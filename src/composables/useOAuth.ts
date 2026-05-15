@@ -40,7 +40,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast }  from '@/composables/useToast'
 
 // ── Replace these with your real credentials ──────────────────────────────────
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'
+const GOOGLE_CLIENT_ID = '214765646212-qg57lp4fpecr0ae6u7fbtvin58lhbfe4.apps.googleusercontent.com'
 const APPLE_CLIENT_ID  = 'io.one-led.services.auth'   // your Apple Services ID
 const APPLE_REDIRECT   = 'https://one-led.io'
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,9 +61,9 @@ function loadScript(src: string): Promise<void> {
 declare const google: {
   accounts: {
     id: {
-      initialize:    (cfg: object) => void
-      prompt:        (cb?: (n: { isNotDisplayed(): boolean; isSkippedMoment(): boolean }) => void) => void
-      cancel:        () => void
+      initialize:   (cfg: object) => void
+      renderButton: (container: HTMLElement, cfg: object) => void
+      cancel:       () => void
     }
   }
 }
@@ -84,33 +84,69 @@ export function useOAuth() {
   const toast  = useToast()
 
   // ── Google ──────────────────────────────────────────────────────────────────
-  async function signInWithGoogle() {
-    try {
-      await loadScript('https://accounts.google.com/gsi/client')
+  /**
+   * Attach a transparent Google-rendered button on top of a target element.
+   * Must be called once during component mount so the button is ready when
+   * the user clicks. The returned cleanup function removes the overlay.
+   *
+   * Usage in a component:
+   *   onMounted(() => { cleanupGoogle = attachGoogleButton(googleBtnRef.value) })
+   *   onUnmounted(() => cleanupGoogle?.())
+   */
+  function attachGoogleButton(target: HTMLElement | null): (() => void) | undefined {
+    if (!target) return
 
-      const credential = await new Promise<string>((resolve, reject) => {
-        google.accounts.id.initialize({
-          client_id:            GOOGLE_CLIENT_ID,
-          callback:             (res: { credential: string }) => resolve(res.credential),
-          auto_select:          false,
-          cancel_on_tap_outside: true,
-        })
-        google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            reject(new Error('dismissed'))
+    // Overlay sits exactly on top of the target button
+    const overlay = document.createElement('div')
+    overlay.style.cssText = [
+      'position:absolute',
+      'inset:0',
+      'overflow:hidden',
+      'opacity:0.0001',   // invisible but still clickable
+      'z-index:10',
+      'cursor:pointer',
+    ].join(';')
+
+    // Google needs a relative-positioned parent
+    const existing = window.getComputedStyle(target).position
+    if (existing === 'static') target.style.position = 'relative'
+    target.appendChild(overlay)
+
+    const init = () => {
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback:  async (res: { credential: string }) => {
+          try {
+            const data = await authApi.oauthGoogle(res.credential)
+            await auth.loginFromOAuth(data)
+            router.push('/dashboard')
+          } catch {
+            toast.error('Google sign-in failed. Please try again.')
           }
-        })
+        },
+        use_fedcm_for_prompt: false,
       })
-
-      const data = await authApi.oauthGoogle(credential)
-      await auth.loginFromOAuth(data)
-      router.push('/dashboard')
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : ''
-      if (msg !== 'dismissed') {
-        toast.error('Google sign-in failed. Please try again.')
-      }
+      google.accounts.id.renderButton(overlay, {
+        type:            'standard',
+        theme:           'outline',
+        size:            'large',
+        width:           target.offsetWidth || 300,
+        logo_alignment:  'center',
+      })
     }
+
+    loadScript('https://accounts.google.com/gsi/client')
+      .then(init)
+      .catch(() => { /* script load failed — silent */ })
+
+    return () => {
+      if (target.contains(overlay)) target.removeChild(overlay)
+    }
+  }
+
+  // Legacy click handler kept for backward compat (no longer triggers prompt)
+  async function signInWithGoogle() {
+    toast.warning('Click the Google button to sign in.')
   }
 
   // ── Apple ───────────────────────────────────────────────────────────────────
@@ -144,5 +180,5 @@ export function useOAuth() {
     }
   }
 
-  return { signInWithGoogle, signInWithApple }
+  return { attachGoogleButton, signInWithGoogle, signInWithApple }
 }
