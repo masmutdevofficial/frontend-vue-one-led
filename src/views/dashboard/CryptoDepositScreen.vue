@@ -59,7 +59,10 @@
         <div>
           <h2 class="text-[12px] font-semibold text-[#17212f]">1. Select Coin</h2>
 
-          <button class="mt-3 flex w-full items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm active:scale-[0.99]">
+          <button
+            class="mt-3 flex w-full items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm active:scale-[0.99]"
+            @click="showCoinSheet = true"
+          >
             <div class="flex items-center gap-3">
               <div class="flex h-9 w-9 items-center justify-center rounded-full" :class="selectedIconClass">
                 <CoinIcon :icon="selectedIcon" :symbol="selectedSymbol" icon-class="text-[23px]" img-class="h-5 w-5 rounded-full" />
@@ -69,7 +72,7 @@
                 <p class="mt-1 text-[9px] font-semibold text-gray-400">{{ selectedName }}</p>
               </div>
             </div>
-            <Icon icon="mdi:chevron-right" class="text-[22px] text-gray-400" />
+            <Icon icon="mdi:chevron-down" class="text-[22px] text-gray-400" />
           </button>
         </div>
 
@@ -78,9 +81,36 @@
           <h2 class="text-[12px] font-semibold text-[#17212f]">2. Choose Network</h2>
 
           <div class="mt-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-            <div class="flex items-start justify-between">
+            <!-- Multiple networks — show selectable list -->
+            <div v-if="availableNetworks.length > 1" class="space-y-2">
+              <button
+                v-for="net in availableNetworks"
+                :key="net"
+                @click="selectNetwork(net)"
+                class="flex w-full items-center justify-between rounded-xl border-2 px-4 py-3 transition active:scale-[0.99]"
+                :class="selectedNetwork === net ? 'border-[#1fb9b2] bg-[#e9fffc]' : 'border-gray-100 bg-white'"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
+                    <CoinIcon :icon="selectedIcon" :symbol="selectedSymbol" icon-class="text-[19px]" img-class="h-4 w-4 rounded-full" />
+                  </div>
+                  <div class="text-left">
+                    <p class="text-[12px] font-semibold" :class="selectedNetwork === net ? 'text-[#1fb9b2]' : 'text-[#17212f]'">{{ net }}</p>
+                    <p class="mt-0.5 text-[9px] font-semibold text-gray-400">{{ selectedSymbol }}</p>
+                  </div>
+                </div>
+                <Icon
+                  :icon="selectedNetwork === net ? 'mdi:check-circle' : 'mdi:circle-outline'"
+                  :class="selectedNetwork === net ? 'text-[#1fb9b2]' : 'text-gray-300'"
+                  class="text-[20px]"
+                />
+              </button>
+            </div>
+
+            <!-- Single network — show static (non-selectable) -->
+            <div v-else class="flex items-start justify-between">
               <div class="flex items-start gap-3">
-                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-[#17212f]">
+                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
                   <CoinIcon :icon="selectedIcon" :symbol="selectedSymbol" icon-class="text-[19px]" img-class="h-4 w-4 rounded-full" />
                 </div>
                 <div>
@@ -255,6 +285,45 @@
     </div>
   </Teleport>
 
+  <!-- COIN SELECTOR SHEET -->
+  <Teleport to="body">
+    <div v-if="showCoinSheet" class="fixed inset-0 z-50 flex items-end justify-center">
+      <div class="absolute inset-0 bg-black/50" @click="showCoinSheet = false"></div>
+      <div class="relative w-full max-w-107.5 rounded-t-3xl bg-white pb-8">
+        <!-- Handle -->
+        <div class="flex justify-center pt-3">
+          <div class="h-1 w-10 rounded-full bg-gray-200"></div>
+        </div>
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
+          <h2 class="text-sm font-semibold text-[#17212f]">Select Coin</h2>
+          <button @click="showCoinSheet = false" class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 active:scale-95">
+            <Icon icon="mdi:close" class="text-base text-[#17212f]" />
+          </button>
+        </div>
+        <!-- Coin list -->
+        <div class="mt-2 max-h-72 overflow-y-auto px-5 space-y-1">
+          <button
+            v-for="coin in availableCoins"
+            :key="coin"
+            @click="selectCoin(coin)"
+            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 transition active:scale-[0.99]"
+            :class="selectedSymbol === coin ? 'bg-[#e9fffc]' : 'hover:bg-gray-50'"
+          >
+            <div class="flex h-9 w-9 items-center justify-center rounded-full" :class="coinIconClass(coin)">
+              <CoinIcon :icon="marketStore.coinMap.get(coin)?.icon ?? 'mdi:currency-usd'" :symbol="coin" icon-class="text-[22px]" img-class="h-5 w-5 rounded-full" />
+            </div>
+            <div class="flex-1 text-left">
+              <p class="text-[13px] font-semibold text-[#17212f]">{{ coin }}</p>
+              <p class="text-[9px] font-semibold text-gray-400">{{ marketStore.coinMap.get(coin)?.name ?? coin }}</p>
+            </div>
+            <Icon v-if="selectedSymbol === coin" icon="mdi:check-circle" class="text-[20px] text-[#1fb9b2]" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
   <!-- HISTORY MODAL -->
   <Teleport to="body">
     <div v-if="showHistory" class="fixed inset-0 z-50 flex items-end justify-center">
@@ -376,19 +445,51 @@ async function loadDepositConfig() {
   } catch {
     qrConfigs.value = []
   }
+  // Auto-select first available coin + network after loading
+  if (qrConfigs.value.length) {
+    const first = qrConfigs.value[0]
+    selectedSymbol.value  = first.coin
+    selectedNetwork.value = first.network ?? ''
+  }
 }
 
+// ─── Coin & Network selection ─────────────────────────────────
+/** Unique coins available in qrConfigs (in order of first appearance) */
+const availableCoins = computed(() => {
+  const seen = new Set<string>()
+  const list: string[] = []
+  for (const c of qrConfigs.value) {
+    if (!seen.has(c.coin)) { seen.add(c.coin); list.push(c.coin) }
+  }
+  // Fallback: if no configs, show BTC as default
+  return list.length ? list : ['BTC']
+})
+
+/** Networks available for the currently selected coin */
+const availableNetworks = computed(() =>
+  qrConfigs.value
+    .filter(c => c.coin === selectedSymbol.value && c.network)
+    .map(c => c.network as string)
+)
+
 // Selected coin for deposit (defaults to BTC)
-const selectedSymbol = ref('BTC')
-const selectedCoin = computed(() => marketStore.coinMap.get(selectedSymbol.value))
-const selectedIcon = computed(() => selectedCoin.value?.icon ?? 'mdi:bitcoin')
-const selectedName = computed(() => selectedCoin.value?.name ?? 'Bitcoin')
+const selectedSymbol  = ref('BTC')
+const selectedNetwork = ref('')
+
+const selectedCoin      = computed(() => marketStore.coinMap.get(selectedSymbol.value))
+const selectedIcon      = computed(() => selectedCoin.value?.icon ?? 'mdi:bitcoin')
+const selectedName      = computed(() => selectedCoin.value?.name ?? selectedSymbol.value)
 const selectedIconClass = computed(() => coinIconClass(selectedSymbol.value))
 
-/** Active QR config for the selected coin — null if not configured */
-const selectedQrConfig = computed(() =>
-  qrConfigs.value.find(c => c.coin.toUpperCase() === selectedSymbol.value.toUpperCase()) ?? null,
-)
+/** Active QR config — matches coin + network (if network selected), else first match for coin */
+const selectedQrConfig = computed(() => {
+  if (selectedNetwork.value) {
+    return qrConfigs.value.find(
+      c => c.coin === selectedSymbol.value && c.network === selectedNetwork.value,
+    ) ?? null
+  }
+  return qrConfigs.value.find(c => c.coin === selectedSymbol.value) ?? null
+})
 
 /** Wallet address — from backend or hardcoded fallback */
 const depositAddress = computed(() =>
@@ -398,8 +499,29 @@ const depositAddress = computed(() =>
 /** QR image URL — from backend or null (show icon fallback) */
 const qrImageUrl = computed(() => selectedQrConfig.value?.qr_image_url ?? null)
 
-/** Network label for the deposit address section */
-const depositNetwork = computed(() => selectedQrConfig.value?.network ?? 'Bitcoin Network')
+/** Network label shown in Section 2 */
+const depositNetwork = computed(() =>
+  selectedNetwork.value || selectedQrConfig.value?.network || `${selectedSymbol.value} Network`,
+)
+
+// ─── Coin selector bottom sheet ───────────────────────────────
+const showCoinSheet = ref(false)
+
+function selectCoin(coin: string) {
+  selectedSymbol.value  = coin
+  // Auto-select first network for the new coin
+  const nets = qrConfigs.value.filter(c => c.coin === coin && c.network)
+  selectedNetwork.value = nets[0]?.network ?? ''
+  showCoinSheet.value   = false
+}
+
+// ─── Network selector bottom sheet ───────────────────────────────
+const showNetworkSheet = ref(false)
+
+function selectNetwork(network: string) {
+  selectedNetwork.value  = network
+  showNetworkSheet.value = false
+}
 
 // ─── Help Modal ───────────────────────────────────────────────
 const showHelp = ref(false)
