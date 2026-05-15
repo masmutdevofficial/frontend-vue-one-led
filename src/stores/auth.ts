@@ -101,6 +101,17 @@ export const useAuthStore = defineStore('auth', () => {
     return authApi.resetPassword(email, code, password)
   }
 
+  /** Called after a successful Google or Apple OAuth response to set the session */
+  async function loginFromOAuth(data: {
+    access_token:  string
+    refresh_token: string
+    expires_in:    number
+    user:          WalletUser
+  }) {
+    _applySession(data)
+    startStatusPolling()
+  }
+
   async function refreshSession(): Promise<boolean> {
     if (!refreshToken.value) return false
     try {
@@ -180,6 +191,7 @@ export const useAuthStore = defineStore('auth', () => {
     otpContext,
     register,
     login,
+    loginFromOAuth,
     verifyOtp,
     resendOtp,
     forgotPassword,

@@ -21,6 +21,17 @@ button {
   cursor: pointer;
 }
 
+/* ── iOS Safari auto-zoom fix ────────────────────────────────────────────────
+   Safari on iOS zooms in when an input has font-size < 16px.
+   Force all inputs to 16px on mobile to prevent this behaviour. */
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Teal overlay scrollbar — desktop only, avoids iOS right-gap */
 @media (hover: hover) and (pointer: fine) {
   ::-webkit-scrollbar {

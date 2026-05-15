@@ -168,41 +168,81 @@ interface Feature {
 
 // --- Animated balance count-up ---
 const displayBalance = ref('$0.00')
-const balanceChange = ref<{ pct: string; positive: boolean }>({ pct: '8.42', positive: true })
+const balanceChange = ref<{ pct: string; positive: boolean }>({ pct: '0.00', positive: true })
 
-// --- Live coin simulation ---
+// Demo portfolio: how many units of each coin the user "holds"
+// index 0 = BTC, 1 = ETH, 2 = USDT  (must match COINCAP_IDS order)
+const COINCAP_IDS = ['bitcoin', 'ethereum', 'tether']
+const HOLDINGS    = [0.1, 3, 5000] // 0.1 BTC | 3 ETH | 5000 USDT
+
+// --- Live coin data (initial values shown before API responds) ---
 const coins = ref<Coin[]>([
-  { icon: 'mdi:bitcoin', name: 'Bitcoin', code: 'BTC', baseAmount: 15680.35, amount: '$15,680.35', changePct: 6.21, change: '+6.21%', positive: true, className: 'bg-orange-400 text-white' },
-  { icon: 'mdi:ethereum', name: 'Ethereum', code: 'ETH', baseAmount: 4872.10, amount: '$4,872.10', changePct: 5.71, change: '+5.71%', positive: true, className: 'bg-indigo-500 text-white' },
-  { icon: 'mdi:alpha-t-circle', name: 'Tether', code: 'USDT', baseAmount: 4000.00, amount: '$4,000.00', changePct: 0.02, change: '+0.02%', positive: true, className: 'bg-teal-500 text-white' },
+  { icon: 'mdi:bitcoin',       name: 'Bitcoin', code: 'BTC',  baseAmount: 10000, amount: '…', changePct: 0, change: '0.00%', positive: true, className: 'bg-orange-400 text-white' },
+  { icon: 'mdi:ethereum',      name: 'Ethereum', code: 'ETH', baseAmount: 9000,  amount: '…', changePct: 0, change: '0.00%', positive: true, className: 'bg-indigo-500 text-white' },
+  { icon: 'mdi:alpha-t-circle', name: 'Tether', code: 'USDT', baseAmount: 5000,  amount: '…', changePct: 0, change: '0.00%', positive: true, className: 'bg-teal-500 text-white' },
 ])
 
-onMounted(() => {
-  // Count-up animation
-  const target = 24530.45
+function fmtUsd(n: number) {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+/** Fetch real-time prices from CoinCap (free, no API key required) */
+async function fetchLivePrices() {
+  try {
+    const res = await fetch('https://api.coincap.io/v2/assets?ids=' + COINCAP_IDS.join(','))
+    if (!res.ok) return
+    const json = await res.json() as { data?: Array<{ id: string; priceUsd: string; changePercent24Hr: string }> }
+    for (const asset of json.data ?? []) {
+      const idx = COINCAP_IDS.indexOf(asset.id)
+      if (idx < 0) continue
+      const price     = parseFloat(asset.priceUsd)       || 0
+      const changePct = parseFloat(asset.changePercent24Hr) || 0
+      const coin      = coins.value[idx]
+      coin.baseAmount = price * HOLDINGS[idx]
+      coin.changePct  = changePct
+      coin.positive   = changePct >= 0
+      coin.amount     = fmtUsd(coin.baseAmount)
+      coin.change     = (coin.positive ? '+' : '') + changePct.toFixed(2) + '%'
+    }
+  } catch {
+    // CoinCap unreachable — keep default values, simulation still runs
+  }
+}
+
+function startCountUp(target: number) {
   const duration = 1500
   const startTime = Date.now()
   function tick() {
-    const elapsed = Date.now() - startTime
+    const elapsed  = Date.now() - startTime
     const progress = Math.min(elapsed / duration, 1)
-    const eased = 1 - Math.pow(1 - progress, 3)
-    displayBalance.value = '$' + (eased * target).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    const eased    = 1 - Math.pow(1 - progress, 3)
+    displayBalance.value = fmtUsd(eased * target)
     if (progress < 1) requestAnimationFrame(tick)
   }
   requestAnimationFrame(tick)
+}
 
-  // Simulate live trading updates every 2s
+onMounted(async () => {
+  // 1. Fetch real prices — then animate count-up to the real total
+  await fetchLivePrices()
+  const total = coins.value.reduce((sum, c) => sum + c.baseAmount, 0)
+  startCountUp(total)
+
+  // 2. Simulate micro price movements every 2 s
   setInterval(() => {
     coins.value.forEach((coin) => {
       coin.baseAmount *= 1 + (Math.random() - 0.5) * 0.004
-      coin.changePct += (Math.random() - 0.5) * 0.12
-      coin.positive = coin.changePct >= 0
-      coin.amount = '$' + coin.baseAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      coin.change = (coin.positive ? '+' : '-') + Math.abs(coin.changePct).toFixed(2) + '%'
+      coin.changePct  += (Math.random() - 0.5) * 0.12
+      coin.positive    = coin.changePct >= 0
+      coin.amount      = fmtUsd(coin.baseAmount)
+      coin.change      = (coin.positive ? '+' : '') + Math.abs(coin.changePct).toFixed(2) + '%'
     })
     const newPct = parseFloat(balanceChange.value.pct) + (Math.random() - 0.5) * 0.1
     balanceChange.value = { pct: Math.abs(newPct).toFixed(2), positive: newPct >= 0 }
   }, 2000)
+
+  // 3. Re-fetch real prices every 30 s to stay accurate
+  setInterval(fetchLivePrices, 30_000)
 })
 
 const chartSeries = [{ name: 'Balance', data: [18, 30, 26, 42, 34, 38, 50, 41, 45, 58, 52, 68, 62, 76] }]
