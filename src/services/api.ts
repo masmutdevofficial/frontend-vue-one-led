@@ -263,6 +263,8 @@ export function makeContentApi(token: string) {
       api.get<{ courses: LearnCourse[] }>(`/learn-earn/courses?limit=${limit}`),
     getCopyTraders: (limit = 50) =>
       api.get<{ traders: CopyTrader[] }>(`/copy-trade/traders?limit=${limit}`),
+    getDepositQrCodes: () =>
+      api.get<{ qr_codes: Array<{ coin: string; network: string | null; wallet_address: string; qr_image_url: string | null }> }>('/deposit/qr-codes'),
   }
 }
 

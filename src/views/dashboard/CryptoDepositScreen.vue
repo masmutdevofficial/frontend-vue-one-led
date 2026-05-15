@@ -85,12 +85,12 @@
                 </div>
                 <div>
                   <div class="flex items-center gap-2">
-                    <p class="text-[12px] font-semibold text-[#17212f]">Bitcoin Network</p>
+                    <p class="text-[12px] font-semibold text-[#17212f]">{{ depositNetwork }}</p>
                     <span class="rounded-full bg-[#e9fffc] px-2 py-0.5 text-[7px] font-semibold uppercase text-[#1fb9b2]">
                       Recommended
                     </span>
                   </div>
-                  <p class="mt-1 text-[9px] font-semibold text-gray-400">BTC</p>
+                  <p class="mt-1 text-[9px] font-semibold text-gray-400">{{ selectedSymbol }}</p>
                 </div>
               </div>
               <Icon icon="mdi:check-circle" class="text-[20px] text-[#1fb9b2]" />
@@ -115,7 +115,15 @@
             <!-- QR BOX -->
             <div class="mt-4 flex justify-center">
               <div class="relative flex h-32.5 w-32.5 items-center justify-center rounded-xl border border-gray-100 bg-white">
-                <Icon icon="mdi:qrcode" class="text-[112px] text-[#17212f]" />
+                <!-- Backend QR image -->
+                <img
+                  v-if="qrImageUrl"
+                  :src="qrImageUrl"
+                  :alt="`${selectedSymbol} QR Code`"
+                  class="h-full w-full rounded-xl object-contain p-1"
+                />
+                <!-- Fallback icon -->
+                <Icon v-else icon="mdi:qrcode" class="text-[112px] text-[#17212f]" />
                 <div class="absolute flex h-9 w-9 items-center justify-center rounded-full shadow-md" :class="selectedIconClass">
                   <CoinIcon :icon="selectedIcon" :symbol="selectedSymbol" icon-class="text-[24px]" img-class="h-5 w-5 rounded-full" />
                 </div>
@@ -125,7 +133,7 @@
             <!-- ADDRESS -->
             <div class="mt-4 flex items-center justify-between rounded-lg border border-gray-100 bg-[#f9fafb] px-3 py-3">
               <p class="max-w-61.25 truncate text-[10px] font-semibold text-[#344054]">
-                bc1qx2kgdyjqsrdtq2n0yrf2493p3kkjfhx0vlh
+                {{ depositAddress }}
               </p>
               <button @click="copyAddress" class="ml-3 flex items-center gap-1 text-[10px] font-semibold transition-colors active:scale-95" :class="copied ? 'text-green-500' : 'text-[#1fb9b2]'">
                 {{ copied ? 'Copied!' : 'Copy' }}
@@ -342,9 +350,33 @@ import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CoinIcon from '@/components/CoinIcon.vue'
 import { useMarketStore, coinIconClass } from '@/stores/market'
+import { useAuthStore } from '@/stores/auth'
+import { makeContentApi } from '@/services/api'
 
-const router = useRouter()
+const router      = useRouter()
 const marketStore = useMarketStore()
+const authStore   = useAuthStore()
+
+// ─── Deposit QR Codes from backend ────────────────────────────
+interface QrCodeConfig {
+  coin:           string
+  network:        string | null
+  wallet_address: string
+  qr_image_url:   string | null
+}
+const qrConfigs = ref<QrCodeConfig[]>([])
+
+async function loadDepositConfig() {
+  try {
+    const token = authStore.accessToken
+    if (!token) return
+    const api  = makeContentApi(token)
+    const data = await api.getDepositQrCodes()
+    qrConfigs.value = data.qr_codes ?? []
+  } catch {
+    qrConfigs.value = []
+  }
+}
 
 // Selected coin for deposit (defaults to BTC)
 const selectedSymbol = ref('BTC')
@@ -352,6 +384,22 @@ const selectedCoin = computed(() => marketStore.coinMap.get(selectedSymbol.value
 const selectedIcon = computed(() => selectedCoin.value?.icon ?? 'mdi:bitcoin')
 const selectedName = computed(() => selectedCoin.value?.name ?? 'Bitcoin')
 const selectedIconClass = computed(() => coinIconClass(selectedSymbol.value))
+
+/** Active QR config for the selected coin — null if not configured */
+const selectedQrConfig = computed(() =>
+  qrConfigs.value.find(c => c.coin.toUpperCase() === selectedSymbol.value.toUpperCase()) ?? null,
+)
+
+/** Wallet address — from backend or hardcoded fallback */
+const depositAddress = computed(() =>
+  selectedQrConfig.value?.wallet_address ?? 'bc1qx2kgdyjqsrdtq2n0yrf2493p3kkjfhx0vlh',
+)
+
+/** QR image URL — from backend or null (show icon fallback) */
+const qrImageUrl = computed(() => selectedQrConfig.value?.qr_image_url ?? null)
+
+/** Network label for the deposit address section */
+const depositNetwork = computed(() => selectedQrConfig.value?.network ?? 'Bitcoin Network')
 
 // ─── Help Modal ───────────────────────────────────────────────
 const showHelp = ref(false)
@@ -461,10 +509,9 @@ const activeStep = ref(1)
 
 // ─── Copy Address ─────────────────────────────────────────────
 const copied = ref(false)
-const depositAddress = 'bc1qx2kgdyjqsrdtq2n0yrf2493p3kkjfhx0vlh'
 
 function copyAddress() {
-  navigator.clipboard.writeText(depositAddress).catch(() => {})
+  navigator.clipboard.writeText(depositAddress.value).catch(() => {})
   copied.value = true
   setTimeout(() => { copied.value = false }, 2000)
 }
@@ -482,10 +529,13 @@ const depositDetails: DepositDetail[] = [
 ]
 
 const tips: string[] = [
-  'Send only BTC to this deposit address.',
+  'Send only the selected coin to this deposit address.',
   'Sending any other coins may result in permanent loss.',
   'Your deposit will be credited after 1 network confirmation.',
 ]
 
-onMounted(() => { marketStore.fetchCoins() })
+onMounted(async () => {
+  marketStore.fetchCoins()
+  await loadDepositConfig()
+})
 </script>
