@@ -184,23 +184,25 @@ function fmtUsd(n: number) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-/** Fetch real-time prices from Binance (free, no API key required) */
+/** Fetch real-time prices from CoinGecko (free, no API key, CORS-safe) */
 async function fetchLivePrices() {
   try {
-    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT"]')
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true',
+    )
     if (!res.ok) return
-    const data = await res.json() as Array<{ symbol: string; lastPrice: string; priceChangePercent: string }>
-    for (const ticker of data) {
-      const idx = ticker.symbol === 'BTCUSDT' ? 0 : ticker.symbol === 'ETHUSDT' ? 1 : -1
-      if (idx < 0) continue
-      const price     = parseFloat(ticker.lastPrice)          || 0
-      const changePct = parseFloat(ticker.priceChangePercent) || 0
+    const data = await res.json() as Record<string, { usd: number; usd_24h_change: number }>
+
+    const map: Record<string, number> = { bitcoin: 0, ethereum: 1 }
+    for (const [id, info] of Object.entries(data)) {
+      const idx = map[id]
+      if (idx === undefined) continue
       const coin      = coins.value[idx]
-      coin.baseAmount = price * HOLDINGS[idx]
-      coin.changePct  = changePct
-      coin.positive   = changePct >= 0
+      coin.baseAmount = info.usd * HOLDINGS[idx]
+      coin.changePct  = info.usd_24h_change ?? 0
+      coin.positive   = coin.changePct >= 0
       coin.amount     = fmtUsd(coin.baseAmount)
-      coin.change     = (coin.positive ? '+' : '') + changePct.toFixed(2) + '%'
+      coin.change     = (coin.positive ? '+' : '') + coin.changePct.toFixed(2) + '%'
     }
     // USDT is always pegged to $1.00
     const usdt      = coins.value[2]
@@ -210,7 +212,7 @@ async function fetchLivePrices() {
     usdt.amount     = fmtUsd(usdt.baseAmount)
     usdt.change     = '+0.01%'
   } catch {
-    // Binance unreachable — simulation continues with current values
+    // API unreachable — simulation continues with current values
   }
 }
 
