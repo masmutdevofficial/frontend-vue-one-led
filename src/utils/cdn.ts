@@ -13,9 +13,7 @@
  *   cdnUrl(null)  → '' (empty string, safe for :src bindings)
  */
 
-const CDN_BASE = (import.meta.env.VITE_CDN_URL as string | undefined)
-  ?.replace(/\/$/, '')
-  ?? 'https://cdn.one-led.io'
+const CDN_BASE = 'https://cdn.one-led.io'
 
 export function cdnUrl(path: string | null | undefined): string {
   if (!path) return ''

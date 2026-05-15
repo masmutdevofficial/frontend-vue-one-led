@@ -38,8 +38,7 @@ interface RawTick {
 
 // ── Singleton state ───────────────────────────────────────────────────────────
 
-const WS_URL: string =
-  (import.meta as any).env?.VITE_WS_URL ?? 'ws://localhost:3002'
+const WS_URL: string = 'wss://ws.one-led.io'
 
 /**
  * Reactive map of Binance pair → latest ticker data.
