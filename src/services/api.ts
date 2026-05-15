@@ -1,4 +1,4 @@
-const BASE = '/v1/user'
+const BASE = 'https://api.one-led.io/v1/user'
 
 export class ApiError extends Error {
   status: number
