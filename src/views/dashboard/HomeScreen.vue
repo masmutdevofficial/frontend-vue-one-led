@@ -396,8 +396,8 @@ function toggleFavorite(name: string) {
 
 // ── Mini spline chart ─────────────────────────────────────────
 const chartPoints = ref<number[]>([0.55, 0.42, 0.60, 0.38, 0.52, 0.30, 0.48, 0.22, 0.40, 0.18])
-const pnlValue = ref(-4.81)
-const pnlPct = ref(-2.59)
+const pnlValue = ref(0)
+const pnlPct = ref(0)
 
 function buildSplinePath(pts: number[], filled = false): string {
   const W = 105, H = 58, padTop = 4, padBottom = 6
@@ -450,7 +450,9 @@ function tickChart() {
 
   const pnlDelta = (Math.random() - 0.48) * 0.12
   pnlValue.value = Math.round((pnlValue.value + pnlDelta) * 100) / 100
-  pnlPct.value = Math.round((pnlValue.value / 212216.40) * 10000) / 100
+  pnlPct.value = balanceTotal.value > 0
+    ? Math.round((pnlValue.value / balanceTotal.value) * 10000) / 100
+    : 0
 
   // Animate sparkline chart points only (prices come from WS)
   marketsData.value = marketsData.value.map(coin => {
@@ -471,7 +473,11 @@ onMounted(() => {
   // Fetch real balance
   if (auth.accessToken) {
     makeUserApi(auth.accessToken).getBalance()
-      .then(d => { balanceTotal.value = parseFloat(d.total as unknown as string) || 0 })
+      .then(d => {
+        balanceTotal.value = parseFloat(d.total as unknown as string) || 0
+        pnlValue.value = 0
+        pnlPct.value = 0
+      })
       .catch(() => {})
   }
 })
