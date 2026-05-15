@@ -1,0 +1,288 @@
+const BASE = '/v1/user'
+
+export class ApiError extends Error {
+  status: number
+  code: string | undefined
+
+  constructor(status: number, message: string, code?: string) {
+    super(message)
+    this.status = status
+    this.code   = code
+    this.name   = 'ApiError'
+  }
+}
+
+/** Called whenever an authenticated request receives a 401. Wire up in main.ts. */
+let _onUnauthorized: (() => void) | null = null
+export function setUnauthorizedHandler(fn: () => void): void {
+  _onUnauthorized = fn
+}
+
+async function request<T>(method: string, path: string, body?: unknown, authToken?: string | null): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`
+
+  const res = await fetch(BASE + path, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+
+  if (res.status === 204) return undefined as T
+
+  const data = await res.json().catch(() => ({}))
+
+  if (!res.ok) {
+    // If an authenticated request gets 401 (token invalid or account deactivated) → auto-logout
+    if (res.status === 401 && authToken) {
+      _onUnauthorized?.()
+    }
+    throw new ApiError(
+      res.status,
+      data?.error?.message ?? 'Request failed.',
+      data?.error?.code,
+    )
+  }
+
+  return data as T
+}
+
+/** Auth endpoints — no token needed */
+export const authApi = {
+  register:       (body: Record<string, string>) =>
+    request<{ message: string; _dev_otp?: string }>('POST', '/auth/register', body),
+
+  login:          (email: string, password: string) =>
+    request<{ access_token: string; refresh_token: string; expires_in: number; user: WalletUser }>('POST', '/auth/login', { email, password }),
+
+  verifyOtp:      (email: string, code: string) =>
+    request<{ access_token: string; refresh_token: string; expires_in: number; user: WalletUser }>('POST', '/auth/otp/verify', { email, code }),
+
+  resendOtp:      (email: string) =>
+    request<{ message: string; _dev_otp?: string }>('POST', '/auth/otp/resend', { email }),
+
+  forgotPassword: (email: string) =>
+    request<{ message: string; _dev_otp?: string }>('POST', '/auth/forgot-password', { email }),
+
+  resetPassword:  (email: string, code: string, password: string) =>
+    request<{ message: string }>('POST', '/auth/reset-password', { email, code, password }),
+
+  refresh:        (refreshToken: string) =>
+    request<{ access_token: string; expires_in: number }>('POST', '/auth/refresh', undefined, refreshToken),
+
+  logout:         (token: string) =>
+    request<void>('POST', '/auth/logout', undefined, token),
+}
+
+/** Authenticated API call factory — pass access token */
+export function makeApi(token: string) {
+  return {
+    get:    <T>(path: string)              => request<T>('GET',    path, undefined, token),
+    post:   <T>(path: string, body: unknown) => request<T>('POST',   path, body,      token),
+    put:    <T>(path: string, body: unknown) => request<T>('PUT',    path, body,      token),
+    delete: <T>(path: string)              => request<T>('DELETE', path, undefined, token),
+  }
+}
+
+export interface WalletUser {
+  id:       string
+  username: string
+  email:    string
+  balance?: string
+}
+
+export interface UserProfile {
+  id:            string
+  username:      string
+  email:         string
+  balance:       string
+  commission:    string
+  twofa_enabled: boolean
+  ktp_status:    string | null
+  credit_score:  number
+  member_since:  string    // ISO datetime
+}
+
+export interface UserBalance {
+  total:    string
+  balances: { coin: string; amount: string }[]
+}
+
+/** Authenticated user profile + balance API */
+export function makeUserApi(token: string) {
+  const api = makeApi(token)
+  return {
+    getProfile:    () => api.get<UserProfile>('/me'),
+    updateProfile: (body: {
+      username?: string
+      email?: string
+      bank?: string
+      bank_account?: string
+      country?: string
+    }) => api.put<{ ok: boolean }>('/me', body),
+    getBalance:    () => api.get<UserBalance>('/balance'),
+  }
+}
+
+/** Public P2P endpoints — no auth needed */
+export const p2pApi = {
+  getMerchants: (type?: string, asset?: string) => {
+    const params = new URLSearchParams()
+    if (type)  params.set('type', type)
+    if (asset) params.set('asset', asset)
+    const query = params.toString()
+    return request<{ merchants: any[] }>('GET', `/p2p/merchants${query ? '?' + query : ''}`)
+  },
+}
+
+// ── Content API types ─────────────────────────────────────────────────────────
+
+export interface StakingProduct {
+  id: number
+  coin: string
+  type: 'flexible' | 'locked'
+  apr: number
+  min_amount: string
+  max_amount: string | null
+  duration_days: number | null
+  early_withdrawal_fee_pct: number
+}
+
+export interface ApiEvent {
+  id: number
+  title: string
+  type: string
+  description: string | null
+  prize_pool: string | null
+  start_date: string
+  end_date: string
+  banner_url: string | null
+  max_participants: number | null
+  participants: number
+  status: string
+}
+
+export interface ApiCampaign {
+  id: number
+  title: string
+  type: string
+  description: string | null
+  reward: string | null
+  start_date: string
+  end_date: string
+  banner_url: string | null
+  min_requirement: string | null
+  participants: number
+  status: string
+}
+
+export interface AmaSession {
+  id: number
+  title: string
+  host: string
+  description: string | null
+  scheduled_at: string | null
+  is_live: number
+  started_at: string | null
+}
+
+export interface NewsArticle {
+  id: number
+  title: string
+  summary: string | null
+  source: string | null
+  source_url: string | null
+  thumbnail_url: string | null
+  published_at: string | null
+  category_name: string | null
+}
+
+export interface NewsCategory {
+  id: number
+  name: string
+}
+
+export interface LearnCourse {
+  id: number
+  title: string
+  sponsor: string | null
+  reward_usdt: string
+  duration_min: number
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  thumbnail_url: string | null
+}
+
+export interface CopyTrader {
+  id: number
+  name: string
+  username: string
+  tag: string | null
+  avatar: string | null
+  roi: number
+  aum: string
+  win_rate: number
+  copiers: number
+  min_copy: number
+  risk: string
+  verified: number
+}
+
+/** Authenticated user content API — call makeContentApi(token) */
+export function makeContentApi(token: string) {
+  const api = makeApi(token)
+  return {
+    getStakingProducts: (type?: string) => {
+      const q = type && type !== 'all' ? `?type=${type}` : ''
+      return api.get<{ products: StakingProduct[] }>(`/staking/products${q}`)
+    },
+    getEvents: (limit = 20) =>
+      api.get<{ events: ApiEvent[] }>(`/events?limit=${limit}`),
+    getCampaigns: (limit = 20) =>
+      api.get<{ campaigns: ApiCampaign[] }>(`/campaigns?limit=${limit}`),
+    getAmaSessions: (limit = 20) =>
+      api.get<{ sessions: AmaSession[] }>(`/ama/sessions?limit=${limit}`),
+    getNews: (limit = 30, categoryId?: number) => {
+      const q = categoryId ? `?limit=${limit}&category_id=${categoryId}` : `?limit=${limit}`
+      return api.get<{ articles: NewsArticle[] }>(`/news${q}`)
+    },
+    getNewsCategories: () =>
+      api.get<{ categories: NewsCategory[] }>('/news/categories'),
+    getLearnCourses: (limit = 30) =>
+      api.get<{ courses: LearnCourse[] }>(`/learn-earn/courses?limit=${limit}`),
+    getCopyTraders: (limit = 50) =>
+      api.get<{ traders: CopyTrader[] }>(`/copy-trade/traders?limit=${limit}`),
+  }
+}
+
+// ── Notification types ────────────────────────────────────────────────────────
+
+export interface UserNotification {
+  id: number
+  type: string
+  title: string
+  message: string
+  is_read: 0 | 1
+  created_at: string
+}
+
+export interface NotificationsResponse {
+  notifications: UserNotification[]
+  total: number
+  unread: number
+}
+
+/** Authenticated notifications API */
+export function makeNotificationsApi(token: string) {
+  const api = makeApi(token)
+  return {
+    list: (limit = 50, offset = 0) =>
+      api.get<NotificationsResponse>(`/notifications?limit=${limit}&offset=${offset}`),
+    unreadCount: () =>
+      api.get<{ unread: number }>('/notifications/unread-count'),
+    markRead: (id: number) =>
+      api.put<{ ok: boolean }>(`/notifications/${id}/read`, {}),
+    markAllRead: () =>
+      api.put<{ ok: boolean }>('/notifications/read-all', {}),
+  }
+}
+

@@ -1,0 +1,26 @@
+/**
+ * src/utils/cdn.ts
+ *
+ * Build a full CDN URL from an R2 object key or any image path.
+ *
+ * Usage:
+ *   cdnUrl('coin-icons/btc.png')
+ *     → 'https://cdn.one-led.io/coin-icons/btc.png'
+ *
+ *   cdnUrl('https://cdn.one-led.io/coin-icons/btc.png')
+ *     → 'https://cdn.one-led.io/coin-icons/btc.png'  (passthrough)
+ *
+ *   cdnUrl(null)  → '' (empty string, safe for :src bindings)
+ */
+
+const CDN_BASE = (import.meta.env.VITE_CDN_URL as string | undefined)
+  ?.replace(/\/$/, '')
+  ?? 'https://cdn.one-led.io'
+
+export function cdnUrl(path: string | null | undefined): string {
+  if (!path) return ''
+  // Already an absolute URL — return as-is
+  if (/^https?:\/\//i.test(path)) return path
+  // Relative key — prepend CDN base
+  return `${CDN_BASE}/${path.replace(/^\//, '')}`
+}

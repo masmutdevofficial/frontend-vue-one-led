@@ -1,0 +1,459 @@
+<template>
+  <DashboardLayout>
+    <div class="min-h-screen bg-[#f6f8fb] text-[#0b1638]">
+      <!-- PAGE HEADER -->
+      <div class="relative flex h-14 items-center justify-center border-b border-gray-100 bg-white px-4">
+        <button
+          @click="router.back()"
+          class="absolute left-3 flex h-9 w-9 items-center justify-center rounded-xl bg-[#f6f8fb] active:scale-95"
+        >
+          <Icon icon="mdi:chevron-left" class="text-[27px] text-[#243142]" />
+        </button>
+        <h1 class="text-[16px] font-semibold text-[#17212f]">Staking</h1>
+        <button
+          @click="showTnC = true; tncScrolledToBottom = false"
+          class="absolute right-3 flex h-9 w-9 items-center justify-center rounded-xl bg-[#f6f8fb] active:scale-95"
+        >
+          <Icon icon="mdi:file-document-outline" class="text-[20px] text-[#243142]" />
+        </button>
+      </div>
+
+      <div class="px-4 pt-4 pb-8">
+        <!-- SUMMARY CARD -->
+        <section class="relative overflow-hidden rounded-2xl border border-gray-100 bg-white px-5 py-5 shadow-sm">
+          <div class="absolute right-0 top-0 h-full w-[52%] bg-linear-to-l from-cyan-100/80 via-cyan-50/60 to-transparent"></div>
+
+          <div class="relative z-10">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="flex items-center gap-2 text-[13px] font-medium text-[#5b6d9a]">
+                  Total Staked
+                  <button @click="showBalance = !showBalance">
+                    <Icon :icon="showBalance ? 'mdi:eye-outline' : 'mdi:eye-off-outline'" class="text-[15px]" />
+                  </button>
+                </div>
+
+                <div class="mt-4 flex items-end gap-2">
+                  <h1 class="text-[30px] font-semibold leading-none tracking-tight text-[#0b1638]">
+                    {{ showBalance ? '58,420.80' : '••••••••' }}
+                  </h1>
+                  <button class="mb-1 flex items-center gap-1 text-[12px] font-semibold text-[#5b6d9a]">
+                    USDT
+                    <Icon icon="mdi:chevron-down" class="text-[16px]" />
+                  </button>
+                </div>
+
+                <p class="mt-3 text-[13px] font-medium text-[#7a86a4]">
+                  {{ showBalance ? '≈ $58,420.80' : '≈ $••••••••' }}
+                </p>
+              </div>
+
+              <!-- Illustration -->
+              <div class="relative flex h-32.5 w-38.75 items-center justify-center">
+                <div class="absolute bottom-3 h-10.5 w-32.5 rounded-full bg-cyan-200/60 blur-md"></div>
+                <div class="absolute bottom-2 h-18 w-30 rounded-7 border border-cyan-100 bg-cyan-50/70"></div>
+                <div class="relative z-10 flex h-19.5 w-19.5 items-center justify-center rounded-full bg-linear-to-br from-[#eafffb] to-[#08a99f] shadow-xl">
+                  <Icon icon="mdi:alpha-t-circle" class="text-[54px] text-white" />
+                </div>
+                <div class="absolute right-2 top-5 flex h-11 w-11 items-center justify-center rounded-full bg-white/80 shadow-sm">
+                  <Icon icon="mdi:chart-bar" class="text-[24px] text-[#20c7b7]" />
+                </div>
+                <Icon icon="mdi:plus" class="absolute left-2 top-12 text-[22px] text-[#20c7b7]" />
+                <Icon icon="mdi:diamond-stone" class="absolute bottom-7 right-7 text-[17px] text-[#20c7b7]" />
+              </div>
+            </div>
+
+            <div class="mt-6 h-px bg-gray-100"></div>
+
+            <!-- STATS -->
+            <div class="mt-5 grid grid-cols-3 divide-x divide-gray-100">
+              <div>
+                <div class="flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
+                  Est. Daily Reward
+                  <Icon icon="mdi:information-outline" class="text-[13px]" />
+                </div>
+                <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">24.35 USDT</p>
+                <p class="mt-1 text-[11px] font-medium text-[#7a86a4]">≈ $24.35</p>
+              </div>
+              <div class="px-4">
+                <div class="flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
+                  Avg APR
+                  <Icon icon="mdi:information-outline" class="text-[13px]" />
+                </div>
+                <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">4.27%</p>
+              </div>
+              <div class="pl-4">
+                <div class="flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
+                  Active Positions
+                  <Icon icon="mdi:information-outline" class="text-[13px]" />
+                </div>
+                <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">4</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TABS -->
+        <section class="mt-5 px-8">
+          <div class="grid h-10.5 grid-cols-2 rounded-2xl bg-[#f0f3f8] p-1 shadow-inner">
+            <button
+              v-for="tab in tabs"
+              :key="tab"
+              @click="activeTab = tab"
+              class="rounded-xl text-[13px] font-semibold transition"
+              :class="activeTab === tab ? 'bg-white text-[#20c7b7] shadow-sm' : 'text-[#6b7280]'"
+            >
+              {{ tab }}
+            </button>
+          </div>
+        </section>
+
+        <!-- STAKING PRODUCTS -->
+        <section class="mt-5 space-y-3">
+          <article
+            v-for="item in filteredProducts"
+            :key="item.asset + item.subtitle"
+            class="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-sm"
+          >
+            <!-- Asset -->
+            <div class="flex flex-1 items-center gap-3">
+              <div
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
+                :class="item.iconClass"
+              >
+                <CoinIcon :icon="item.icon" :symbol="item.asset" icon-class="text-[28px]" img-class="h-7 w-7 rounded-full" />
+              </div>
+              <div>
+                <h2 class="text-[16px] font-semibold leading-none text-[#0b1638]">{{ item.asset }}</h2>
+                <p class="mt-1 text-[11px] font-medium text-[#7a86a4]">{{ item.subtitle }}</p>
+              </div>
+            </div>
+            <!-- APR -->
+            <div class="shrink-0 text-center">
+              <p class="text-[10px] font-medium text-[#7a86a4]">APR</p>
+              <p class="mt-1 text-[15px] font-semibold text-[#20c7b7]">{{ item.apr }}</p>
+            </div>
+            <!-- Min -->
+            <div class="shrink-0 text-center">
+              <p class="text-[10px] font-medium text-[#7a86a4]">Min.</p>
+              <p class="mt-1 text-[13px] font-semibold text-[#4b5575]">{{ item.minAmount }}</p>
+            </div>
+            <!-- CTA -->
+            <button
+              @click="openStake(item)"
+              class="h-10 shrink-0 rounded-xl bg-[#08a99f] px-4 text-[13px] font-semibold text-white shadow-sm active:scale-95"
+            >
+              Stake
+            </button>
+          </article>
+        </section>
+
+        <!-- HOW STAKING WORKS -->
+        <section
+          class="mt-5 flex items-center justify-between rounded-2xl border border-[#dff8f6] bg-[#fbfffe] px-5 py-5 shadow-sm"
+          @click="showHowItWorks = true"
+        >
+          <div class="flex items-center gap-4">
+            <div class="flex h-14.5 w-14.5 shrink-0 items-center justify-center rounded-full bg-[#eafffb]">
+              <Icon icon="mdi:shield-check" class="text-[30px] text-[#20c7b7]" />
+            </div>
+            <div>
+              <h2 class="text-[14px] font-semibold text-[#0b1638]">How Staking Works</h2>
+              <p class="mt-1 text-[11px] font-medium leading-relaxed text-[#7a86a4]">
+                Stake your crypto to earn rewards. Rewards are added daily and can be withdrawn anytime.
+              </p>
+            </div>
+          </div>
+          <Icon icon="mdi:chevron-right" class="shrink-0 text-[24px] text-[#20c7b7]" />
+        </section>
+      </div>
+    </div>
+
+    <!-- BACKDROP -->
+    <Teleport to="body">
+      <Transition
+        enter-from-class="opacity-0"
+        enter-active-class="transition-opacity duration-300"
+        leave-to-class="opacity-0"
+        leave-active-class="transition-opacity duration-300"
+      >
+        <div
+          v-if="selectedProduct || showHowItWorks || showTnC"
+          class="fixed inset-0 z-50 bg-black/50"
+          @click="selectedProduct = null; showHowItWorks = false; showTnC = false"
+        ></div>
+      </Transition>
+
+      <!-- STAKE SHEET -->
+      <Transition
+        enter-from-class="translate-y-full"
+        enter-active-class="transition-transform duration-300"
+        leave-to-class="translate-y-full"
+        leave-active-class="transition-transform duration-300"
+      >
+        <div
+          v-if="selectedProduct"
+          class="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-107.5 rounded-t-3xl bg-white shadow-2xl"
+        >
+          <div class="flex justify-center pt-3">
+            <div class="h-1 w-10 rounded-full bg-gray-200"></div>
+          </div>
+          <div class="px-5 pb-10 pt-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-[15px] font-semibold text-[#17212f]">Stake {{ selectedProduct.asset }}</h3>
+              <button @click="selectedProduct = null">
+                <Icon icon="mdi:close" class="text-[22px] text-gray-400" />
+              </button>
+            </div>
+            <div class="mt-4 rounded-xl bg-[#f6f8fb] p-4 space-y-2">
+              <div class="flex justify-between">
+                <p class="text-[11px] font-bold text-gray-400">APR</p>
+                <p class="text-[11px] font-semibold text-[#20c7b7]">{{ selectedProduct.apr }}</p>
+              </div>
+              <div class="flex justify-between">
+                <p class="text-[11px] font-bold text-gray-400">Min. Amount</p>
+                <p class="text-[11px] font-semibold text-[#17212f]">{{ selectedProduct.minAmount }}</p>
+              </div>
+              <div class="flex justify-between">
+                <p class="text-[11px] font-bold text-gray-400">Type</p>
+                <p class="text-[11px] font-semibold text-[#17212f]">{{ selectedProduct.subtitle }}</p>
+              </div>
+            </div>
+            <div class="mt-4">
+              <label class="text-[11px] font-semibold text-[#344054]">Amount</label>
+              <div class="mt-2 flex items-center rounded-xl border border-gray-200 bg-white px-4 py-3">
+                <input
+                  v-model="stakeAmount"
+                  type="number"
+                  placeholder="0.00"
+                  class="flex-1 bg-transparent text-[13px] font-semibold text-[#17212f] outline-none placeholder:text-gray-400"
+                />
+                <span class="text-[11px] font-semibold text-gray-400">{{ selectedProduct.asset }}</span>
+              </div>
+            </div>
+            <button
+              @click="confirmStake"
+              class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-semibold text-white active:scale-95"
+            >
+              Confirm Stake
+            </button>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- HOW IT WORKS SHEET -->
+      <Transition
+        enter-from-class="translate-y-full"
+        enter-active-class="transition-transform duration-300"
+        leave-to-class="translate-y-full"
+        leave-active-class="transition-transform duration-300"
+      >
+        <div
+          v-if="showHowItWorks"
+          class="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-107.5 rounded-t-3xl bg-white shadow-2xl"
+        >
+          <div class="flex justify-center pt-3">
+            <div class="h-1 w-10 rounded-full bg-gray-200"></div>
+          </div>
+          <div class="px-5 pb-10 pt-4">
+            <h3 class="text-[15px] font-semibold text-[#17212f]">How Staking Works</h3>
+            <div class="mt-4 space-y-4">
+              <div v-for="step in howItWorksSteps" :key="step.title" class="flex items-start gap-4">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e9fffc]">
+                  <Icon :icon="step.icon" class="text-[20px] text-[#20c7b7]" />
+                </div>
+                <div>
+                  <h4 class="text-[12px] font-semibold text-[#17212f]">{{ step.title }}</h4>
+                  <p class="mt-1 text-[11px] font-medium leading-relaxed text-gray-400">{{ step.desc }}</p>
+                </div>
+              </div>
+            </div>
+            <button
+              @click="showHowItWorks = false"
+              class="mt-6 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-semibold text-white active:scale-95"
+            >
+              Got It
+            </button>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- T&C SHEET -->
+      <Transition
+        enter-from-class="translate-y-full"
+        enter-active-class="transition-transform duration-300"
+        leave-to-class="translate-y-full"
+        leave-active-class="transition-transform duration-300"
+      >
+        <div
+          v-if="showTnC"
+          class="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-107.5 rounded-t-3xl bg-white shadow-2xl"
+        >
+          <div class="flex justify-center pt-3">
+            <div class="h-1 w-10 rounded-full bg-gray-200"></div>
+          </div>
+          <div class="flex items-center justify-between px-5 pb-3 pt-4">
+            <h3 class="text-[15px] font-semibold text-[#17212f]">Terms &amp; Conditions</h3>
+            <button @click="showTnC = false">
+              <Icon icon="mdi:close" class="text-[22px] text-gray-400" />
+            </button>
+          </div>
+
+          <div
+            ref="tncScrollEl"
+            @scroll="onTncScroll"
+            class="max-h-[62dvh] overflow-y-auto px-5 pb-2 text-[13px] leading-relaxed text-gray-700"
+          >
+            <p class="font-semibold text-[#17212f]">Terms &amp; Conditions – Smart Arbitrage (Lock Coin APR)</p>
+
+            <h4 class="mt-4 text-[12px] font-semibold text-[#17212f]">Lock Coin APR Program</h4>
+            <p class="mt-1">The Smart Arbitrage – Lock Coin APR feature allows users to lock their crypto assets for a fixed period in exchange for an Annual Percentage Rate (APR) reward.</p>
+            <p class="mt-1">The minimum lock-up period is 1 month (30 calendar days).</p>
+
+            <h4 class="mt-4 text-[12px] font-semibold text-[#17212f]">Early Withdrawal</h4>
+            <p class="mt-1">If the user withdraws funds before completing 1 full month, the following conditions apply:</p>
+            <ul class="mt-1 list-disc space-y-1 pl-5">
+              <li>A 1% penalty fee will be deducted from the total withdrawn amount.</li>
+              <li>All accrued APR interest will be canceled and not paid out.</li>
+            </ul>
+
+            <h4 class="mt-4 text-[12px] font-semibold text-[#17212f]">Withdrawal After Maturity</h4>
+            <p class="mt-1">If funds are withdrawn after the 1-month lock-up period, the user is entitled to:</p>
+            <ul class="mt-1 list-disc space-y-1 pl-5">
+              <li>The full principal amount (no deduction).</li>
+              <li>The APR interest as calculated by the system.</li>
+            </ul>
+
+            <h4 class="mt-4 text-[12px] font-semibold text-[#17212f]">APR Calculation</h4>
+            <ul class="mt-1 list-disc space-y-1 pl-5">
+              <li>Interest is calculated based on the locked amount and the lock-up duration, in accordance with system rules.</li>
+              <li>APR interest is only valid if the user completes the full lock-up period (≥ 1 month).</li>
+            </ul>
+
+            <h4 class="mt-4 text-[12px] font-semibold text-[#17212f]">Risks &amp; Responsibility</h4>
+            <ul class="mt-1 list-disc space-y-1 pl-5">
+              <li>Users acknowledge that crypto assets are subject to market volatility.</li>
+              <li>The platform is not responsible for any loss in asset value caused by market fluctuations.</li>
+              <li>By joining this program, users are deemed to have understood and accepted all associated risks.</li>
+            </ul>
+
+            <h4 class="mt-4 text-[12px] font-semibold text-[#17212f]">Amendments</h4>
+            <p class="mt-1">The platform reserves the right to review and amend these terms at any time, with prior notice to users.</p>
+            <div class="h-4"></div>
+          </div>
+
+          <div class="border-t border-gray-100 px-5 py-3">
+            <button
+              @click="tncScrolledToBottom && (showTnC = false)"
+              :disabled="!tncScrolledToBottom"
+              class="h-11 w-full rounded-xl text-[13px] font-semibold text-white transition-all"
+              :class="tncScrolledToBottom ? 'bg-[#08a99f] active:scale-[0.99]' : 'cursor-not-allowed bg-gray-300'"
+            >I Understand</button>
+            <p v-if="!tncScrolledToBottom" class="mt-2 text-center text-[10px] font-semibold text-gray-400">Scroll to the bottom to continue</p>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+  </DashboardLayout>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { Icon } from '@iconify/vue'
+import { useRouter } from 'vue-router'
+import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import CoinIcon from '@/components/CoinIcon.vue'
+import { makeContentApi } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import { useMarketStore, coinIconClass } from '@/stores/market'
+
+const router = useRouter()
+const auth = useAuthStore()
+const marketStore = useMarketStore()
+
+interface StakingProduct {
+  asset: string
+  subtitle: string
+  icon: string
+  iconClass: string
+  apr: string
+  minAmount: string
+  type: 'Flexible' | 'Locked'
+}
+
+const showBalance = ref(true)
+const activeTab = ref('Flexible')
+const tabs = ['Flexible', 'Locked']
+const selectedProduct = ref<StakingProduct | null>(null)
+const showHowItWorks = ref(false)
+const stakeAmount = ref('')
+
+const showTnC = ref(false)
+const tncScrolledToBottom = ref(false)
+const tncScrollEl = ref<HTMLElement | null>(null)
+
+function onTncScroll(e: Event) {
+  const el = e.target as HTMLElement
+  tncScrolledToBottom.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 8
+}
+
+// ── Coin helpers — resolve from market store, fallback to static ──────────────
+function coinIconResolved(coin: string): string {
+  return marketStore.coinMap.get(coin.toUpperCase())?.icon ?? 'mdi:currency-usd-circle'
+}
+function coinClass(coin: string): string {
+  return coinIconClass(coin.toUpperCase())
+}
+
+// ── Defaults (shown when API unavailable) ────────────────────────────────────
+const defaultProducts: StakingProduct[] = [
+  { asset: 'USDT', subtitle: 'Flexible Staking', icon: 'mdi:alpha-t-circle',          iconClass: coinIconClass('USDT'), apr: '4.00%', minAmount: '10 USDT',   type: 'Flexible' },
+  { asset: 'ETH',  subtitle: 'Flexible Staking', icon: 'mdi:ethereum',                iconClass: coinIconClass('ETH'),  apr: '3.85%', minAmount: '0.01 ETH',  type: 'Flexible' },
+  { asset: 'BTC',  subtitle: '30 Days',          icon: 'mdi:bitcoin',                 iconClass: coinIconClass('BTC'),  apr: '5.20%', minAmount: '0.001 BTC', type: 'Locked' },
+  { asset: 'SOL',  subtitle: '30 Days',          icon: 'mdi:circle-multiple-outline', iconClass: coinIconClass('SOL'),  apr: '6.10%', minAmount: '0.1 SOL',   type: 'Locked' },
+  { asset: 'BNB',  subtitle: '60 Days',          icon: 'mdi:alpha-b-circle',          iconClass: coinIconClass('BNB'),  apr: '5.80%', minAmount: '0.05 BNB',  type: 'Locked' },
+]
+
+const stakingProducts = ref<StakingProduct[]>(defaultProducts)
+
+onMounted(async () => {
+  marketStore.fetchCoins()
+  if (!auth.accessToken) return
+  try {
+    const api = makeContentApi(auth.accessToken)
+    const data = await api.getStakingProducts()
+    if (data.products.length > 0) {
+      stakingProducts.value = data.products.map(p => ({
+        asset:     p.coin,
+        subtitle:  p.type === 'flexible' ? 'Flexible Staking' : `${p.duration_days ?? 30} Days`,
+        icon:      coinIconResolved(p.coin),
+        iconClass: coinClass(p.coin),
+        apr:       Number(p.apr).toFixed(2) + '%',
+        minAmount: p.min_amount + ' ' + p.coin,
+        type:      p.type === 'flexible' ? 'Flexible' : 'Locked',
+      }))
+    }
+  } catch { /* silently use defaults */ }
+})
+
+const filteredProducts = computed(() =>
+  stakingProducts.value.filter(p => p.type === activeTab.value)
+)
+
+function openStake(item: StakingProduct) {
+  selectedProduct.value = item
+  stakeAmount.value = ''
+}
+
+function confirmStake() {
+  selectedProduct.value = null
+  stakeAmount.value = ''
+}
+
+const howItWorksSteps = [
+  { icon: 'mdi:wallet-outline',      title: 'Choose an Asset',      desc: 'Select a crypto asset you want to stake from the available products.' },
+  { icon: 'mdi:lock-outline',        title: 'Lock Your Funds',       desc: 'Enter the amount you wish to stake. Flexible stakes can be withdrawn anytime; locked stakes have a fixed term.' },
+  { icon: 'mdi:chart-line',          title: 'Earn Daily Rewards',    desc: 'Rewards are calculated daily based on the APR of your chosen product and credited to your account.' },
+  { icon: 'mdi:cash-multiple',       title: 'Withdraw Anytime',      desc: 'For flexible staking, redeem your funds at any time. Locked staking rewards are released at maturity.' },
+]
+</script>
