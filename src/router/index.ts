@@ -35,6 +35,7 @@ import RewardsScreen from '../views/dashboard/RewardsScreen.vue'
 import CopyTradeHistoryScreen from '../views/dashboard/CopyTradeHistoryScreen.vue'
 import NewsScreen from '../views/dashboard/NewsScreen.vue'
 import StakingScreen from '../views/dashboard/StakingScreen.vue'
+import GoogleCallbackScreen from '../views/auth/GoogleCallbackScreen.vue'
 
 /** Routes accessible only when NOT logged in */
 const guestOnly = ['/login', '/register', '/forgot', '/otp']
@@ -54,6 +55,7 @@ const routes = [
   { path: '/register',                             component: RegisterScreen },
   { path: '/forgot',                               component: ForgotPasswordScreen },
   { path: '/otp',                                  component: OtpScreen },
+  { path: '/auth/google/callback',                 component: GoogleCallbackScreen },
   { path: '/profile',           meta: { requiresAuth: true }, component: ProfileScreen },
   { path: '/dashboard',         meta: { requiresAuth: true }, component: HomeScreen },
   { path: '/assets',            meta: { requiresAuth: true }, component: AssetsScreen },

@@ -10,7 +10,7 @@
  * 2. Create a project → APIs & Services → OAuth 2.0 Client IDs
  * 3. Application type: "Web application"
  * 4. Authorised JavaScript origins: https://one-led.io
- * 5. No redirect URIs needed (we use the popup / callback approach)
+ * 5. Authorised redirect URIs: https://one-led.io/auth/google/callback  ← REQUIRED
  * 6. Copy the Client ID and paste it into GOOGLE_CLIENT_ID below
  * 7. On the backend, install: npm install google-auth-library
  *    Then verify the credential in /auth/oauth/google route using:
@@ -40,9 +40,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useToast }  from '@/composables/useToast'
 
 // ── Replace these with your real credentials ──────────────────────────────────
-const GOOGLE_CLIENT_ID = '214765646212-qg57lp4fpecr0ae6u7fbtvin58lhbfe4.apps.googleusercontent.com'
-const APPLE_CLIENT_ID  = 'io.one-led.services.auth'   // your Apple Services ID
-const APPLE_REDIRECT   = 'https://one-led.io'
+const GOOGLE_CLIENT_ID   = '214765646212-qg57lp4fpecr0ae6u7fbtvin58lhbfe4.apps.googleusercontent.com'
+const GOOGLE_REDIRECT_URI = 'https://one-led.io/auth/google/callback'
+const APPLE_CLIENT_ID    = 'io.one-led.services.auth'   // your Apple Services ID
+const APPLE_REDIRECT     = 'https://one-led.io'
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Dynamically load a <script> tag once (idempotent) */
@@ -56,16 +57,6 @@ function loadScript(src: string): Promise<void> {
     s.onerror  = () => reject(new Error(`Failed to load OAuth script: ${src}`))
     document.head.appendChild(s)
   })
-}
-
-declare const google: {
-  accounts: {
-    id: {
-      initialize:   (cfg: object) => void
-      renderButton: (container: HTMLElement, cfg: object) => void
-      cancel:       () => void
-    }
-  }
 }
 
 declare const AppleID: {
@@ -85,68 +76,47 @@ export function useOAuth() {
 
   // ── Google ──────────────────────────────────────────────────────────────────
   /**
-   * Attach a transparent Google-rendered button on top of a target element.
-   * Must be called once during component mount so the button is ready when
-   * the user clicks. The returned cleanup function removes the overlay.
-   *
-   * Usage in a component:
-   *   onMounted(() => { cleanupGoogle = attachGoogleButton(googleBtnRef.value) })
-   *   onUnmounted(() => cleanupGoogle?.())
+   * Redirect the browser to Google's OAuth consent screen.
+   * After consent, Google redirects to GOOGLE_REDIRECT_URI with the id_token
+   * in the URL fragment. The GoogleCallbackScreen then calls handleGoogleCallback().
    */
-  function attachGoogleButton(target: HTMLElement | null): (() => void) | undefined {
-    if (!target) return
+  function signInWithGoogle() {
+    // Generate a random nonce to bind this request
+    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+    sessionStorage.setItem('google_oauth_nonce', nonce)
 
-    // Overlay sits exactly on top of the target button
-    const overlay = document.createElement('div')
-    overlay.style.cssText = [
-      'position:absolute',
-      'inset:0',
-      'overflow:hidden',
-      'opacity:0.0001',   // invisible but still clickable
-      'z-index:10',
-      'cursor:pointer',
-    ].join(';')
-
-    // Google needs a relative-positioned parent
-    const existing = window.getComputedStyle(target).position
-    if (existing === 'static') target.style.position = 'relative'
-    target.appendChild(overlay)
-
-    const init = () => {
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback:  async (res: { credential: string }) => {
-          try {
-            const data = await authApi.oauthGoogle(res.credential)
-            await auth.loginFromOAuth(data)
-            router.push('/dashboard')
-          } catch {
-            toast.error('Google sign-in failed. Please try again.')
-          }
-        },
-        use_fedcm_for_prompt: false,
-      })
-      google.accounts.id.renderButton(overlay, {
-        type:            'standard',
-        theme:           'outline',
-        size:            'large',
-        width:           target.offsetWidth || 300,
-        logo_alignment:  'center',
-      })
-    }
-
-    loadScript('https://accounts.google.com/gsi/client')
-      .then(init)
-      .catch(() => { /* script load failed — silent */ })
-
-    return () => {
-      if (target.contains(overlay)) target.removeChild(overlay)
-    }
+    const params = new URLSearchParams({
+      response_type: 'id_token',
+      client_id:     GOOGLE_CLIENT_ID,
+      redirect_uri:  GOOGLE_REDIRECT_URI,
+      scope:         'openid email profile',
+      nonce,
+    })
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
   }
 
-  // Legacy click handler kept for backward compat (no longer triggers prompt)
-  async function signInWithGoogle() {
-    toast.warning('Click the Google button to sign in.')
+  /**
+   * Called by GoogleCallbackScreen on mount.
+   * Parses the id_token from the URL fragment, verifies it with the backend,
+   * and navigates to /dashboard on success.
+   * Throws on any error so the callback screen can display a message.
+   */
+  async function handleGoogleCallback(): Promise<void> {
+    const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const idToken  = fragment.get('id_token')
+    const error    = fragment.get('error')
+
+    if (error) throw new Error(`Google OAuth error: ${error}`)
+    if (!idToken) throw new Error('No id_token in callback URL')
+
+    // Clear the token from the URL bar immediately
+    window.history.replaceState({}, '', window.location.pathname)
+
+    const data = await authApi.oauthGoogle(idToken)
+    await auth.loginFromOAuth(data)
+    await router.push('/dashboard')
   }
 
   // ── Apple ───────────────────────────────────────────────────────────────────
@@ -180,5 +150,5 @@ export function useOAuth() {
     }
   }
 
-  return { attachGoogleButton, signInWithGoogle, signInWithApple }
+  return { signInWithGoogle, handleGoogleCallback, signInWithApple }
 }

@@ -176,7 +176,7 @@
       </div>
 
       <div class="mt-4 grid gap-3">
-        <button ref="googleBtnRef" type="button" class="relative flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50">
+        <button type="button" class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50" @click="signInWithGoogle">
           <img src="/images/google-logo.png" alt="google logo" class="size-5 object-contain" />
           <span>Continue with Google</span>
         </button>
@@ -195,7 +195,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useAuthStore, ApiError } from '../../stores/auth'
@@ -205,12 +205,7 @@ import { useOAuth } from '../../composables/useOAuth'
 const router = useRouter()
 const auth   = useAuthStore()
 const toast  = useToast()
-const { attachGoogleButton, signInWithApple } = useOAuth()
-
-const googleBtnRef = ref<HTMLElement | null>(null)
-let cleanupGoogle: (() => void) | undefined
-onMounted(() => { cleanupGoogle = attachGoogleButton(googleBtnRef.value) })
-onUnmounted(() => cleanupGoogle?.())
+const { signInWithGoogle, signInWithApple } = useOAuth()
 
 const email        = ref('')
 const password     = ref('')
