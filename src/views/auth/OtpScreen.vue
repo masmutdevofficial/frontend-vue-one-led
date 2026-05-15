@@ -160,10 +160,15 @@ async function handleVerify() {
   try {
     const wasRegister = auth.otpContext === 'register'
     await auth.verifyOtp(auth.pendingEmail, code)
+    auth.pendingEmail = ''
     if (wasRegister) {
-      toast.success('Akun berhasil diverifikasi! Selamat datang.')
+      // Clear session so user must log in manually
+      await auth.logout()
+      toast.success('Akun berhasil diverifikasi! Silakan login untuk masuk.')
+      router.push('/login')
+    } else {
+      router.push('/dashboard')
     }
-    router.push('/dashboard')
   } catch (err) {
     toast.error(err instanceof ApiError ? err.message : 'OTP verification failed.')
   } finally {
