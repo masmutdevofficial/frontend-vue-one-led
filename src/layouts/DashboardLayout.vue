@@ -158,11 +158,16 @@ const auth = useAuthStore()
 
 // ── User avatar ───────────────────────────────────────────────
 const DEFAULT_AVATAR = cdnUrl('defaults/avatar.png')
-const avatarSrc = ref(
-  (auth.profile as Record<string, unknown> | null)?.photo_url
-    ? cdnUrl(String((auth.profile as Record<string, unknown>).photo_url))
-    : DEFAULT_AVATAR,
-)
+
+/** Resolve avatar: Google/uploaded URL on user object > CDN path on profile > default */
+function resolveAvatar(): string {
+  if (auth.user?.profile) return auth.user.profile
+  const photoUrl = (auth.profile as Record<string, unknown> | null)?.photo_url
+  if (photoUrl) return cdnUrl(String(photoUrl))
+  return DEFAULT_AVATAR
+}
+
+const avatarSrc = ref(resolveAvatar())
 const userAvatar = computed(() => avatarSrc.value || DEFAULT_AVATAR)
 function onAvatarError() {
   avatarSrc.value = DEFAULT_AVATAR

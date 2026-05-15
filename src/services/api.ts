@@ -97,6 +97,7 @@ export interface WalletUser {
   username: string
   email:    string
   balance?: string
+  profile?: string | null   // URL to profile picture (Google photo or uploaded)
 }
 
 export interface UserProfile {

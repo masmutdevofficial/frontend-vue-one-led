@@ -201,7 +201,14 @@
       <div class="flex items-center gap-5">
         <div class="relative">
           <div class="grid size-28 place-items-center overflow-hidden rounded-full bg-linear-to-br from-teal-100 to-teal-400 text-white">
-            <Icon icon="mdi:account" class="size-20" />
+            <img
+              v-if="auth.user?.profile"
+              :src="auth.user.profile"
+              :alt="displayName"
+              class="size-full object-cover"
+              @error="($event.target as HTMLImageElement).style.display='none'"
+            />
+            <Icon v-else icon="mdi:account" class="size-20" />
           </div>
           <span class="absolute bottom-1 right-0 grid size-10 place-items-center rounded-full border-4 border-white bg-white text-slate-500 shadow-md">
             <Icon icon="mdi:camera-outline" class="size-5" />
