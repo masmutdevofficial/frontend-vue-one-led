@@ -470,6 +470,7 @@ onMounted(() => {
   chartTimer = setInterval(tickChart, 1200)
   // Fetch coin metadata from market store
   marketStore.fetchCoins()
+  if (marketStore.loaded) buildMarketsFromStore()
   // Fetch real balance
   if (auth.accessToken) {
     makeUserApi(auth.accessToken).getBalance()

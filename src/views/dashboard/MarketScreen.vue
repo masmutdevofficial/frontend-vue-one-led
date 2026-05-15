@@ -345,7 +345,7 @@ function generateChartPoints(): number[] {
 // ── Fetch coin list from admin-managed table ────────────────────
 async function fetchMarketCoins() {
   try {
-    const res = await fetch('/v1/public/market-coins')
+    const res = await fetch('https://api.one-led.io/v1/public/market-coins')
     if (!res.ok) return
     const data = await res.json()
     const coins: any[] = data.coins ?? []
