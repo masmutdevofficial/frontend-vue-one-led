@@ -171,9 +171,7 @@ const displayBalance = ref('$0.00')
 const balanceChange = ref<{ pct: string; positive: boolean }>({ pct: '0.00', positive: true })
 
 // Demo portfolio: how many units of each coin the user "holds"
-// index 0 = BTC, 1 = ETH, 2 = USDT  (must match COINCAP_IDS order)
-const COINCAP_IDS = ['bitcoin', 'ethereum', 'tether']
-const HOLDINGS    = [0.1, 3, 5000] // 0.1 BTC | 3 ETH | 5000 USDT
+const HOLDINGS = [0.1, 3, 5000] // 0.1 BTC | 3 ETH | 5000 USDT
 
 // --- Live coin data (initial values shown before API responds) ---
 const coins = ref<Coin[]>([
@@ -186,17 +184,17 @@ function fmtUsd(n: number) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-/** Fetch real-time prices from CoinCap (free, no API key required) */
+/** Fetch real-time prices from Binance (free, no API key required) */
 async function fetchLivePrices() {
   try {
-    const res = await fetch('https://api.coincap.io/v2/assets?ids=' + COINCAP_IDS.join(','))
+    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT"]')
     if (!res.ok) return
-    const json = await res.json() as { data?: Array<{ id: string; priceUsd: string; changePercent24Hr: string }> }
-    for (const asset of json.data ?? []) {
-      const idx = COINCAP_IDS.indexOf(asset.id)
+    const data = await res.json() as Array<{ symbol: string; lastPrice: string; priceChangePercent: string }>
+    for (const ticker of data) {
+      const idx = ticker.symbol === 'BTCUSDT' ? 0 : ticker.symbol === 'ETHUSDT' ? 1 : -1
       if (idx < 0) continue
-      const price     = parseFloat(asset.priceUsd)       || 0
-      const changePct = parseFloat(asset.changePercent24Hr) || 0
+      const price     = parseFloat(ticker.lastPrice)          || 0
+      const changePct = parseFloat(ticker.priceChangePercent) || 0
       const coin      = coins.value[idx]
       coin.baseAmount = price * HOLDINGS[idx]
       coin.changePct  = changePct
@@ -204,8 +202,15 @@ async function fetchLivePrices() {
       coin.amount     = fmtUsd(coin.baseAmount)
       coin.change     = (coin.positive ? '+' : '') + changePct.toFixed(2) + '%'
     }
+    // USDT is always pegged to $1.00
+    const usdt      = coins.value[2]
+    usdt.baseAmount = HOLDINGS[2]
+    usdt.changePct  = 0.01
+    usdt.positive   = true
+    usdt.amount     = fmtUsd(usdt.baseAmount)
+    usdt.change     = '+0.01%'
   } catch {
-    // CoinCap unreachable — keep default values, simulation still runs
+    // Binance unreachable — simulation continues with current values
   }
 }
 
