@@ -153,11 +153,8 @@
             >
               <!-- Name + icon -->
               <div class="flex items-center gap-2">
-                <div
-                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                  :class="coinIconClass(coin.name)"
-                >
-                  <CoinIcon :icon="coin.icon" :symbol="coin.name" icon-class="text-[20px]" img-class="h-5 w-5 rounded-full" />
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center">
+                  <CoinIcon :icon="coin.icon" :symbol="coin.name" icon-class="text-[28px]" img-class="h-8 w-8 rounded-full object-contain" />
                 </div>
                 <div class="min-w-0">
                   <p class="text-[12px] font-extrabold leading-none">{{ coin.name }}</p>
@@ -231,7 +228,6 @@ import { Icon } from '@iconify/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CoinIcon from '@/components/CoinIcon.vue'
 import { useMarketWs } from '@/services/marketWs'
-import { coinIconClass as storeCoinIconClass } from '@/stores/market'
 
 const router = useRouter()
 
@@ -281,10 +277,6 @@ function formatPrice(price: number): string {
   if (price >= 1000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   if (price >= 1) return price.toFixed(2)
   return price.toFixed(6)
-}
-
-function coinIconClass(name: string): string {
-  return storeCoinIconClass(name)
 }
 
 // ── Tabs & categories ──────────────────────────────────────────

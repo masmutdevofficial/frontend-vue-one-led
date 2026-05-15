@@ -264,11 +264,8 @@
             >
               <!-- Name + icon -->
               <div class="flex items-center gap-2">
-                <div
-                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-                  :class="coinIconClass(coin.symbol)"
-                >
-                  <CoinIcon :icon="coin.icon" :symbol="coin.symbol" icon-class="text-[17px]" img-class="h-4 w-4 rounded-full" />
+                <div class="flex h-7 w-7 shrink-0 items-center justify-center">
+                  <CoinIcon :icon="coin.icon" :symbol="coin.symbol" icon-class="text-[26px]" img-class="h-7 w-7 rounded-full object-contain" />
                 </div>
                 <div class="min-w-0">
                   <p class="text-[10px] font-extrabold leading-none">{{ coin.symbol }}</p>
@@ -371,7 +368,7 @@ import 'swiper/css'
 import 'swiper/css/pagination'
 import { useAuthStore } from '@/stores/auth'
 import { makeUserApi, makeContentApi } from '@/services/api'
-import { useMarketStore, coinIconClass } from '@/stores/market'
+import { useMarketStore } from '@/stores/market'
 import { useMarketWs } from '@/services/marketWs'
 
 const router = useRouter()
@@ -545,7 +542,7 @@ function buildMarketsFromStore() {
       change: t?.change ?? existing?.change ?? 0,
       marketCap: marketStore.fmtCap(c.marketCap),
       chartPoints: existing?.chartPoints ?? [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60],
-      isNewListing: !c.isFeatured,
+      isNewListing: false,
     }
   })
 }
