@@ -48,7 +48,7 @@ export const useMarketStore = defineStore('market', () => {
     if (loaded.value || loading.value) return
     loading.value = true
     try {
-      const res = await fetch('/v1/public/market-coins')
+      const res = await fetch('https://api.one-led.io/v1/public/market-coins')
       const data = await res.json()
       coins.value = (data.coins ?? []).map((c: Record<string, unknown>) => ({
         symbol:      String(c.symbol ?? '').toUpperCase(),
