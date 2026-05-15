@@ -38,7 +38,7 @@ interface RawTick {
 
 // ── Singleton state ───────────────────────────────────────────────────────────
 
-const WS_URL: string = 'wss://ws.one-led.io'
+const WS_URL: string = 'wss://api.one-led.io/ws'
 
 /**
  * Reactive map of Binance pair → latest ticker data.
