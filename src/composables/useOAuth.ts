@@ -35,7 +35,7 @@
  */
 
 import { useRouter } from 'vue-router'
-import { authApi }   from '@/services/api'
+import { authApi, type WalletUser } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useToast }  from '@/composables/useToast'
 
@@ -115,7 +115,16 @@ export function useOAuth() {
     window.history.replaceState({}, '', window.location.pathname)
 
     const data = await authApi.oauthGoogle(idToken)
-    await auth.loginFromOAuth(data)
+
+    // New or inactive user — admin must send OTP before they can log in
+    if ('pending_otp' in data && data.pending_otp) {
+      auth.pendingEmail = data.email
+      auth.otpContext   = 'register'
+      await router.push('/otp')
+      return
+    }
+
+    await auth.loginFromOAuth(data as { access_token: string; refresh_token: string; expires_in: number; user: WalletUser })
     await router.push('/dashboard')
   }
 

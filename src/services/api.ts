@@ -75,7 +75,10 @@ export const authApi = {
 
   /** OAuth — Google: send the credential (id_token) from Google GIS callback */
   oauthGoogle: (credential: string) =>
-    request<{ access_token: string; refresh_token: string; expires_in: number; user: WalletUser }>('POST', '/auth/oauth/google', { credential }),
+    request<
+      { access_token: string; refresh_token: string; expires_in: number; user: WalletUser } |
+      { pending_otp: true; email: string }
+    >('POST', '/auth/oauth/google', { credential }),
 
   /** OAuth — Apple: send id_token + authorization code from Apple Sign-in */
   oauthApple: (id_token: string, code: string) =>
