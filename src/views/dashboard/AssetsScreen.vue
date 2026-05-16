@@ -272,7 +272,7 @@ const COIN_META_FALLBACK: Record<string, { name: string; icon: string; price: nu
 function getCoinMeta(symbol: string): { name: string; icon: string; iconClass: string; price: number } {
   const upper = symbol.toUpperCase()
   const storeData = marketStore.coinMap.get(upper)
-  const ticker    = marketStore.tickerMap.value.get(storeData?.binancePair ?? upper + 'USDT')
+  const ticker    = marketStore.tickerMap.get(storeData?.binancePair ?? upper + 'USDT')
   const fallback  = COIN_META_FALLBACK[upper]
   return {
     name:      storeData?.name  ?? fallback?.name  ?? symbol,

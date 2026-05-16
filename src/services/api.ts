@@ -77,8 +77,13 @@ export const authApi = {
   oauthGoogle: (credential: string) =>
     request<
       { access_token: string; refresh_token: string; expires_in: number; user: WalletUser } |
-      { pending_otp: true; email: string }
+      { pending_otp: true; email: string } |
+      { needs_referral: true; email: string }
     >('POST', '/auth/oauth/google', { credential }),
+
+  /** OAuth — Google (step 2): submit referral code + re-validated token to create account */
+  completeGoogleOAuth: (credential: string, referral: string) =>
+    request<{ pending_otp: true; email: string }>('POST', '/auth/oauth/google/complete', { credential, referral }),
 
   /** OAuth — Apple: send id_token + authorization code from Apple Sign-in */
   oauthApple: (id_token: string, code: string) =>

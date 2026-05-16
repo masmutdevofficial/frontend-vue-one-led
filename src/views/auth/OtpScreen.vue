@@ -11,16 +11,37 @@
       <div class="mt-4 grid items-center gap-2 sm:grid-cols-[1fr_180px] lg:grid-cols-1">
         <div>
           <h2 class="text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-3xl">
-            {{ isForgot ? 'Reset' : 'Enter' }}<br /><span class="text-teal-500">{{ isForgot ? 'Password' : 'OTP Code' }}</span>
+            {{ isForgot ? 'Reset' : (isGoogleRegister && googlePhase === 'referral' ? 'Enter' : 'Enter') }}<br />
+            <span class="text-teal-500">{{ isForgot ? 'Password' : (isGoogleRegister && googlePhase === 'referral' ? 'Referral Code' : 'OTP Code') }}</span>
           </h2>
           <p class="mt-2 text-sm font-medium text-slate-500 sm:mt-3 sm:text-base">
-            {{ isForgot ? 'Enter the OTP sent to your email and set a new password.' : 'We have sent a 6-digit verification code to your email.' }}
+            {{ isForgot ? 'Enter the OTP sent to your email and set a new password.' : (isGoogleRegister && googlePhase === 'referral' ? 'Enter your upline\'s referral code to complete your Google registration.' : 'We have sent a 6-digit verification code to your email.') }}
           </p>
         </div>
         <img src="/images/wallet-image.png" alt="Crypto Wallet" class="hidden w-full h-auto object-contain sm:block lg:hidden" />
       </div>
 
-      <div class="mt-6 grid grid-cols-6 gap-2">
+      <!-- Referral input — only shown for new Google users (phase 1) -->
+      <div v-if="isGoogleRegister && googlePhase === 'referral'" class="mt-6">
+        <div class="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm shadow-slate-200/40 transition focus-within:border-teal-400 focus-within:ring-1 focus-within:ring-teal-300">
+          <span class="grid size-9 shrink-0 place-items-center rounded-xl border border-slate-100 bg-white text-teal-500 shadow-sm">
+            <Icon icon="mdi:account-multiple-outline" class="size-5" />
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-semibold tracking-wide text-slate-400">Upline Referral Code</p>
+            <input
+              v-model="referralCode"
+              type="text"
+              placeholder="e.g. ABC12345"
+              class="mt-0.5 w-full bg-transparent text-sm font-semibold uppercase text-slate-950 placeholder:font-normal placeholder:text-slate-400 placeholder:normal-case outline-none"
+              @keyup.enter="handleReferralSubmit"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- OTP digit grid — hidden during referral phase -->
+      <div v-if="!(isGoogleRegister && googlePhase === 'referral')" class="mt-6 grid grid-cols-6 gap-2">
         <input
           v-for="(_, i) in 6"
           :key="i"
@@ -53,15 +74,20 @@
         </div>
       </div>
 
-      <p class="mt-5 text-center text-xs font-semibold text-slate-500">
+      <p v-if="!(isGoogleRegister && googlePhase === 'referral')" class="mt-5 text-center text-xs font-semibold text-slate-500">
         Didn't receive the code?
         <button v-if="resendCooldown === 0" type="button" class="font-semibold text-teal-500" @click="handleResend">Resend Code</button>
         <span v-else class="font-semibold text-teal-500">Resend in {{ String(Math.floor(resendCooldown / 60)).padStart(2, '0') }}:{{ String(resendCooldown % 60).padStart(2, '0') }}</span>
       </p>
 
       <div class="mt-5">
-        <button type="button" :disabled="loading" class="flex w-full items-center justify-center rounded-xl bg-[#020a22] px-5 py-3.5 text-base font-semibold tracking-wide text-white shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed" @click="handleVerify">
-          <span class="flex-1 text-center ml-4">{{ loading ? 'Verifying…' : (isForgot ? 'Reset Password' : 'Verify Code') }}</span>
+        <button
+          type="button"
+          :disabled="loading"
+          class="flex w-full items-center justify-center rounded-xl bg-[#020a22] px-5 py-3.5 text-base font-semibold tracking-wide text-white shadow-lg shadow-slate-950/20 transition hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+          @click="isGoogleRegister && googlePhase === 'referral' ? handleReferralSubmit() : handleVerify()"
+        >
+          <span class="flex-1 text-center ml-4">{{ loading ? 'Please wait…' : (isGoogleRegister && googlePhase === 'referral' ? 'Continue' : (isForgot ? 'Reset Password' : 'Verify Code')) }}</span>
           <Icon icon="mdi:arrow-right" class="size-5" />
         </button>
       </div>
@@ -94,7 +120,12 @@ const newPassword  = ref('')
 const showPassword = ref(false)
 const resendCooldown = ref(30)
 
-const isForgot = computed(() => auth.otpContext === 'forgot')
+const isForgot         = computed(() => auth.otpContext === 'forgot')
+const isGoogleRegister = computed(() => auth.otpContext === 'google_register')
+
+// google_register is a two-phase flow: referral input → then OTP
+const googlePhase  = ref<'referral' | 'otp'>('referral')
+const referralCode = ref('')
 
 let cooldownTimer: ReturnType<typeof setInterval> | null = null
 
@@ -132,8 +163,26 @@ function onPaste(e: ClipboardEvent) {
 }
 
 function goBack() {
-  auth.pendingEmail = ''
-  router.push(auth.otpContext === 'register' ? '/register' : '/login')
+  auth.pendingEmail       = ''
+  auth.pendingGoogleToken = ''
+  const ctx = auth.otpContext
+  router.push(ctx === 'register' ? '/register' : '/login')
+}
+
+async function handleReferralSubmit() {
+  const code = referralCode.value.trim().toUpperCase()
+  if (!code) { toast.warning('Please enter your upline referral code.'); return }
+
+  loading.value = true
+  try {
+    await auth.completeGoogleRegister(code)
+    googlePhase.value = 'otp'
+    toast.success('Account created! Please enter the OTP code sent by admin.')
+  } catch (err) {
+    toast.error(err instanceof ApiError ? err.message : 'Failed to submit referral code.')
+  } finally {
+    loading.value = false
+  }
 }
 
 async function handleVerify() {
@@ -158,7 +207,7 @@ async function handleVerify() {
 
   loading.value = true
   try {
-    const wasRegister = auth.otpContext === 'register'
+    const wasRegister = auth.otpContext === 'register' || auth.otpContext === 'google_register'
     await auth.verifyOtp(auth.pendingEmail, code)
     auth.pendingEmail = ''
     if (wasRegister) {

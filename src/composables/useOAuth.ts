@@ -116,6 +116,15 @@ export function useOAuth() {
 
     const data = await authApi.oauthGoogle(idToken)
 
+    // New user — must provide referral code before account is created
+    if ('needs_referral' in data && data.needs_referral) {
+      auth.pendingEmail       = data.email
+      auth.pendingGoogleToken = idToken
+      auth.otpContext         = 'google_register'
+      await router.push('/otp')
+      return
+    }
+
     // New or inactive user — admin must send OTP before they can log in
     if ('pending_otp' in data && data.pending_otp) {
       auth.pendingEmail = data.email

@@ -41,6 +41,10 @@ const supportCards = [
   { title: 'Live Chat', desc: 'Chat with our support team in real time.', icon: 'mdi:chat-outline' },
   { title: 'Email Support', desc: 'Send us an email and we\'ll get back to you.', icon: 'mdi:email-outline' },
 ]
+
+function openMailSupport() {
+  window.open('mailto:support@oneledger.com', '_blank')
+}
 </script>
 
 <template>
@@ -121,7 +125,7 @@ const supportCards = [
             v-for="card in supportCards"
             :key="card.title"
             class="rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm active:scale-[0.98]"
-            @click="card.title === 'Email Support' && window.open('mailto:support@oneledger.com', '_blank')"
+            @click="card.title === 'Email Support' && openMailSupport()"
           >
             <div class="flex h-12 w-12 items-center justify-center rounded-full bg-[#eafffb]">
               <Icon :icon="card.icon" class="text-[24px] text-[#20c7b7]" />

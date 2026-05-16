@@ -7,7 +7,7 @@ let _pollInterval: ReturnType<typeof setInterval> | null = null
 
 const STORAGE_KEY = 'wallet_session'
 
-export type OtpContext = 'register' | 'login' | 'forgot'
+export type OtpContext = 'register' | 'login' | 'forgot' | 'google_register'
 
 export const useAuthStore = defineStore('auth', () => {
   const user         = ref<WalletUser | null>(null)
@@ -17,8 +17,9 @@ export const useAuthStore = defineStore('auth', () => {
   const expiresAt    = ref<number | null>(null)
 
   // Pending OTP state (passed between screens)
-  const pendingEmail = ref<string>('')
-  const otpContext   = ref<OtpContext>('login')
+  const pendingEmail       = ref<string>('')
+  const otpContext         = ref<OtpContext>('login')
+  const pendingGoogleToken = ref<string>('')
 
   // ── Getters ──
 
@@ -101,6 +102,11 @@ export const useAuthStore = defineStore('auth', () => {
     return authApi.resetPassword(email, code, password)
   }
 
+  /** Step 2 of Google new-user flow: submit referral code to create account */
+  async function completeGoogleRegister(referral: string) {
+    return authApi.completeGoogleOAuth(pendingGoogleToken.value, referral)
+  }
+
   /** Called after a successful Google or Apple OAuth response to set the session */
   async function loginFromOAuth(data: {
     access_token:  string
@@ -135,7 +141,8 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value  = null
     refreshToken.value = null
     expiresAt.value    = null
-    pendingEmail.value = ''
+    pendingEmail.value       = ''
+    pendingGoogleToken.value = ''
     localStorage.removeItem(STORAGE_KEY)
   }
 
@@ -189,6 +196,8 @@ export const useAuthStore = defineStore('auth', () => {
     isTokenExpired,
     pendingEmail,
     otpContext,
+    pendingGoogleToken,
+    completeGoogleRegister,
     register,
     login,
     loginFromOAuth,

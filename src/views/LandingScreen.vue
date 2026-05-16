@@ -255,8 +255,8 @@ onMounted(async () => {
 const chartSeries = [{ name: 'Balance', data: [18, 30, 26, 42, 34, 38, 50, 41, 45, 58, 52, 68, 62, 76] }]
 
 const chartOptions = {
-  chart: { type: 'area', sparkline: { enabled: true }, toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
-  stroke: { curve: 'smooth', width: 2 },
+  chart: { type: 'area' as const, sparkline: { enabled: true }, toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
+  stroke: { curve: 'smooth' as const, width: 2 },
   fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0, stops: [0, 100] } },
   colors: ['#2dd4bf'],
   tooltip: { enabled: false },
