@@ -263,7 +263,28 @@
                   <p class="mt-0.5 text-[11px] font-semibold leading-none text-[#17212f]">{{ trader.winRate }}%</p>
                 </div>
               </div>
-              <!-- AUM / Copiers / Min. Copy -->
+
+            </div>
+
+            <!-- Action -->
+            <div class="flex flex-col items-end gap-2">
+              <span class="rounded-full px-2 py-1 text-[8px] font-semibold" :class="trader.riskClass">
+                {{ trader.risk }}
+              </span>
+              <button
+                @click.stop="followedTraders.includes(trader.name)
+                  ? router.push(`/copy-trader/${trader.username}`)
+                  : openJoinModal(trader.username)"
+                class="h-8 w-15 rounded-lg border text-[11px] font-semibold transition-colors duration-200 active:scale-95"
+                :class="followedTraders.includes(trader.name)
+                  ? 'border-[#10b8ad] bg-[#10b8ad] text-white'
+                  : 'border-[#10b8ad] bg-[#f7fffe] text-[#10b8ad]'"
+              >
+                {{ followedTraders.includes(trader.name) ? 'Copying' : 'Join' }}
+              </button>
+            </div>
+          </div>
+                        <!-- AUM / Copiers / Min. Copy -->
               <div class="mt-1.5 flex items-start justify-between gap-1">
                 <div class="flex min-w-0 flex-1 items-start gap-0.5">
                   <Icon icon="mdi:bank-outline" class="mt-px shrink-0 text-[9px] text-gray-400" />
@@ -287,26 +308,6 @@
                   </div>
                 </div>
               </div>
-            </div>
-
-            <!-- Action -->
-            <div class="flex flex-col items-end gap-2">
-              <span class="rounded-full px-2 py-1 text-[8px] font-semibold" :class="trader.riskClass">
-                {{ trader.risk }}
-              </span>
-              <button
-                @click.stop="followedTraders.includes(trader.name)
-                  ? router.push(`/copy-trader/${trader.username}`)
-                  : openJoinModal(trader.username)"
-                class="h-8 w-15 rounded-lg border text-[11px] font-semibold transition-colors duration-200 active:scale-95"
-                :class="followedTraders.includes(trader.name)
-                  ? 'border-[#10b8ad] bg-[#10b8ad] text-white'
-                  : 'border-[#10b8ad] bg-[#f7fffe] text-[#10b8ad]'"
-              >
-                {{ followedTraders.includes(trader.name) ? 'Copying' : 'Join' }}
-              </button>
-            </div>
-          </div>
         </article>
         </div>
 
