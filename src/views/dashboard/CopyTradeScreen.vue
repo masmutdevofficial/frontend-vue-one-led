@@ -264,7 +264,7 @@
                 </div>
               </div>
               <!-- AUM / Copiers / Min. Copy -->
-              <div class="mt-1.5 flex flex-col gap-1 md:flex-row md:items-start md:gap-3">
+              <div class="mt-1.5 grid grid-cols-3 gap-2">
                 <div class="flex items-start gap-1">
                   <Icon icon="mdi:bank-outline" class="mt-px shrink-0 text-[9px] text-gray-400" />
                   <div>
@@ -1001,21 +1001,43 @@ onMounted(async () => {
     const api = makeContentApi(auth.accessToken)
     const data = await api.getCopyTraders()
     if (data.traders.length > 0) {
-      tradersRaw.value = data.traders.map((t, i) => ({
-        rank:      String(i + 1).padStart(2, '0'),
-        name:      t.name,
-        username:  t.username,
-        tag:       t.tag ?? '',
-        avatar:    t.avatar ?? `https://i.pravatar.cc/100?img=${20 + i}`,
-        roi:       Number(t.roi),
-        aum:       '$' + formatAum(Number(t.aum)),
-        winRate:   Number(t.win_rate),
-        copiers:   Number(t.copiers),
-        minCopy:   Number(t.min_copy),
-        risk:      riskLabel(t.risk),
-        riskClass: riskClass(t.risk),
-        chartPts:  randPts(10, 45, 18),
-      }))
+      let totalAumRaw = 0
+      let totalCopiers = 0
+      let totalRoi = 0
+
+      tradersRaw.value = data.traders.map((t, i) => {
+        const rawAum = Number(t.aum) || 0
+        totalAumRaw  += rawAum
+        totalCopiers += Number(t.copiers) || 0
+        totalRoi     += Number(t.roi) || 0
+        return {
+          rank:      String(i + 1).padStart(2, '0'),
+          name:      t.name,
+          username:  t.username,
+          tag:       t.tag ?? '',
+          avatar:    t.avatar ?? `https://i.pravatar.cc/100?img=${20 + i}`,
+          roi:       Number(t.roi),
+          aum:       '$' + formatAum(rawAum),
+          winRate:   Number(t.win_rate),
+          copiers:   Number(t.copiers),
+          minCopy:   Number(t.min_copy),
+          risk:      riskLabel(t.risk),
+          riskClass: riskClass(t.risk),
+          chartPts:  randPts(10, 45, 18),
+        }
+      })
+
+      const n      = data.traders.length
+      const avgRoi = n > 0 ? totalRoi / n : 0
+      const aumB   = totalAumRaw / 1e9
+
+      liveStats.value = liveStats.value.map(s => {
+        if (s.label === 'Total Copied Value') return { ...s, raw: aumB,          value: `$${aumB.toFixed(2)}B` }
+        if (s.label === 'Avg. 30D ROI')       return { ...s, raw: avgRoi,        value: `+${avgRoi.toFixed(2)}%` }
+        if (s.label === 'Active Traders')     return { ...s, raw: n,             value: n.toLocaleString() }
+        if (s.label === 'Total Copiers')      return { ...s, raw: totalCopiers,  value: totalCopiers.toLocaleString() }
+        return s
+      })
     }
   } catch { /* silently use defaults */ }
 })

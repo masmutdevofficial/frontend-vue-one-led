@@ -25,11 +25,11 @@
             </div>
             <div class="mt-3 flex items-end justify-between">
               <div>
-                <p class="text-[24px] font-semibold leading-none text-[#10b8ad]">64,023.45</p>
-                <p class="mt-1 text-[11px] font-semibold text-gray-400">≈ $64,023.45</p>
+                <p class="text-[24px] font-semibold leading-none" :class="liveChange >= 0 ? 'text-[#10b8ad]' : 'text-red-400'">{{ formatPrice(livePrice) }}</p>
+                <p class="mt-1 text-[11px] font-semibold text-gray-400">≈ ${{ formatPrice(livePrice) }}</p>
               </div>
               <div class="text-right">
-                <p class="text-[16px] font-semibold text-[#10b8ad]">+1.24%</p>
+                <p class="text-[16px] font-semibold" :class="liveChange >= 0 ? 'text-[#10b8ad]' : 'text-red-400'">{{ (liveChange >= 0 ? '+' : '') + liveChange.toFixed(2) }}%</p>
                 <p class="mt-0.5 text-[10px] font-bold text-gray-400">24h Change</p>
               </div>
             </div>
@@ -44,20 +44,12 @@
                 <span class="rounded-full border border-[#b7eee9] bg-[#f2fffe] px-3 py-1 text-[10px] font-semibold text-[#0aa99e]">Perpetual</span>
               </div>
               <p class="mt-5 text-[12px] font-bold text-gray-400">Last Price</p>
-              <p class="mt-2 text-[26px] font-semibold leading-none text-[#10b8ad]">64,023.45</p>
-              <p class="mt-2 text-[12px] font-semibold text-gray-400">≈ $64,023.45</p>
+              <p class="mt-2 text-[26px] font-semibold leading-none" :class="liveChange >= 0 ? 'text-[#10b8ad]' : 'text-red-400'">{{ formatPrice(livePrice) }}</p>
+              <p class="mt-2 text-[12px] font-semibold text-gray-400">≈ ${{ formatPrice(livePrice) }}</p>
             </div>
             <div class="border-l border-gray-100 pl-6">
               <p class="text-[12px] font-bold text-gray-400">24h Change</p>
-              <p class="mt-4 text-[18px] font-semibold text-[#10b8ad]">+1.24%</p>
-              <div class="relative mt-4 h-8.5 w-21.5">
-                <span class="absolute left-0 top-6.25 h-0.5 w-4 rotate-[-28deg] rounded-full bg-[#72ded8]"></span>
-                <span class="absolute left-3.25 top-4.75 h-0.5 w-4 rotate-34 rounded-full bg-[#72ded8]"></span>
-                <span class="absolute left-6.5 top-5.5 h-0.5 w-4 rotate-[-34deg] rounded-full bg-[#72ded8]"></span>
-                <span class="absolute left-9.75 top-3.25 h-0.5 w-4 rotate-32 rounded-full bg-[#72ded8]"></span>
-                <span class="absolute left-13 top-4.25 h-0.5 w-4 rotate-[-35deg] rounded-full bg-[#72ded8]"></span>
-                <span class="absolute left-16.25 top-2 h-0.5 w-4 rotate-[-28deg] rounded-full bg-[#72ded8]"></span>
-              </div>
+              <p class="mt-4 text-[18px] font-semibold" :class="liveChange >= 0 ? 'text-[#10b8ad]' : 'text-red-400'">{{ (liveChange >= 0 ? '+' : '') + liveChange.toFixed(2) }}%</p>
             </div>
             <div class="border-l border-gray-100 pl-6">
               <p class="text-[12px] font-bold text-gray-400">Leverage</p>
@@ -126,7 +118,7 @@
               {{ marginMode }} <Icon icon="mdi:chevron-down" class="text-[15px]" />
             </button>
             <button class="flex items-center gap-2 text-[12px] font-semibold text-gray-500">
-              0.00 USDT <Icon icon="mdi:swap-horizontal" class="text-[16px]" />
+              {{ formatPrice(availableBalance) }} USDT <Icon icon="mdi:swap-horizontal" class="text-[16px]" />
             </button>
           </div>
 
@@ -185,7 +177,7 @@
           <div class="mt-4 space-y-2">
             <div class="flex justify-between text-[12px]">
               <span class="font-bold text-gray-500">Available</span>
-              <span class="font-semibold text-[#17212f]">1,250.00 USDT <Icon icon="mdi:plus-circle-outline" class="inline text-[15px] text-[#0aa99e]" /></span>
+              <span class="font-semibold text-[#17212f]">{{ formatPrice(availableBalance) }} USDT <Icon icon="mdi:plus-circle-outline" class="inline text-[15px] text-[#0aa99e]" /></span>
             </div>
             <div class="flex justify-between text-[12px]">
               <span class="font-bold text-gray-500">Max Long</span>
@@ -254,12 +246,12 @@
         <div class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           <div class="flex items-center justify-between border-b border-gray-100 px-4 md:px-5">
             <div class="flex h-15 items-center gap-5 overflow-x-auto md:gap-9">
-              <button v-for="tab in bottomTabs" :key="tab" @click="activeTab = tab"
+              <button v-for="(label, i) in bottomTabs" :key="bottomTabKeys[i]" @click="activeTab = bottomTabKeys[i]"
                 class="relative h-full shrink-0 text-[13px] font-semibold transition-colors md:text-[14px]"
-                :class="activeTab === tab ? 'text-[#0aa99e]' : 'text-gray-500'"
+                :class="activeTab === bottomTabKeys[i] ? 'text-[#0aa99e]' : 'text-gray-500'"
               >
-                {{ tab }}
-                <span v-if="activeTab === tab" class="absolute bottom-0 left-0 right-0 h-0.75 rounded-full bg-[#0aa99e]"></span>
+                {{ label }}
+                <span v-if="activeTab === bottomTabKeys[i]" class="absolute bottom-0 left-0 right-0 h-0.75 rounded-full bg-[#0aa99e]"></span>
               </button>
             </div>
             <button class="shrink-0 active:scale-95">
@@ -267,50 +259,78 @@
             </button>
           </div>
 
-          <!-- Position card -->
-          <div class="p-4 md:p-5">
-            <div class="flex items-start justify-between">
-              <div class="flex items-center gap-3">
-                <div class="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 text-orange-500 md:h-12 md:w-12">
-                  <Icon icon="mdi:bitcoin" class="text-[28px] md:text-[30px]" />
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <h2 class="text-[15px] font-semibold md:text-[17px]">BTC/USDT</h2>
-                    <span class="rounded bg-[#eafffd] px-2 py-0.5 text-[9px] font-semibold text-[#0aa99e]">Perpetual</span>
-                  </div>
-                  <div class="mt-1 flex items-center gap-2">
-                    <span class="text-[12px] font-semibold text-[#0aa99e]">Long</span>
-                    <span class="text-[12px] font-bold text-gray-400">{{ leverage }}x</span>
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-center gap-3 text-gray-500 md:gap-4">
-                <button @click="showShareSheet = true" class="flex items-center gap-1 text-[12px] font-bold active:scale-95">
-                  <Icon icon="mdi:share-variant-outline" class="text-[17px]" />
-                  <span class="hidden sm:inline">Share</span>
-                </button>
-                <button @click="showPositionMenu = true" class="active:scale-95">
-                  <Icon icon="mdi:dots-vertical" class="text-[20px]" />
-                </button>
-              </div>
-            </div>
+          <!-- Loading -->
+          <div v-if="isLoadingPositions" class="py-12 text-center text-[13px] font-semibold text-gray-400">Loading…</div>
 
-            <!-- Position data -->
-            <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 md:mt-5 md:grid-cols-4 md:gap-x-6 md:gap-y-5">
-              <div v-for="item in positionData" :key="item.label">
-                <p class="text-[11px] font-bold text-gray-400">{{ item.label }}</p>
-                <p class="mt-1.5 whitespace-pre-line text-[13px] font-semibold leading-snug md:mt-2 md:text-[14px]" :class="item.teal ? 'text-[#0aa99e]' : 'text-[#17212f]'">
-                  {{ item.value }}
-                </p>
+          <!-- Positions tab -->
+          <template v-else-if="activeTab === 'positions'">
+            <!-- Empty state -->
+            <div v-if="positionsList.length === 0" class="flex flex-col items-center py-12 text-center">
+              <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[#e9fffc]">
+                <Icon icon="mdi:chart-line-variant" class="text-[36px] text-[#10b8ad]" />
               </div>
-              <div class="col-span-2 mt-1 md:col-span-1 md:mt-0 md:flex md:items-end md:justify-end">
-                <button @click="showCloseSheet = true" class="h-10 w-full rounded-xl border border-[#0aa99e] bg-[#f6fffe] px-6 text-[13px] font-semibold text-[#0aa99e] active:scale-95 md:w-auto">
-                  Close Position
-                </button>
+              <p class="mt-4 text-[13px] font-semibold text-gray-400">No open positions</p>
+            </div>
+            <!-- Position card -->
+            <div v-else class="p-4 md:p-5">
+              <div class="flex items-start justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 text-orange-500 md:h-12 md:w-12">
+                    <Icon icon="mdi:bitcoin" class="text-[28px] md:text-[30px]" />
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h2 class="text-[15px] font-semibold md:text-[17px]">{{ firstPosition?.symbol?.replace('USDT', '/USDT') ?? 'BTC/USDT' }}</h2>
+                      <span class="rounded bg-[#eafffd] px-2 py-0.5 text-[9px] font-semibold text-[#0aa99e]">Perpetual</span>
+                    </div>
+                    <div class="mt-1 flex items-center gap-2">
+                      <span class="text-[12px] font-semibold" :class="(firstPosition?.side ?? 'Long') === 'Long' ? 'text-[#0aa99e]' : 'text-red-400'">{{ firstPosition?.side ?? 'Long' }}</span>
+                      <span class="text-[12px] font-bold text-gray-400">{{ firstPosition?.leverage ?? leverage }}x</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 text-gray-500 md:gap-4">
+                  <button @click="showShareSheet = true" class="flex items-center gap-1 text-[12px] font-bold active:scale-95">
+                    <Icon icon="mdi:share-variant-outline" class="text-[17px]" />
+                    <span class="hidden sm:inline">Share</span>
+                  </button>
+                  <button @click="showPositionMenu = true" class="active:scale-95">
+                    <Icon icon="mdi:dots-vertical" class="text-[20px]" />
+                  </button>
+                </div>
+              </div>
+              <!-- Position data -->
+              <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 md:mt-5 md:grid-cols-4 md:gap-x-6 md:gap-y-5">
+                <div v-for="item in positionData" :key="item.label">
+                  <p class="text-[11px] font-bold text-gray-400">{{ item.label }}</p>
+                  <p class="mt-1.5 whitespace-pre-line text-[13px] font-semibold leading-snug md:mt-2 md:text-[14px]" :class="item.teal ? 'text-[#0aa99e]' : 'text-[#17212f]'">
+                    {{ item.value }}
+                  </p>
+                </div>
+                <div class="col-span-2 mt-1 md:col-span-1 md:mt-0 md:flex md:items-end md:justify-end">
+                  <button @click="showCloseSheet = true" class="h-10 w-full rounded-xl border border-[#0aa99e] bg-[#f6fffe] px-6 text-[13px] font-semibold text-[#0aa99e] active:scale-95 md:w-auto">
+                    Close Position
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          </template>
+
+          <!-- Open Orders tab -->
+          <template v-else-if="activeTab === 'open-orders'">
+            <div class="flex flex-col items-center py-12 text-center">
+              <Icon icon="mdi:clipboard-list-outline" class="text-[48px] text-gray-200" />
+              <p class="mt-4 text-[13px] font-semibold text-gray-400">No open orders</p>
+            </div>
+          </template>
+
+          <!-- History tab -->
+          <template v-else>
+            <div class="flex flex-col items-center py-12 text-center">
+              <Icon icon="mdi:history" class="text-[48px] text-gray-200" />
+              <p class="mt-4 text-[13px] font-semibold text-gray-400">No order history</p>
+            </div>
+          </template>
         </div>
       </section>
 
@@ -396,15 +416,17 @@
         <div class="mt-4 rounded-2xl border border-gray-100 bg-[#f6f8fb] px-4 py-3">
           <div class="flex justify-between text-[12px]">
             <span class="font-bold text-gray-400">Position Size</span>
-            <span class="font-semibold">50,000.00 USDT</span>
+            <span class="font-semibold">{{ firstPosition ? formatPrice(Number(firstPosition.size) * Number(firstPosition.entry_price)) : '—' }} USDT</span>
           </div>
           <div class="mt-2 flex justify-between text-[12px]">
             <span class="font-bold text-gray-400">Unrealized PnL</span>
-            <span class="font-semibold text-[#0aa99e]">+286.72 USDT (+0.57%)</span>
+            <span class="font-semibold" :class="firstPositionPnl.raw >= 0 ? 'text-[#0aa99e]' : 'text-red-400'">
+              {{ firstPosition ? (firstPositionPnl.raw >= 0 ? '+' : '') + formatPrice(firstPositionPnl.raw) + ' USDT (' + (firstPositionPnl.raw >= 0 ? '+' : '') + firstPositionPnl.pct.toFixed(2) + '%)' : '—' }}
+            </span>
           </div>
           <div class="mt-2 flex justify-between text-[12px]">
             <span class="font-bold text-gray-400">Mark Price</span>
-            <span class="font-semibold">64,023.45 USDT</span>
+            <span class="font-semibold">{{ formatPrice(livePrice) }} USDT</span>
           </div>
         </div>
         <div class="mt-4">
@@ -412,7 +434,7 @@
           <div class="mt-2 flex h-12 items-center justify-between rounded-xl border border-gray-100 bg-[#f6f8fb] px-3">
             <input v-model="closeAmount" type="number" inputmode="decimal" placeholder="Enter amount"
               class="w-full bg-transparent text-[14px] font-semibold outline-none placeholder:text-gray-300" />
-            <button @click="closeAmount = '50000'" class="shrink-0 rounded-lg bg-[#eafffd] px-3 py-1.5 text-[11px] font-semibold text-[#0aa99e]">Max</button>
+            <button @click="closeAmount = firstPosition ? String(Math.floor(Number(firstPosition.size) * Number(firstPosition.entry_price))) : ''" class="shrink-0 rounded-lg bg-[#eafffd] px-3 py-1.5 text-[11px] font-semibold text-[#0aa99e]">Max</button>
           </div>
         </div>
         <div class="mt-5 grid grid-cols-2 gap-3">
@@ -443,12 +465,12 @@
         <div class="mt-4 rounded-2xl bg-linear-to-br from-[#eafffd] to-[#f0fff9] p-5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-[15px] font-semibold">BTC/USDT Perpetual</p>
-              <p class="mt-1 text-[12px] font-bold text-[#0aa99e]">Long · {{ leverage }}x</p>
+              <p class="text-[15px] font-semibold">{{ firstPosition ? firstPosition.symbol.replace('USDT', '/USDT') : 'BTC/USDT' }} Perpetual</p>
+              <p class="mt-1 text-[12px] font-bold" :class="(firstPosition?.side ?? 'Long') === 'Long' ? 'text-[#0aa99e]' : 'text-red-400'">{{ firstPosition?.side ?? 'Long' }} · {{ firstPosition?.leverage ?? leverage }}x</p>
             </div>
             <div class="text-right">
-              <p class="text-[20px] font-semibold text-[#0aa99e]">+0.57%</p>
-              <p class="text-[11px] font-bold text-gray-400">+286.72 USDT</p>
+              <p class="text-[20px] font-semibold" :class="firstPositionPnl.raw >= 0 ? 'text-[#0aa99e]' : 'text-red-400'">{{ (firstPositionPnl.raw >= 0 ? '+' : '') + firstPositionPnl.pct.toFixed(2) }}%</p>
+              <p class="text-[11px] font-bold text-gray-400">{{ (firstPositionPnl.raw >= 0 ? '+' : '') + formatPrice(firstPositionPnl.raw) }} USDT</p>
             </div>
           </div>
         </div>
@@ -483,60 +505,16 @@
 
   </DashboardLayout>
 
-  <!-- NOTICE MODAL -->
-  <Teleport to="body">
-    <Transition
-      enter-from-class="opacity-0"
-      enter-active-class="transition-opacity duration-300"
-      leave-to-class="opacity-0"
-      leave-active-class="transition-opacity duration-300"
-    >
-      <div
-        v-if="showNotice"
-        class="fixed inset-0 z-50 flex items-center justify-center px-6"
-        @click.self="showNotice = false"
-      >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50" @click="showNotice = false"></div>
 
-        <!-- Card -->
-        <div class="relative w-full max-w-95 rounded-md border border-gray-300 bg-white p-5 shadow-sm">
-          <div class="flex items-center gap-2">
-            <Icon icon="mdi:alert" class="text-2xl text-yellow-400" />
-            <h2 class="text-base font-semibold text-[#1f1f1f]">Notice</h2>
-          </div>
-
-          <div class="mt-3 space-y-3 text-sm leading-relaxed text-[#555]">
-            <p>
-              Your account is still new.<br />
-              The Futures Trading feature will be available once your account has been
-              active for a longer period.
-            </p>
-            <p>
-              This is to ensure security and provide you with the best trading
-              experience.
-            </p>
-            <p>Thank you for your understanding.</p>
-          </div>
-
-          <div class="mt-5 flex justify-end">
-            <button
-              @click="showNotice = false"
-              class="rounded-md border border-gray-300 bg-[#f8f8f8] px-4 py-2 text-sm font-medium text-[#222] active:scale-95"
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import DashboardLayout from '../../layouts/DashboardLayout.vue'
+import { useMarketWs } from '@/services/marketWs'
+import { useAuthStore } from '@/stores/auth'
+import { makeTradeApi, type FuturesPosition } from '@/services/api'
 import {
   createChart,
   CandlestickSeries,
@@ -549,32 +527,47 @@ import {
   type HistogramData,
 } from 'lightweight-charts'
 
+const { tickerMap } = useMarketWs()
+const auth = useAuthStore()
+
 // ── Constants ─────────────────────────────────────────────────
-const timeframes       = ['1m', '5m', '15m', '1H', '4H', '1D']
-const orderTabs        = ['Limit', 'Market', 'Trigger']
-const bottomTabs       = ['Positions (1)', 'Open Orders (2)', 'Order History']
-const leverageOptions  = [5, 10, 20, 50, 100, 125]
-const indicators       = ['MA', 'EMA', 'BOLL', 'VOL', 'MACD', 'KDJ']
-const positionActions  = [
-  { label: 'Add Margin',       icon: 'mdi:plus-circle-outline',      danger: false },
-  { label: 'Edit TP/SL',       icon: 'mdi:target',                   danger: false },
-  { label: 'View Order Detail',icon: 'mdi:file-document-outline',     danger: false },
-  { label: 'Close Position',   icon: 'mdi:close-circle-outline',      danger: true  },
+const timeframes      = ['1m', '5m', '15m', '1H', '4H', '1D']
+const orderTabs       = ['Limit', 'Market', 'Trigger']
+const bottomTabKeys   = ['positions', 'open-orders', 'history']
+const leverageOptions = [5, 10, 20, 50, 100, 125]
+const indicators      = ['MA', 'EMA', 'BOLL', 'VOL', 'MACD', 'KDJ']
+const positionActions = [
+  { label: 'Add Margin',        icon: 'mdi:plus-circle-outline',  danger: false },
+  { label: 'Edit TP/SL',        icon: 'mdi:target',               danger: false },
+  { label: 'View Order Detail', icon: 'mdi:file-document-outline', danger: false },
+  { label: 'Close Position',    icon: 'mdi:close-circle-outline',  danger: true  },
 ]
 
+// ── Live price from WS ────────────────────────────────────────
+const livePrice  = ref(64023.45)
+const liveChange = ref(1.24)
+
 // ── UI state ──────────────────────────────────────────────────
-const activeMobileTab  = ref<'chart' | 'order'>('chart')
-const activeTime       = ref('15m')
-const activePanel      = ref<'Open' | 'Close'>('Open')
-const activeOrder      = ref('Limit')
-const activeTab        = ref('Positions (1)')
-const activeIndicator  = ref('')
+const activeMobileTab = ref<'chart' | 'order'>('chart')
+const activeTime      = ref('15m')
+const activePanel     = ref<'Open' | 'Close'>('Open')
+const activeOrder     = ref('Limit')
+const activeTab       = ref('positions')
+const activeIndicator = ref('')
 
 // ── Leverage & margin ─────────────────────────────────────────
-const leverage         = ref(20)
-const marginMode       = ref('Isolated')
+const leverage          = ref(20)
+const marginMode        = ref('Isolated')
 const showLeverageSheet = ref(false)
-const showMarginSheet  = ref(false)
+const showMarginSheet   = ref(false)
+
+// ── Balance from auth store ───────────────────────────────────
+const availableBalance = computed(() => Number(auth.user?.balance ?? 0))
+
+const maxLong = computed(() =>
+  (availableBalance.value * leverage.value).toLocaleString('en-US', { minimumFractionDigits: 2 })
+)
+const maxShort = computed(() => maxLong.value)
 
 // ── Order form ────────────────────────────────────────────────
 const orderPrice       = ref(64023.45)
@@ -585,17 +578,11 @@ const tpPrice          = ref('')
 const slPrice          = ref('')
 const reduceOnly       = ref(false)
 
-const availableBalance = 1250
-const maxLong = computed(() =>
-  (availableBalance * leverage.value).toLocaleString('en-US', { minimumFractionDigits: 2 })
-)
-const maxShort = computed(() => maxLong.value)
-
 const orderCost = computed(() => {
   const amt = parseFloat(orderAmountInput.value) || 0
   return amt > 0 ? (amt / leverage.value).toFixed(2) : '0.00'
 })
-const estLiqLong  = computed(() => {
+const estLiqLong = computed(() => {
   const amt = parseFloat(orderAmountInput.value) || 0
   return amt > 0 ? formatPrice(orderPrice.value * (1 - 1 / leverage.value)) : '-- USDT'
 })
@@ -606,9 +593,61 @@ const estLiqShort = computed(() => {
 
 // sync slider → amount
 watch(sliderPct, (pct) => {
-  const max = availableBalance * leverage.value
+  const max = availableBalance.value * leverage.value
   orderAmountInput.value = ((pct / 100) * max).toFixed(2)
 })
+
+// ── Positions from API ────────────────────────────────────────
+const positionsList      = ref<FuturesPosition[]>([])
+const isLoadingPositions = ref(false)
+
+const bottomTabs = computed(() => [
+  `Positions (${positionsList.value.length})`,
+  'Open Orders (0)',
+  'Order History',
+])
+
+const firstPosition = computed(() => positionsList.value[0] ?? null)
+
+const firstPositionPnl = computed(() => {
+  const pos = firstPosition.value
+  if (!pos) return { raw: 0, pct: 0 }
+  const entry   = Number(pos.entry_price)
+  const size    = Number(pos.size)
+  const pnlRaw  = pos.side === 'Long'
+    ? (livePrice.value - entry) * size
+    : (entry - livePrice.value) * size
+  const pnlPct  = entry > 0 && size > 0 ? (pnlRaw / (entry * size)) * 100 : 0
+  return { raw: pnlRaw, pct: pnlPct }
+})
+
+const positionData = computed(() => {
+  const pos = firstPosition.value
+  if (!pos) return []
+  const entry = Number(pos.entry_price)
+  const size  = Number(pos.size)
+  const pnl   = firstPositionPnl.value
+  const sign  = pnl.raw >= 0 ? '+' : ''
+  return [
+    { label: 'Size (USDT)',           value: formatPrice(size * entry),                                                   teal: false },
+    { label: 'Entry Price',           value: formatPrice(entry),                                                           teal: false },
+    { label: 'Mark Price',            value: formatPrice(livePrice.value),                                                 teal: false },
+    { label: 'Unrealized PnL (USDT)', value: `${sign}${formatPrice(pnl.raw)}\n(${sign}${pnl.pct.toFixed(2)}%)`,          teal: pnl.raw >= 0 },
+    { label: 'Liq. Price',            value: pos.liquidation_price ? formatPrice(Number(pos.liquidation_price)) : '—',    teal: false },
+    { label: 'Margin (USDT)',         value: formatPrice(Number(pos.margin)),                                              teal: false },
+  ]
+})
+
+async function fetchPositions() {
+  if (!auth.accessToken) return
+  isLoadingPositions.value = true
+  try {
+    const { positions } = await makeTradeApi(auth.accessToken).getPositions()
+    positionsList.value = positions
+  } catch { /* ignore */ } finally {
+    isLoadingPositions.value = false
+  }
+}
 
 // ── Modals / sheets ───────────────────────────────────────────
 const showSuccess      = ref(false)
@@ -628,34 +667,30 @@ function adjustPrice(dir: number) {
 }
 function adjustAmount(dir: number) {
   const current = parseFloat(orderAmountInput.value) || 0
-  const next = Math.max(0, current + dir * 100)
+  const next    = Math.max(0, current + dir * 100)
   orderAmountInput.value = next.toFixed(2)
-  const max = availableBalance * leverage.value
-  sliderPct.value = Math.min(100, Math.round((next / max) * 100))
+  const max = availableBalance.value * leverage.value
+  sliderPct.value = max > 0 ? Math.min(100, Math.round((next / max) * 100)) : 0
 }
-function setSlider(pct: number) {
-  sliderPct.value = pct
-}
-function onSliderInput(e: Event) {
-  sliderPct.value = +(e.target as HTMLInputElement).value
-}
+function setSlider(pct: number)  { sliderPct.value = pct }
+function onSliderInput(e: Event) { sliderPct.value = +(e.target as HTMLInputElement).value }
 function confirmOrder(side: 'Long' | 'Short') {
   successSide.value = side
   showSuccess.value = true
 }
 
-// auto-dismiss close success toast
 watch(showCloseSuccess, (v) => {
   if (v) setTimeout(() => (showCloseSuccess.value = false), 2500)
 })
 
-// ── Lightweight Charts ───────────────────────────────────────
+// ── Lightweight Charts ────────────────────────────────────────
 const chartContainerEl = ref<HTMLElement | null>(null)
 let lwChart: IChartApi | null = null
 let candleSeries: ISeriesApi<'Candlestick'> | null = null
-let volumeSeries: ISeriesApi<'Histogram'> | null = null
-
-const BASE_PRICE = 64023.45
+let volumeSeries:  ISeriesApi<'Histogram'>  | null = null
+let lastCandleTime = 0
+let lastCandle: CandlestickData | null = null
+let lastVolume: HistogramData   | null = null
 
 const tfConfig: Record<string, { bars: number; interval: number }> = {
   '1m':  { bars: 60, interval: 1    },
@@ -668,12 +703,14 @@ const tfConfig: Record<string, { bars: number; interval: number }> = {
 
 function generateOHLC(basePrice: number, tf: string) {
   const { bars, interval } = tfConfig[tf] ?? tfConfig['15m']
+  const intervalSec = interval * 60
   const nowSec = Math.floor(Date.now() / 1000)
+  const currentBarTime = nowSec - (nowSec % intervalSec)
   const candles: CandlestickData[] = []
-  const volumes: HistogramData[] = []
+  const volumes: HistogramData[]   = []
   let price = basePrice * (0.92 + Math.random() * 0.06)
   for (let i = bars - 1; i >= 0; i--) {
-    const t = nowSec - i * interval * 60
+    const t = currentBarTime - i * intervalSec
     const o = price
     const change = price * (Math.random() - 0.495) * 0.018
     const c = Math.max(price * 0.001, price + change)
@@ -687,9 +724,28 @@ function generateOHLC(basePrice: number, tf: string) {
   return { candles, volumes }
 }
 
+function updateLiveCandle() {
+  if (!candleSeries || !volumeSeries) return
+  const { interval } = tfConfig[activeTime.value] ?? tfConfig['15m']
+  const intervalSec = interval * 60
+  const nowSec  = Math.floor(Date.now() / 1000)
+  const barTime = nowSec - (nowSec % intervalSec)
+  if (barTime !== lastCandleTime) {
+    lastCandleTime = barTime
+    lastCandle = { time: barTime as any, open: livePrice.value, high: livePrice.value, low: livePrice.value, close: livePrice.value }
+    lastVolume = { time: barTime as any, value: 0, color: '#0aa99e66' }
+  } else if (lastCandle) {
+    lastCandle = { ...lastCandle, high: Math.max(lastCandle.high, livePrice.value), low: Math.min(lastCandle.low, livePrice.value), close: livePrice.value }
+    lastVolume = { time: barTime as any, value: (lastVolume?.value ?? 0) + livePrice.value * 0.05, color: livePrice.value >= lastCandle.open ? '#0aa99e66' : '#ef535066' }
+  }
+  if (lastCandle) try { candleSeries.update(lastCandle) } catch { /* ignore */ }
+  if (lastVolume) try { volumeSeries.update(lastVolume) } catch { /* ignore */ }
+}
+
 function initChart() {
   if (!chartContainerEl.value) return
   destroyChart()
+  lastCandleTime = 0; lastCandle = null; lastVolume = null
   lwChart = createChart(chartContainerEl.value, {
     layout: {
       background: { color: '#ffffff' },
@@ -717,7 +773,7 @@ function initChart() {
     priceFormat: { type: 'volume' }, priceScaleId: 'vol',
   } as Partial<HistogramSeriesOptions>)
   volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } })
-  const { candles, volumes } = generateOHLC(BASE_PRICE, activeTime.value)
+  const { candles, volumes } = generateOHLC(livePrice.value, activeTime.value)
   candleSeries.setData(candles)
   volumeSeries.setData(volumes)
   lwChart.timeScale().fitContent()
@@ -742,23 +798,39 @@ function destroyChart() {
   volumeSeries = null
 }
 
-// ── Position data ─────────────────────────────────────────────
-const positionData = [
-  { label: 'Size (USDT)',           value: '50,000.00',         teal: false },
-  { label: 'Entry Price',           value: '63,450.00',         teal: false },
-  { label: 'Mark Price',            value: '64,023.45',         teal: false },
-  { label: 'Unrealized PnL (USDT)', value: '+286.72\n(+0.57%)', teal: true  },
-  { label: 'Liq. Price',            value: '60,123.40',         teal: false },
-  { label: 'Margin (USDT)',         value: '2,500.00',          teal: false },
-  { label: 'Margin Ratio',          value: '3.21%',             teal: true  },
-]
+// ── Live tick (fallback when WS has no data) ──────────────────
+let timer: ReturnType<typeof setInterval>
+function tick() {
+  if (!tickerMap.value.get('BTCUSDT')) {
+    const delta = livePrice.value * (Math.random() - 0.499) * 0.0005
+    livePrice.value  = Math.max(1, livePrice.value + delta)
+    liveChange.value = Math.round((liveChange.value + (Math.random() - 0.49) * 0.03) * 100) / 100
+    if (activeOrder.value === 'Market') orderPrice.value = livePrice.value
+  }
+  updateLiveCandle()
+}
 
-// ── Notice Modal ─────────────────────────────────────────────
-const showNotice = ref(false)
+// ── WS price watch ────────────────────────────────────────────
+watch(tickerMap, (map) => {
+  const t = map.get('BTCUSDT')
+  if (!t) return
+  livePrice.value  = t.price
+  liveChange.value = Math.round(t.change * 100) / 100
+  if (activeOrder.value === 'Market') orderPrice.value = t.price
+  updateLiveCandle()
+})
+
 onMounted(() => {
-  setTimeout(() => { showNotice.value = true }, 3000)
+  initChart()
+  fetchPositions()
+  timer = setInterval(tick, 800)
+})
+onUnmounted(() => {
+  clearInterval(timer)
+  destroyChart()
+})
+watch(activeTime, () => {
+  lastCandleTime = 0; lastCandle = null; lastVolume = null
   initChart()
 })
-onUnmounted(() => destroyChart())
-watch(activeTime, () => initChart())
 </script>

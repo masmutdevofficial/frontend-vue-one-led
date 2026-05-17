@@ -288,57 +288,87 @@
           :class="{ 'hidden md:block': activePanelTab !== 'orderbook' }"
         >
           <div class="grid h-10 grid-cols-2 border-b border-gray-100">
-            <button class="relative text-[14px] font-semibold text-[#10b8ad] md:text-[15px]">
+            <button
+              @click="activeOrderBookTab = 'orderbook'"
+              class="relative text-[14px] font-semibold md:text-[15px]"
+              :class="activeOrderBookTab === 'orderbook' ? 'text-[#10b8ad]' : 'text-gray-400'"
+            >
               Order Book
-              <span class="absolute bottom-0 left-4 right-4 h-0.75 rounded-full bg-[#10b8ad]"></span>
+              <span v-if="activeOrderBookTab === 'orderbook'" class="absolute bottom-0 left-4 right-4 h-0.75 rounded-full bg-[#10b8ad]"></span>
             </button>
-            <button class="text-[14px] font-semibold text-gray-500 md:text-[15px]">Trades</button>
+            <button
+              @click="activeOrderBookTab = 'trades'"
+              class="text-[14px] font-semibold md:text-[15px]"
+              :class="activeOrderBookTab === 'trades' ? 'text-[#10b8ad]' : 'text-gray-400'"
+            >
+              Trades
+              <span v-if="activeOrderBookTab === 'trades'" class="block absolute bottom-0 left-4 right-4 h-0.75 rounded-full bg-[#10b8ad]"></span>
+            </button>
           </div>
 
-          <div class="mt-4 grid grid-cols-3 gap-2 text-[10px] font-bold text-gray-400 md:text-[11px]">
-            <span>Price (USDT)</span>
-            <span class="text-right">Amount ({{ coin.symbol }})</span>
-            <span class="text-right">Total (USDT)</span>
-          </div>
+          <!-- ── ORDER BOOK sub-tab ── -->
+          <template v-if="activeOrderBookTab === 'orderbook'">
+            <div class="mt-4 grid grid-cols-3 gap-2 text-[10px] font-bold text-gray-400 md:text-[11px]">
+              <span>Price (USDT)</span>
+              <span class="text-right">Amount ({{ coin.symbol }})</span>
+              <span class="text-right">Total (USDT)</span>
+            </div>
 
-          <!-- Sell Orders -->
-          <div class="mt-3 space-y-0.75">
-            <div v-for="order in sellOrders" :key="order.price" class="relative overflow-hidden rounded-[3px]">
-              <div class="absolute right-0 top-0 h-full bg-red-50 transition-all duration-300 ease-out" :style="{ width: order.pct + '%' }"></div>
-              <div class="relative grid grid-cols-3 gap-1 px-0.5 py-1.25 text-[10px] font-semibold md:text-[11px]">
-                <span class="text-red-400">{{ order.price }}</span>
-                <span class="text-right text-[#17212f]">{{ order.amount }}</span>
-                <span class="text-right text-gray-500">{{ order.total }}</span>
+            <!-- Sell Orders -->
+            <div class="mt-3 space-y-0.75">
+              <div v-for="order in sellOrders" :key="order.price" class="relative overflow-hidden rounded-[3px]">
+                <div class="absolute right-0 top-0 h-full bg-red-50 transition-all duration-300 ease-out" :style="{ width: order.pct + '%' }"></div>
+                <div class="relative grid grid-cols-3 gap-1 px-0.5 py-1.25 text-[10px] font-semibold md:text-[11px]">
+                  <span class="text-red-400">{{ order.price }}</span>
+                  <span class="text-right text-[#17212f]">{{ order.amount }}</span>
+                  <span class="text-right text-gray-500">{{ order.total }}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Current Price -->
-          <div class="my-4 flex items-end gap-2">
-            <span class="text-[20px] font-semibold leading-none text-[#10b8ad] md:text-[24px]">{{ formatPrice(livePrice) }}</span>
-            <span class="text-[12px] font-semibold text-gray-400 md:text-[13px]">≈ ${{ formatPrice(livePrice) }}</span>
-          </div>
+            <!-- Current Price -->
+            <div class="my-4 flex items-end gap-2">
+              <span class="text-[20px] font-semibold leading-none text-[#10b8ad] md:text-[24px]">{{ formatPrice(livePrice) }}</span>
+              <span class="text-[12px] font-semibold text-gray-400 md:text-[13px]">≈ ${{ formatPrice(livePrice) }}</span>
+            </div>
 
-          <!-- Buy Orders -->
-          <div class="space-y-0.75">
-            <div v-for="order in buyOrders" :key="order.price" class="relative overflow-hidden rounded-[3px]">
-              <div class="absolute right-0 top-0 h-full bg-teal-50 transition-all duration-300 ease-out" :style="{ width: order.pct + '%' }"></div>
-              <div class="relative grid grid-cols-3 gap-1 px-0.5 py-1.25 text-[10px] font-semibold md:text-[11px]">
-                <span class="text-[#10b8ad]">{{ order.price }}</span>
-                <span class="text-right text-[#17212f]">{{ order.amount }}</span>
-                <span class="text-right text-gray-500">{{ order.total }}</span>
+            <!-- Buy Orders -->
+            <div class="space-y-0.75">
+              <div v-for="order in buyOrders" :key="order.price" class="relative overflow-hidden rounded-[3px]">
+                <div class="absolute right-0 top-0 h-full bg-teal-50 transition-all duration-300 ease-out" :style="{ width: order.pct + '%' }"></div>
+                <div class="relative grid grid-cols-3 gap-1 px-0.5 py-1.25 text-[10px] font-semibold md:text-[11px]">
+                  <span class="text-[#10b8ad]">{{ order.price }}</span>
+                  <span class="text-right text-[#17212f]">{{ order.amount }}</span>
+                  <span class="text-right text-gray-500">{{ order.total }}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="mt-6 flex items-center justify-between">
-            <button class="flex h-9 items-center gap-2 rounded-lg border border-gray-100 bg-[#f6f8fb] px-3 text-[11px] font-semibold text-gray-500 md:gap-3 md:px-4 md:text-[12px]">
-              0.01 <Icon icon="mdi:chevron-down" class="text-[15px] md:text-[16px]" />
-            </button>
-            <button class="active:scale-95">
-              <Icon icon="mdi:chart-bar" class="text-[24px] text-[#10b8ad] md:text-[26px]" />
-            </button>
-          </div>
+            <div class="mt-6 flex items-center justify-between">
+              <button class="flex h-9 items-center gap-2 rounded-lg border border-gray-100 bg-[#f6f8fb] px-3 text-[11px] font-semibold text-gray-500 md:gap-3 md:px-4 md:text-[12px]">
+                0.01 <Icon icon="mdi:chevron-down" class="text-[15px] md:text-[16px]" />
+              </button>
+              <button class="active:scale-95">
+                <Icon icon="mdi:chart-bar" class="text-[24px] text-[#10b8ad] md:text-[26px]" />
+              </button>
+            </div>
+          </template>
+
+          <!-- ── TRADES sub-tab ── -->
+          <template v-else>
+            <div class="mt-4 grid grid-cols-3 gap-2 text-[10px] font-bold text-gray-400 md:text-[11px]">
+              <span>Price (USDT)</span>
+              <span class="text-right">Amount ({{ coin.symbol }})</span>
+              <span class="text-right">Time</span>
+            </div>
+            <div class="mt-3 space-y-0.75">
+              <div v-for="trade in recentTrades" :key="trade.id" class="grid grid-cols-3 gap-1 px-0.5 py-1.25 text-[10px] font-semibold md:text-[11px]">
+                <span :class="trade.isBuy ? 'text-[#10b8ad]' : 'text-red-400'">{{ trade.price }}</span>
+                <span class="text-right text-[#17212f]">{{ trade.amount }}</span>
+                <span class="text-right text-gray-400">{{ trade.time }}</span>
+              </div>
+            </div>
+          </template>
         </div>
       </section>
 
@@ -689,11 +719,48 @@ const buyOrders = computed(() =>
   }))
 )
 
+// ── Recent Trades ─────────────────────────────────────────────
+interface RecentTrade { id: number; price: string; amount: string; isBuy: boolean; time: string }
+const recentTrades = ref<RecentTrade[]>([])
+let tradeIdSeq = 1
+
+function formatTradeTime(d: Date): string {
+  return d.toTimeString().slice(0, 8)
+}
+
+function initRecentTrades(basePrice: number) {
+  const now = Date.now()
+  recentTrades.value = Array.from({ length: 20 }, (_, i) => {
+    const price  = basePrice * (1 + (Math.random() - 0.5) * 0.002)
+    const amount = 0.001 + Math.random() * 0.5
+    const isBuy  = Math.random() > 0.5
+    return {
+      id:     tradeIdSeq++,
+      price:  formatPrice(price),
+      amount: amount.toFixed(4),
+      isBuy,
+      time:   formatTradeTime(new Date(now - i * 3500)),
+    }
+  })
+}
+
+function pushRecentTrade(basePrice: number) {
+  if (Math.random() > 0.45) return // not every tick
+  const price  = basePrice * (1 + (Math.random() - 0.5) * 0.0015)
+  const amount = 0.001 + Math.random() * 0.4
+  const isBuy  = Math.random() > 0.5
+  recentTrades.value = [
+    { id: tradeIdSeq++, price: formatPrice(price), amount: amount.toFixed(4), isBuy, time: formatTradeTime(new Date()) },
+    ...recentTrades.value.slice(0, 19),
+  ]
+}
+
 // ── UI state ───────────────────────────────────────────────────
-const activeTimeframe  = ref('1H')
-const activePanelTab   = ref<'trade' | 'orderbook'>('trade')
-const activeSide       = ref<'Buy' | 'Sell'>('Buy')
-const activeOrderType  = ref('Limit')
+const activeTimeframe    = ref('1H')
+const activePanelTab     = ref<'trade' | 'orderbook'>('trade')
+const activeOrderBookTab = ref<'orderbook' | 'trades'>('orderbook')
+const activeSide         = ref<'Buy' | 'Sell'>('Buy')
+const activeOrderType    = ref('Limit')
 
 const timeframes  = ['1H', '4H', '1D', '1W', 'More']
 const sides: ('Buy' | 'Sell')[] = ['Buy', 'Sell']
@@ -789,6 +856,7 @@ function tick() {
     amount:   Math.max(0.001, e.amount + (Math.random() - 0.5) * 0.015),
     pct:      Math.max(5, Math.min(100, e.pct + (Math.random() - 0.5) * 14)),
   }))
+  pushRecentTrade(p)
 }
 
 onMounted(() => {
@@ -803,6 +871,7 @@ onMounted(() => {
   const favs = JSON.parse(localStorage.getItem('market-favorites') ?? '[]') as string[]
   isFavorite.value = favs.includes(c.symbol)
   initOrderBook(c.price)
+  initRecentTrades(c.price)
   initChart()
   timer = setInterval(tick, 600)
   // Fetch trade data
@@ -825,6 +894,7 @@ watch(baseCoin, (c) => {
   const favs = JSON.parse(localStorage.getItem('market-favorites') ?? '[]') as string[]
   isFavorite.value = favs.includes(c.symbol)
   initOrderBook(c.price)
+  initRecentTrades(c.price)
   lastCandleTime = 0; lastCandle = null; lastVolume = null
   initChart()
 })
