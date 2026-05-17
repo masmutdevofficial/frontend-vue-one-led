@@ -115,9 +115,10 @@ async function submitChangePassword() {
 
 // Security item dispatch
 function handleItem(title: string) {
-  if (title === 'Change Password')  openPasswordModal()
-  else if (title === 'Login History')   router.push('/login-history')
-  else if (title === 'Manage Devices')  router.push('/manage-devices')
+  if (title === 'Change Password')          openPasswordModal()
+  else if (title === 'Login History')            router.push('/login-history')
+  else if (title === 'Manage Devices')           router.push('/manage-devices')
+  else if (title === 'Two-Factor Authentication') router.push('/two-factor')
 }
 
 const securityItems = [

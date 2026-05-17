@@ -2,6 +2,56 @@
   <section class="min-h-screen bg-slate-50">
     <div class="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-8">
     <div class="w-full max-w-sm rounded-3xl bg-white px-6 py-8 lg:shadow-xl lg:shadow-slate-200/60">
+
+      <!-- ══ 2FA STEP ══ -->
+      <template v-if="step === '2fa'">
+        <div class="flex flex-col items-center text-center">
+          <div class="flex h-16 w-16 items-center justify-center rounded-full bg-teal-50">
+            <Icon icon="mdi:shield-key-outline" class="text-3xl text-teal-500" />
+          </div>
+          <h2 class="mt-4 text-2xl font-black tracking-tight text-slate-950">Verification Required</h2>
+          <p class="mt-2 text-sm font-medium text-slate-500">
+            Enter the 6-digit code from your <span class="font-semibold">Google Authenticator</span> app.
+          </p>
+        </div>
+
+        <div v-if="twoFaError" class="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+          {{ twoFaError }}
+        </div>
+
+        <div class="mt-6">
+          <input
+            v-model="twoFaCode"
+            type="text"
+            inputmode="numeric"
+            maxlength="6"
+            placeholder="000000"
+            class="h-16 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-center text-3xl font-bold tracking-[0.5em] text-slate-950 outline-none focus:border-teal-400 focus:bg-white transition"
+            @keyup.enter="handle2Fa"
+          />
+        </div>
+
+        <button
+          type="button"
+          :disabled="twoFaCode.length !== 6 || loading"
+          class="mt-4 flex w-full items-center justify-center rounded-xl bg-[#020a22] px-5 py-3.5 text-base font-semibold tracking-wide text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+          @click="handle2Fa"
+        >
+          <span class="flex-1 text-center ml-4">{{ loading ? 'Verifying\u2026' : 'Verify' }}</span>
+          <Icon icon="mdi:arrow-right" class="size-5" />
+        </button>
+
+        <button
+          type="button"
+          class="mt-3 w-full text-center text-sm font-medium text-slate-400 hover:text-slate-600"
+          @click="step = 'login'; twoFaCode = ''; twoFaError = ''"
+        >
+          &larr; Back to login
+        </button>
+      </template>
+
+      <!-- ══ LOGIN STEP ══ -->
+      <template v-else>
       <div class="inline-flex items-center gap-3 rounded-full border border-slate-100 bg-white/95 px-4 py-3 shadow-sm shadow-slate-200/70">
         <span class="grid size-8 place-items-center rounded-full bg-teal-50 text-teal-500">
           <Icon icon="mdi:lock" class="size-4" />
@@ -91,6 +141,7 @@
       <p class="mt-5 text-center text-sm font-medium text-slate-500">
         Don't have an account? <button type="button" class="font-semibold text-teal-500" @click="router.push('/register')">Sign Up</button>
       </p>
+      </template><!-- end v-else login step -->
     </div>
     </div>
   </section>
@@ -118,6 +169,12 @@ const loading      = ref(false)
 const passkeyLoading = ref(false)
 const passkeySupported = ref(browserSupportsWebAuthn())
 
+// 2FA state
+const step        = ref<'login' | '2fa'>('login')
+const twoFaToken  = ref('')
+const twoFaCode   = ref('')
+const twoFaError  = ref('')
+
 async function handleLogin() {
   if (!email.value || !password.value) {
     toast.warning('Please enter your email and password.')
@@ -125,10 +182,31 @@ async function handleLogin() {
   }
   loading.value = true
   try {
-    await auth.login(email.value.trim(), password.value)
-    router.push('/dashboard')
+    const data = await auth.login(email.value.trim(), password.value)
+    if ('requires_2fa' in data && data.requires_2fa) {
+      twoFaToken.value = data._2fa_token
+      step.value       = '2fa'
+    } else {
+      router.push('/dashboard')
+    }
   } catch (err) {
     toast.error(err instanceof ApiError ? err.message : 'Login failed. Please try again.')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handle2Fa() {
+  if (twoFaCode.value.length !== 6) return
+  twoFaError.value = ''
+  loading.value    = true
+  try {
+    const data = await authApi.verify2fa(twoFaToken.value, twoFaCode.value)
+    await auth.loginFromOAuth(data)
+    router.push('/dashboard')
+  } catch (err) {
+    twoFaError.value = err instanceof ApiError ? err.message : 'Invalid code. Please try again.'
+    twoFaCode.value  = ''
   } finally {
     loading.value = false
   }

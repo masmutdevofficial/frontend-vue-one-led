@@ -53,7 +53,10 @@ export const authApi = {
     request<{ message: string; _dev_otp?: string }>('POST', '/auth/register', body),
 
   login:          (email: string, password: string) =>
-    request<{ access_token: string; refresh_token: string; expires_in: number; user: WalletUser }>('POST', '/auth/login', { email, password }),
+    request<
+      { access_token: string; refresh_token: string; expires_in: number; user: WalletUser } |
+      { requires_2fa: true; email: string; _2fa_token: string }
+    >('POST', '/auth/login', { email, password }),
 
   verifyOtp:      (email: string, code: string) =>
     request<{ access_token: string; refresh_token: string; expires_in: number; user: WalletUser }>('POST', '/auth/otp/verify', { email, code }),
@@ -96,6 +99,10 @@ export const authApi = {
   /** WebAuthn — step 2: verify authenticator assertion and receive JWT */
   webauthnVerify: (body: Record<string, unknown>) =>
     request<{ access_token: string; refresh_token: string; expires_in: number; user: WalletUser }>('POST', '/auth/webauthn/verify', body),
+
+  /** 2FA — verify TOTP code after password login and receive full JWT */
+  verify2fa: (_2fa_token: string, code: string) =>
+    request<{ access_token: string; refresh_token: string; expires_in: number; user: WalletUser }>('POST', '/auth/2fa/verify', { _2fa_token, code }),
 }
 
 /** Authenticated API call factory — pass access token */

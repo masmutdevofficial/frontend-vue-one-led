@@ -76,9 +76,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(email: string, password: string) {
     const data = await authApi.login(email, password)
-    _applySession(data)
-    pendingEmail.value = ''
-    startStatusPolling()
+    // If 2FA is required, do NOT apply session — caller must complete the 2FA step
+    if (!('requires_2fa' in data)) {
+      _applySession(data)
+      pendingEmail.value = ''
+      startStatusPolling()
+    }
     return data
   }
 

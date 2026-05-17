@@ -25,6 +25,7 @@ import CopyTraderProfileScreen from '../views/dashboard/CopyTraderProfileScreen.
 import SecurityScreen from '../views/dashboard/SecurityScreen.vue'
 import LoginHistoryScreen from '../views/dashboard/LoginHistoryScreen.vue'
 import ManageDevicesScreen from '../views/dashboard/ManageDevicesScreen.vue'
+import TwoFactorScreen from '../views/dashboard/TwoFactorScreen.vue'
 import TrackingFundsScreen from '../views/dashboard/TrackingFundsScreen.vue'
 import HelpCenterScreen from '../views/dashboard/HelpCenterScreen.vue'
 import VerificationScreen from '../views/dashboard/VerificationScreen.vue'
@@ -78,6 +79,7 @@ const routes = [
   { path: '/security',          meta: { requiresAuth: true }, component: SecurityScreen },
   { path: '/login-history',     meta: { requiresAuth: true }, component: LoginHistoryScreen },
   { path: '/manage-devices',    meta: { requiresAuth: true }, component: ManageDevicesScreen },
+  { path: '/two-factor',        meta: { requiresAuth: true }, component: TwoFactorScreen },
   { path: '/tracking-funds',    meta: { requiresAuth: true }, component: TrackingFundsScreen },
   { path: '/help-center',       meta: { requiresAuth: true }, component: HelpCenterScreen },
   { path: '/verification',      meta: { requiresAuth: true }, component: VerificationScreen },
