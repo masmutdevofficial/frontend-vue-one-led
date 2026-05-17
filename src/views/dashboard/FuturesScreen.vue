@@ -8,18 +8,18 @@
 
           <!-- Mobile -->
           <div class="md:hidden">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <h1 class="text-[20px] font-semibold tracking-tight">BTC/USDT</h1>
-                <Icon icon="mdi:chevron-down" class="text-[18px]" />
-                <span class="rounded-full border border-[#b7eee9] bg-[#f2fffe] px-2 py-0.5 text-[10px] font-semibold text-[#0aa99e]">Perpetual</span>
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                <h1 class="shrink-0 text-[18px] font-semibold tracking-tight">BTC/USDT</h1>
+                <Icon icon="mdi:chevron-down" class="shrink-0 text-[16px]" />
+                <span class="shrink-0 rounded-full border border-[#b7eee9] bg-[#f2fffe] px-2 py-0.5 text-[10px] font-semibold text-[#0aa99e]">Perpetual</span>
               </div>
-              <div class="flex items-center gap-2">
-                <button @click="showLeverageSheet = true" class="flex h-9 items-center gap-1 rounded-xl bg-[#f8fafc] px-3 text-[12px] font-semibold text-[#0aa99e] active:scale-95">
-                  {{ leverage }}x <Icon icon="mdi:chevron-down" class="text-[14px]" />
+              <div class="flex shrink-0 items-center gap-1.5">
+                <button @click="showLeverageSheet = true" class="flex h-8 items-center gap-1 rounded-xl bg-[#f8fafc] px-2.5 text-[11px] font-semibold text-[#0aa99e] active:scale-95">
+                  {{ leverage }}x <Icon icon="mdi:chevron-down" class="text-[13px]" />
                 </button>
-                <button @click="showMarginSheet = true" class="flex h-9 items-center gap-1 rounded-xl bg-[#f8fafc] px-3 text-[12px] font-semibold text-[#0aa99e] active:scale-95">
-                  {{ marginMode }} <Icon icon="mdi:chevron-down" class="text-[14px]" />
+                <button @click="showMarginSheet = true" class="flex h-8 items-center gap-1 rounded-xl bg-[#f8fafc] px-2.5 text-[11px] font-semibold text-[#0aa99e] active:scale-95">
+                  {{ marginMode }} <Icon icon="mdi:chevron-down" class="text-[13px]" />
                 </button>
               </div>
             </div>
