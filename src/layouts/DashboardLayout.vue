@@ -35,7 +35,7 @@
           class="w-9 h-9 flex items-center justify-center rounded-xl active:scale-95 transition"
           @click="router.push('/dashboard')"
         >
-          <Icon icon="mdi:view-grid-outline" class="text-[27px] text-[#30343b]" />
+          <img src="/oneled-logo.png" alt="OneLedger" class="h-[28px] w-auto object-contain" />
         </button>
 
         <!-- Center Tabs -->
@@ -87,6 +87,46 @@
           </button>
         </div>
       </div>
+
+      <!-- Search results dropdown -->
+      <transition
+        enter-active-class="transition duration-150 ease-out"
+        enter-from-class="opacity-0 -translate-y-1"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-100 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 -translate-y-1"
+      >
+        <div
+          v-if="searchOpen && searchQuery.trim() && searchResults.length"
+          class="absolute top-[62px] inset-x-0 z-40 bg-white border-b border-gray-100 shadow-xl"
+        >
+          <div class="mx-auto max-w-7xl px-4 py-2 max-h-[320px] overflow-y-auto">
+            <button
+              v-for="coin in searchResults"
+              :key="coin.symbol"
+              class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 active:bg-slate-100 transition text-left"
+              @click="onSearchResultClick(coin)"
+            >
+              <div :class="['grid size-9 shrink-0 place-items-center rounded-xl', coinIconClass(coin.symbol)]">
+                <img v-if="coin.icon.startsWith('http')" :src="coin.icon" class="size-5 object-contain rounded" alt="" />
+                <Icon v-else :icon="coin.icon" class="size-5" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[13px] font-bold text-[#1f2933]">{{ coin.symbol }}<span class="font-medium text-gray-400">/USDT</span></p>
+                <p class="text-[11px] text-gray-400 truncate">{{ coin.name }}</p>
+              </div>
+              <div v-if="getSearchTicker(coin.binancePair)" class="text-right shrink-0">
+                <p class="text-[13px] font-semibold text-[#1f2933]">{{ getSearchTicker(coin.binancePair)!.price }}</p>
+                <p class="text-[11px]" :class="getSearchTicker(coin.binancePair)!.isPositive ? 'text-green-500' : 'text-red-500'">{{ getSearchTicker(coin.binancePair)!.change }}</p>
+              </div>
+              <div v-else class="text-right shrink-0">
+                <p class="text-[13px] text-gray-300">—</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      </transition>
     </header>
 
     <!-- PAGE CONTENT -->
@@ -151,13 +191,15 @@ import { Icon } from '@iconify/vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { cdnUrl } from '@/utils/cdn'
+import { useMarketStore, type CoinMeta, coinIconClass } from '@/stores/market'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const marketStore = useMarketStore()
 
 // ── User avatar ───────────────────────────────────────────────
-const DEFAULT_AVATAR = cdnUrl('defaults/avatar.png')
+const DEFAULT_AVATAR = '/images/user-default.png'
 
 /** Resolve avatar: Google/uploaded URL on user object > CDN path on profile > default */
 function resolveAvatar(): string {
@@ -181,8 +223,34 @@ const searchOpen = ref(false)
 const searchQuery = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 
+const searchResults = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return []
+  return marketStore.coins
+    .filter(c => c.symbol.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
+    .slice(0, 8)
+})
+
+function getSearchTicker(binancePair: string): { price: string; change: string; isPositive: boolean } | null {
+  const t = marketStore.tickerMap.get(binancePair)
+  if (!t) return null
+  return {
+    price: t.price < 0.01
+      ? '$' + t.price.toFixed(6)
+      : '$' + t.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    change: (t.change >= 0 ? '+' : '') + t.change.toFixed(2) + '%',
+    isPositive: t.change >= 0,
+  }
+}
+
+function onSearchResultClick(coin: CoinMeta) {
+  closeSearch()
+  router.push('/market')
+}
+
 async function openSearch() {
   searchOpen.value = true
+  marketStore.fetchCoins()
   await nextTick()
   searchInputRef.value?.focus()
 }

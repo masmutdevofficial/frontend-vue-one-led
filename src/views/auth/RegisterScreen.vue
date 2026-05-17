@@ -92,6 +92,14 @@
             </div>
 
             <p class="rounded-xl bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">OneLedger Exchange — Use at your own risk. Digital assets are speculative and involve high risk.</p>
+
+            <button
+              type="button"
+              class="mt-4 flex w-full items-center justify-center rounded-xl bg-teal-500 px-5 py-3.5 text-sm font-bold tracking-widest text-white shadow-lg shadow-teal-400/20 transition hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
+              @click="agreed = true; showTerms = false"
+            >
+              I UNDERSTAND
+            </button>
           </div>
         </div>
       </div>
