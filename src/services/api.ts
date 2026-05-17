@@ -117,6 +117,7 @@ export interface UserProfile {
   twofa_enabled: boolean
   ktp_status:    string | null
   ktp_image:     string | null
+  selfie_url:    string | null
   credit_score:  number
   member_since:  string    // ISO datetime
   bank:          string | null
@@ -142,12 +143,6 @@ export function makeUserApi(token: string) {
       country?: string
     }) => api.put<{ ok: boolean }>('/me', body),
     getBalance:    () => api.get<UserBalance>('/balance'),
-    submitVerification: (body: {
-      full_name?: string
-      id_number?: string
-      id_image_url?: string
-      selfie_url?: string
-    }) => api.post<{ ok: boolean }>('/verification', body),
   }
 }
 
