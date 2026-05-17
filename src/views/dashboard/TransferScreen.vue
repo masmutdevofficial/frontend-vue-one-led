@@ -147,7 +147,23 @@
           </button>
         </div>
 
-        <div class="mt-3 flex gap-2 overflow-x-auto pb-1">
+        <!-- loading skeleton -->
+        <div v-if="loadingHistory" class="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <div v-for="i in 3" :key="i" class="flex min-w-[112px] shrink-0 items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-3 shadow-sm animate-pulse">
+            <div class="h-8 w-8 rounded-full bg-gray-100 shrink-0"></div>
+            <div class="space-y-1.5">
+              <div class="h-2.5 w-16 rounded bg-gray-100"></div>
+              <div class="h-2 w-10 rounded bg-gray-100"></div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="recentRecipients.length === 0" class="mt-3 flex flex-col items-center rounded-2xl border border-gray-100 bg-white py-8 text-gray-300 shadow-sm">
+          <Icon icon="mdi:account-group-outline" class="text-3xl" />
+          <p class="mt-2 text-[10px] font-semibold">No recent recipients</p>
+        </div>
+
+        <div v-else class="mt-3 flex gap-2 overflow-x-auto pb-1">
           <button
             v-for="item in recentRecipients"
             :key="item.uid"
@@ -165,7 +181,7 @@
               v-else
               class="flex h-8 w-8 items-center justify-center rounded-full bg-[#e8fffc] text-[12px] font-semibold text-[#10b8ad]"
             >
-              ET
+              {{ initials(item.name) }}
             </div>
             <div class="min-w-0 text-left">
               <p class="truncate text-[10px] font-semibold text-[#17212f]">{{ item.name }}</p>
@@ -509,12 +525,27 @@ function formatDate(iso: string): string {
   } catch { return iso }
 }
 
-const recentRecipients: Recipient[] = [
-  { name: 'Alex Chen',    uid: 'UID 10243', avatar: 'https://i.pravatar.cc/100?img=12' },
-  { name: 'Sophia Li',   uid: 'UID 89143', avatar: 'https://i.pravatar.cc/100?img=47' },
-  { name: 'James Wu',    uid: 'UID 3845',  avatar: 'https://i.pravatar.cc/100?img=52' },
-  { name: 'Ella Taylor', uid: 'UID 77899', avatar: null },
-]
+// Recent recipients derived from transfer history (unique sent recipients, latest first)
+const recentRecipients = computed<Recipient[]>(() => {
+  const seen = new Set<string>()
+  const result: Recipient[] = []
+  for (const t of transfersFromApi.value) {
+    if (t.direction !== 'sent') continue
+    const id = t.recipient_id ?? ''
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    result.push({ name: t.recipient_name ?? id, uid: id, avatar: null })
+    if (result.length >= 5) break
+  }
+  return result
+})
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase()
+}
 
 const transferSteps = [
   'Enter recipient UID or registered email',
