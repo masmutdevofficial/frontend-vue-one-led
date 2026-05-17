@@ -177,9 +177,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const p = await makeUserApi(accessToken.value).getProfile()
       profile.value = p
-      // Sync basic user fields
+      // Sync basic user fields (including profile picture from /me)
       if (user.value) {
-        user.value = { ...user.value, username: p.username, email: p.email, balance: p.balance }
+        user.value = { ...user.value, username: p.username, email: p.email, balance: p.balance, profile: p.profile ?? user.value.profile }
       }
       _persist()
     } catch { /* best-effort */ }

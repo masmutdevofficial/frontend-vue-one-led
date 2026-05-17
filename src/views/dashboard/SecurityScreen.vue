@@ -34,7 +34,7 @@ onMounted(async () => {
 
 async function toggleBiometric() {
   if (!biometricSupported.value) {
-    toast.show('Your browser does not support passkeys.', 'error')
+    toast.error('Your browser does not support passkeys.')
     return
   }
   if (biometricBusy.value) return
@@ -49,20 +49,20 @@ async function toggleBiometric() {
       const regResponse = await startRegistration({ optionsJSON })
       await api().post('/webauthn/register/verify', regResponse)
       biometricEnabled.value = true
-      toast.show('Biometric login enabled!', 'success')
+      toast.success('Biometric login enabled!')
     } else {
       // ── Remove passkeys ───────────────────────────────────────────────────
       await api().delete('/webauthn/credential')
       biometricEnabled.value = false
-      toast.show('Biometric login disabled.', 'success')
+      toast.success('Biometric login disabled.')
     }
   } catch (err) {
     if ((err as Error).name === 'NotAllowedError') {
-      toast.show('Passkey prompt was cancelled.', 'error')
+      toast.error('Passkey prompt was cancelled.')
     } else if ((err as Error).name === 'InvalidStateError') {
-      toast.show('This authenticator is already registered.', 'error')
+      toast.error('This authenticator is already registered.')
     } else {
-      toast.show(err instanceof ApiError ? err.message : 'Biometric setup failed.', 'error')
+      toast.error(err instanceof ApiError ? err.message : 'Biometric setup failed.')
     }
   } finally {
     biometricBusy.value = false
@@ -104,7 +104,7 @@ async function submitChangePassword() {
       old_password: passwordForm.old_password,
       new_password: passwordForm.new_password,
     })
-    toast.show('Password changed successfully!', 'success')
+    toast.success('Password changed successfully!')
     activeView.value = null
   } catch (err) {
     passwordError.value = err instanceof ApiError ? err.message : 'Failed to change password.'
@@ -156,9 +156,9 @@ async function revokeDevice(id: string) {
   try {
     await api().delete(`/devices/${id}`)
     devices.value = devices.value.filter(d => d.id !== id)
-    toast.show('Device session removed.', 'success')
+    toast.success('Device session removed.')
   } catch {
-    toast.show('Failed to remove device.', 'error')
+    toast.error('Failed to remove device.')
   } finally {
     revokingId.value = null
   }

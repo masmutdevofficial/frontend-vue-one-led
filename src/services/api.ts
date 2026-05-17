@@ -122,6 +122,7 @@ export interface UserProfile {
   email:         string
   balance:       string
   commission:    string
+  profile:       string | null
   twofa_enabled: boolean
   ktp_status:    string | null
   ktp_image:     string | null
@@ -150,6 +151,19 @@ export function makeUserApi(token: string) {
       bank_account?: string
       country?: string
     }) => api.put<{ ok: boolean }>('/me', body),
+    uploadAvatar: (file: File) => {
+      const form = new FormData()
+      form.append('avatar', file)
+      return fetch(BASE + '/avatar', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      }).then(async res => {
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new ApiError(res.status, data?.error?.message ?? 'Upload failed.', data?.error?.code)
+        return data as { ok: boolean; profile: string }
+      })
+    },
     getBalance:    () => api.get<UserBalance>('/balance'),
   }
 }

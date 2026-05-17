@@ -218,9 +218,25 @@
             />
             <Icon v-else icon="mdi:account" class="size-20" />
           </div>
-          <span class="absolute bottom-1 right-0 grid size-10 place-items-center rounded-full border-4 border-white bg-white text-slate-500 shadow-md">
-            <Icon icon="mdi:camera-outline" class="size-5" />
-          </span>
+          <!-- hidden file input -->
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/*"
+            class="hidden"
+            @change="onAvatarChange"
+          />
+          <button
+            type="button"
+            :disabled="avatarUploading"
+            class="absolute bottom-1 right-0 grid size-10 place-items-center rounded-full border-4 border-white bg-white text-slate-500 shadow-md transition hover:bg-slate-50 disabled:opacity-60"
+            @click="triggerAvatarPick"
+          >
+            <svg v-if="avatarUploading" class="size-4 animate-spin text-teal-500" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31" stroke-dashoffset="12" />
+            </svg>
+            <Icon v-else icon="mdi:camera-outline" class="size-5" />
+          </button>
         </div>
 
         <div class="min-w-0 flex-1">
@@ -303,12 +319,46 @@ import { Icon } from '@iconify/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { makeUserApi } from '@/services/api'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const auth   = useAuthStore()
+const toast  = useToast()
 
 // ── Fetch full profile on mount ──────────────────────────────────────────────
 onMounted(() => { auth.refreshProfile() })
+
+// ── Avatar upload ─────────────────────────────────────────────────────────────
+const fileInput       = ref<HTMLInputElement | null>(null)
+const avatarUploading = ref(false)
+
+function triggerAvatarPick() {
+  fileInput.value?.click()
+}
+
+async function onAvatarChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file || !auth.accessToken) return
+  if (!file.type.startsWith('image/')) {
+    toast.error('Please select an image file.')
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    toast.error('Image must be smaller than 5 MB.')
+    return
+  }
+  avatarUploading.value = true
+  try {
+    const { profile: newUrl } = await makeUserApi(auth.accessToken).uploadAvatar(file)
+    if (auth.user) auth.user = { ...auth.user, profile: newUrl }
+    toast.success('Profile photo updated!')
+  } catch (e: any) {
+    toast.error(e?.message ?? 'Failed to upload photo.')
+  } finally {
+    avatarUploading.value = false
+    if (fileInput.value) fileInput.value.value = ''
+  }
+}
 
 // ── Derived display values ───────────────────────────────────────────────────
 const displayName = computed(() => auth.profile?.username ?? auth.user?.username ?? 'User')
