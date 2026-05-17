@@ -188,7 +188,7 @@
       >
         <div
           v-if="unstakeTarget"
-          class="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-107.5 rounded-t-3xl bg-white shadow-2xl"
+          class="fixed inset-x-0 bottom-[75px] z-50 mx-auto max-w-107.5 rounded-t-3xl bg-white shadow-2xl"
         >
           <div class="flex justify-center pt-3">
             <div class="h-1 w-10 rounded-full bg-gray-200"></div>

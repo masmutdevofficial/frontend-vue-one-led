@@ -238,7 +238,7 @@
     </div>
 
     <!-- BOTTOM BUTTON -->
-    <div class="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 bg-[#f6f8fb] px-4 pb-4 pt-3">
+    <div class="fixed bottom-[75px] left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 bg-[#f6f8fb] px-4 pb-4 pt-3">
       <p v-if="sendError" class="mb-1 text-center text-[11px] font-semibold text-red-500">{{ sendError }}</p>
       <button
         @click="sendTransfer"
@@ -257,7 +257,7 @@
 
     <!-- SUCCESS SHEET -->
     <Transition enter-from-class="translate-y-full" enter-active-class="transition-transform duration-300" leave-to-class="translate-y-full" leave-active-class="transition-transform duration-300">
-      <div v-if="showSuccess" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
+      <div v-if="showSuccess" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
         <div class="flex justify-center pt-3"><div class="h-1 w-10 rounded-full bg-gray-200"></div></div>
         <div class="flex flex-col items-center px-4 pb-10 pt-5 text-center">
           <div class="flex h-20 w-20 items-center justify-center rounded-full bg-[#e9fffc]">

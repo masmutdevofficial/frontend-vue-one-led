@@ -365,7 +365,7 @@
       leave-to-class="translate-y-full"
       leave-active-class="transition-transform duration-300"
     >
-      <div v-if="showFilter" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
+      <div v-if="showFilter" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
         <div class="flex justify-center pt-3"><div class="h-1 w-10 rounded-full bg-gray-200"></div></div>
         <div class="px-4 pb-8 pt-3">
           <div class="flex items-center justify-between">
@@ -429,7 +429,7 @@
       leave-to-class="translate-y-full"
       leave-active-class="transition-transform duration-300"
     >
-      <div v-if="showAI" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
+      <div v-if="showAI" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
         <div class="flex justify-center pt-3"><div class="h-1 w-10 rounded-full bg-gray-200"></div></div>
         <div class="px-4 pb-8 pt-3">
           <div class="flex items-center justify-between">
@@ -556,7 +556,7 @@
       leave-to-class="translate-y-full"
       leave-active-class="transition-transform duration-300"
     >
-      <div v-if="showTerms" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
+      <div v-if="showTerms" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
         <div class="flex justify-center pt-3"><div class="h-1 w-10 rounded-full bg-gray-200"></div></div>
         <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <h3 class="text-[15px] font-semibold text-[#17212f]">Terms &amp; Conditions</h3>
@@ -646,7 +646,7 @@
       leave-to-class="translate-y-full"
       leave-active-class="transition-transform duration-300"
     >
-      <div v-if="showJoinPassword" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
+      <div v-if="showJoinPassword" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
         <div class="flex justify-center pt-3"><div class="h-1 w-10 rounded-full bg-gray-200"></div></div>
         <div class="px-5 pb-8 pt-4">
           <div class="flex items-center justify-between">

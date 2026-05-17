@@ -341,7 +341,7 @@
       <div v-if="showLeverageSheet" class="fixed inset-0 z-40 bg-black/30" @click="showLeverageSheet = false"></div>
     </Transition>
     <Transition enter-from-class="translate-y-full" enter-active-class="transition duration-300" leave-to-class="translate-y-full" leave-active-class="transition duration-300">
-      <div v-if="showLeverageSheet" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white p-5 shadow-2xl">
+      <div v-if="showLeverageSheet" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white p-5 shadow-2xl">
         <div class="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200"></div>
         <h3 class="text-[16px] font-semibold">Select Leverage</h3>
         <div class="mt-5 grid grid-cols-3 gap-3">
@@ -359,7 +359,7 @@
       <div v-if="showMarginSheet" class="fixed inset-0 z-40 bg-black/30" @click="showMarginSheet = false"></div>
     </Transition>
     <Transition enter-from-class="translate-y-full" enter-active-class="transition duration-300" leave-to-class="translate-y-full" leave-active-class="transition duration-300">
-      <div v-if="showMarginSheet" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white p-5 shadow-2xl">
+      <div v-if="showMarginSheet" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white p-5 shadow-2xl">
         <div class="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200"></div>
         <h3 class="text-[16px] font-semibold">Margin Mode</h3>
         <div class="mt-5 grid grid-cols-2 gap-3">
@@ -382,7 +382,7 @@
       <div v-if="showSuccess" class="fixed inset-0 z-40 bg-black/30" @click="showSuccess = false"></div>
     </Transition>
     <Transition enter-from-class="translate-y-full" enter-active-class="transition duration-300" leave-to-class="translate-y-full" leave-active-class="transition duration-300">
-      <div v-if="showSuccess" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white px-6 pb-8 pt-6 shadow-2xl">
+      <div v-if="showSuccess" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white px-6 pb-8 pt-6 shadow-2xl">
         <div class="mx-auto mb-6 h-1 w-10 rounded-full bg-gray-200"></div>
         <div class="flex flex-col items-center text-center">
           <div class="flex h-16 w-16 items-center justify-center rounded-full" :class="successSide === 'Long' ? 'bg-[#eafffd]' : 'bg-red-50'">
@@ -410,7 +410,7 @@
       <div v-if="showCloseSheet" class="fixed inset-0 z-40 bg-black/30" @click="showCloseSheet = false"></div>
     </Transition>
     <Transition enter-from-class="translate-y-full" enter-active-class="transition duration-300" leave-to-class="translate-y-full" leave-active-class="transition duration-300">
-      <div v-if="showCloseSheet" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white px-5 pb-8 pt-5 shadow-2xl">
+      <div v-if="showCloseSheet" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white px-5 pb-8 pt-5 shadow-2xl">
         <div class="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200"></div>
         <h3 class="text-[16px] font-semibold">Close Position</h3>
         <div class="mt-4 rounded-2xl border border-gray-100 bg-[#f6f8fb] px-4 py-3">
@@ -459,7 +459,7 @@
       <div v-if="showShareSheet" class="fixed inset-0 z-40 bg-black/30" @click="showShareSheet = false"></div>
     </Transition>
     <Transition enter-from-class="translate-y-full" enter-active-class="transition duration-300" leave-to-class="translate-y-full" leave-active-class="transition duration-300">
-      <div v-if="showShareSheet" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white px-5 pb-8 pt-5 shadow-2xl">
+      <div v-if="showShareSheet" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white px-5 pb-8 pt-5 shadow-2xl">
         <div class="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200"></div>
         <h3 class="text-[16px] font-semibold">Share Position</h3>
         <div class="mt-4 rounded-2xl bg-linear-to-br from-[#eafffd] to-[#f0fff9] p-5">
@@ -491,7 +491,7 @@
       <div v-if="showPositionMenu" class="fixed inset-0 z-40 bg-black/30" @click="showPositionMenu = false"></div>
     </Transition>
     <Transition enter-from-class="translate-y-full" enter-active-class="transition duration-300" leave-to-class="translate-y-full" leave-active-class="transition duration-300">
-      <div v-if="showPositionMenu" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white pb-8 pt-5 shadow-2xl">
+      <div v-if="showPositionMenu" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 rounded-t-2xl bg-white pb-8 pt-5 shadow-2xl">
         <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200"></div>
         <button v-for="action in positionActions" :key="action.label" @click="showPositionMenu = false"
           class="flex w-full items-center gap-3 px-6 py-4 text-left text-[14px] font-semibold active:bg-gray-50"

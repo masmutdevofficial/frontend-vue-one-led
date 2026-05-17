@@ -33,37 +33,6 @@
                 <Icon icon="mdi:eye-outline" class="text-[14px] text-gray-400" />
               </div>
 
-              <!-- Total Market Cap -->
-              <div class="mt-4">
-                <p class="text-[11px] font-semibold text-gray-400">Total Market Cap</p>
-                <div class="mt-1 flex items-center justify-start">
-                  <div class="mr-4">
-                    <h2 class="text-[22px] font-semibold leading-none">${{ marketCapValue.toFixed(2) }}T</h2>
-                    <span
-                      class="mt-1 block text-[11px] font-semibold"
-                      :class="marketCapChange >= 0 ? 'text-[#1fb9b2]' : 'text-red-400'"
-                    >{{ (marketCapChange >= 0 ? '+' : '') + marketCapChange.toFixed(2) }}%</span>
-                  </div>
-                  <svg class="h-[40px] w-[72px] shrink-0" viewBox="0 0 72 40" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="mcGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#62d9d3" stop-opacity="0.25" />
-                        <stop offset="100%" stop-color="#62d9d3" stop-opacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path :d="buildPath(marketCapPts, 72, 40, true)" fill="url(#mcGrad)" />
-                    <path
-                      :d="buildPath(marketCapPts, 72, 40)"
-                      fill="none"
-                      stroke="#62d9d3"
-                      stroke-width="1.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </div>
-              </div>
-
               <!-- 24h Trading Volume -->
               <div class="mt-5">
                 <p class="text-[11px] font-semibold text-gray-400">24h Trading Volume</p>
@@ -130,11 +99,10 @@
       <section class="mt-2 px-3">
         <div class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           <!-- TABLE HEADER -->
-          <div class="grid grid-cols-5 gap-x-2 border-b border-gray-100 px-4 py-3 text-[9px] font-bold text-gray-400">
+          <div class="grid grid-cols-4 gap-x-2 border-b border-gray-100 px-4 py-3 text-[9px] font-bold text-gray-400">
             <span>Name</span>
             <span class="text-center">Last Price</span>
             <span class="text-center">24h Chg%</span>
-            <span class="text-center">Mkt Cap</span>
             <span></span>
           </div>
 
@@ -148,7 +116,7 @@
             <div
               v-for="coin in displayedMarkets"
               :key="coin.name"
-              class="grid grid-cols-5 items-center gap-x-2 px-4 py-4 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              class="grid grid-cols-4 items-center gap-x-2 px-4 py-4 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
               @click="router.push('/trade/' + coin.name.toLowerCase())"
             >
               <!-- Name + icon -->
@@ -173,11 +141,6 @@
                 <p class="text-[10px] font-bold" :class="coin.change >= 0 ? 'text-emerald-500' : 'text-red-400'">
                   {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
                 </p>
-              </div>
-
-              <!-- Market Cap -->
-              <div class="flex justify-center">
-                <p class="text-[11px] font-bold">{{ coin.marketCap }}</p>
               </div>
 
               <!-- Star -->
@@ -215,22 +178,7 @@ import { useMarketWs } from '@/services/marketWs'
 const router = useRouter()
 
 // ── Overview stats (live) ──────────────────────────────────────
-const marketCapPts = ref([0.40, 0.45, 0.42, 0.50, 0.52, 0.55, 0.58, 0.62])
 const volumePts = ref([0.35, 0.42, 0.38, 0.46, 0.50, 0.52, 0.55, 0.60])
-
-// Live market cap total = sum of all rawMarketCap / 1e12 (trillions)
-const marketCapValue = computed(() => {
-  const total = marketsData.value.reduce((s, c) => s + (c.rawMarketCap || 0), 0)
-  return Math.round((total / 1e12) * 100) / 100
-})
-
-// Weighted average 24h change across all coins by market cap
-const marketCapChange = computed(() => {
-  const total = marketsData.value.reduce((s, c) => s + (c.rawMarketCap || 0), 0)
-  if (total === 0) return 0
-  const weighted = marketsData.value.reduce((s, c) => s + c.change * (c.rawMarketCap || 0), 0)
-  return Math.round((weighted / total) * 100) / 100
-})
 
 // Live 24h volume = sum of (volume * price) for all tracked pairs in billions
 const volumeValue = computed(() => {
@@ -323,10 +271,6 @@ interface Market {
   icon: string
   price: number
   change: number
-  marketCap: string
-  rawMarketCap: number    // USD market cap (live-adjusted)
-  baseMarketCap: number   // from DB — reference value
-  basePrice: number       // price at fetch time — for ratio computation
   chartPoints: number[]
   isNewListing?: boolean
   tags: string[]
@@ -334,25 +278,19 @@ interface Market {
 }
 
 const marketsData = ref<Market[]>([
-  { name: 'BTC',  fullName: 'Bitcoin',   icon: 'mdi:bitcoin',                 price: 64923.45, change:  1.24, marketCap: '$1.21T',   rawMarketCap: 1.21e12,  baseMarketCap: 1.21e12,  basePrice: 64923.45, chartPoints: [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60], binancePair: 'BTCUSDT',  tags: ['Layer 1', 'Top 100'] },
-  { name: 'ETH',  fullName: 'Ethereum',  icon: 'mdi:ethereum',                price:  3215.67, change:  2.35, marketCap: '$387.10B', rawMarketCap: 387.1e9,  baseMarketCap: 387.1e9,  basePrice: 3215.67,  chartPoints: [0.25, 0.35, 0.38, 0.46, 0.50, 0.55, 0.62, 0.72], binancePair: 'ETHUSDT',  tags: ['Layer 1', 'DeFi', 'Top 100'] },
-  { name: 'SOL',  fullName: 'Solana',    icon: 'mdi:circle-multiple-outline', price:   171.25, change: -0.45, marketCap: '$79.45B',  rawMarketCap: 79.45e9,  baseMarketCap: 79.45e9,  basePrice: 171.25,   chartPoints: [0.65, 0.60, 0.62, 0.55, 0.58, 0.52, 0.54, 0.48], binancePair: 'SOLUSDT',  tags: ['Layer 1', 'Top 100'] },
-  { name: 'BNB',  fullName: 'BNB',       icon: 'mdi:alpha-b-circle',          price:   593.31, change:  0.81, marketCap: '$87.12B',  rawMarketCap: 87.12e9,  baseMarketCap: 87.12e9,  basePrice: 593.31,   chartPoints: [0.35, 0.40, 0.38, 0.44, 0.42, 0.48, 0.46, 0.52], binancePair: 'BNBUSDT',  tags: ['Layer 1', 'Top 100'] },
-  { name: 'XRP',  fullName: 'XRP',       icon: 'mdi:close',                   price:    0.522, change:  1.05, marketCap: '$28.46B',  rawMarketCap: 28.46e9,  baseMarketCap: 28.46e9,  basePrice: 0.522,    chartPoints: [0.40, 0.44, 0.42, 0.48, 0.50, 0.52, 0.54, 0.56], binancePair: 'XRPUSDT',  tags: ['Top 100'] },
-  { name: 'WIF',  fullName: 'dogwifhat', icon: 'mdi:dog',                     price:     2.45, change:  8.32, marketCap: '$2.45B',   rawMarketCap: 2.45e9,   baseMarketCap: 2.45e9,   basePrice: 2.45,     chartPoints: [0.20, 0.28, 0.35, 0.45, 0.55, 0.62, 0.70, 0.78], binancePair: 'WIFUSDT',  isNewListing: true, tags: ['Top 100'] },
-  { name: 'RNDR', fullName: 'Render',    icon: 'mdi:cube-scan',               price:     7.89, change: -1.23, marketCap: '$3.01B',   rawMarketCap: 3.01e9,   baseMarketCap: 3.01e9,   basePrice: 7.89,     chartPoints: [0.70, 0.65, 0.68, 0.60, 0.58, 0.55, 0.52, 0.48], binancePair: 'RNDRUSDT', isNewListing: true, tags: ['DeFi', 'Top 100'] },
+  { name: 'BTC',  fullName: 'Bitcoin',   icon: 'mdi:bitcoin',                 price: 64923.45, change:  1.24, chartPoints: [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60], binancePair: 'BTCUSDT',  tags: ['Layer 1', 'Top 100'] },
+  { name: 'ETH',  fullName: 'Ethereum',  icon: 'mdi:ethereum',                price:  3215.67, change:  2.35, chartPoints: [0.25, 0.35, 0.38, 0.46, 0.50, 0.55, 0.62, 0.72], binancePair: 'ETHUSDT',  tags: ['Layer 1', 'DeFi', 'Top 100'] },
+  { name: 'SOL',  fullName: 'Solana',    icon: 'mdi:circle-multiple-outline', price:   171.25, change: -0.45, chartPoints: [0.65, 0.60, 0.62, 0.55, 0.58, 0.52, 0.54, 0.48], binancePair: 'SOLUSDT',  tags: ['Layer 1', 'Top 100'] },
+  { name: 'BNB',  fullName: 'BNB',       icon: 'mdi:alpha-b-circle',          price:   593.31, change:  0.81, chartPoints: [0.35, 0.40, 0.38, 0.44, 0.42, 0.48, 0.46, 0.52], binancePair: 'BNBUSDT',  tags: ['Layer 1', 'Top 100'] },
+  { name: 'XRP',  fullName: 'XRP',       icon: 'mdi:close',                   price:    0.522, change:  1.05, chartPoints: [0.40, 0.44, 0.42, 0.48, 0.50, 0.52, 0.54, 0.56], binancePair: 'XRPUSDT',  tags: ['Top 100'] },
+  { name: 'WIF',  fullName: 'dogwifhat', icon: 'mdi:dog',                     price:     2.45, change:  8.32, chartPoints: [0.20, 0.28, 0.35, 0.45, 0.55, 0.62, 0.70, 0.78], binancePair: 'WIFUSDT',  isNewListing: true, tags: ['Top 100'] },
+  { name: 'RNDR', fullName: 'Render',    icon: 'mdi:cube-scan',               price:     7.89, change: -1.23, chartPoints: [0.70, 0.65, 0.68, 0.60, 0.58, 0.55, 0.52, 0.48], binancePair: 'RNDRUSDT', isNewListing: true, tags: ['DeFi', 'Top 100'] },
 ])
 
 // Live WS prices
 const { tickerMap } = useMarketWs()
 
 // ── Helpers ────────────────────────────────────────────────────
-function formatMarketCap(value: number): string {
-  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`
-  if (value >= 1e9)  return `$${(value / 1e9).toFixed(2)}B`
-  if (value >= 1e6)  return `$${(value / 1e6).toFixed(2)}M`
-  return `$${value.toLocaleString()}`
-}
 function generateChartPoints(): number[] {
   return Array.from({ length: 8 }, () => Math.random() * 0.8 + 0.1)
 }
@@ -367,7 +305,6 @@ async function fetchMarketCoins() {
     if (coins.length === 0) return
     marketsData.value = coins.map((c) => {
       const existing = marketsData.value.find(m => m.name === c.symbol)
-      const rawCap = Number(c.market_cap) || 0
       const currentPrice = existing?.price ?? 0
       return {
         name:          c.symbol,
@@ -375,10 +312,6 @@ async function fetchMarketCoins() {
         icon:          c.icon ?? 'mdi:currency-usd',
         price:         currentPrice,
         change:        existing?.change ?? 0,
-        marketCap:     formatMarketCap(rawCap),
-        rawMarketCap:  rawCap,
-        baseMarketCap: rawCap,
-        basePrice:     currentPrice,
         chartPoints:   existing?.chartPoints ?? generateChartPoints(),
         isNewListing:  existing?.isNewListing ?? false,
         tags:          existing?.tags ?? (c.is_featured ? ['Top 100'] : []),
@@ -417,12 +350,6 @@ const displayedMarkets = computed(() => {
 let timer: ReturnType<typeof setInterval>
 
 function tick() {
-  // Animate sparkline for market cap (direction follows real computed change)
-  const mcDir = marketCapChange.value >= 0 ? 0.44 : 0.56
-  const mcLast = marketCapPts.value[marketCapPts.value.length - 1]
-  const mcNext = Math.max(0.05, Math.min(0.95, mcLast + (Math.random() - mcDir) * 0.1))
-  marketCapPts.value = [...marketCapPts.value.slice(1), mcNext]
-
   // Animate sparkline for volume (direction follows real computed change)
   const volDir = volumeChange.value >= 0 ? 0.44 : 0.56
   const volLast = volumePts.value[volumePts.value.length - 1]
@@ -448,16 +375,10 @@ watch(tickerMap, (map) => {
   marketsData.value = marketsData.value.map(coin => {
     const t = map.get(coin.binancePair)
     if (!t) return coin
-    // Scale rawMarketCap proportionally to the price movement
-    const base = coin.basePrice > 0 ? coin.basePrice : coin.price
-    const priceRatio = base > 0 ? t.price / base : 1
-    const newRawCap = coin.baseMarketCap * priceRatio
     return {
       ...coin,
-      price:       t.price,
-      change:      Math.round(t.change * 100) / 100,
-      rawMarketCap: newRawCap,
-      marketCap:   formatMarketCap(newRawCap),
+      price:  t.price,
+      change: Math.round(t.change * 100) / 100,
     }
   })
 })

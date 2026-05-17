@@ -251,15 +251,15 @@
             </button>
           </div>
           <!-- Header -->
-          <div class="mt-3 grid grid-cols-5 gap-x-2 text-[8px] font-bold text-gray-400">
-            <span>Name</span><span class="text-center">Last Price</span><span class="text-center">24h Chg%</span><span class="text-center">Mkt Cap</span><span></span>
+          <div class="mt-3 grid grid-cols-4 gap-x-2 text-[8px] font-bold text-gray-400">
+            <span>Name</span><span class="text-center">Last Price</span><span class="text-center">24h Chg%</span><span></span>
           </div>
           <!-- Rows -->
           <div class="mt-2 space-y-3">
             <div
               v-for="coin in displayedMarkets"
               :key="coin.symbol"
-              class="grid grid-cols-5 items-center gap-x-2 cursor-pointer rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              class="grid grid-cols-4 items-center gap-x-2 cursor-pointer rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
               @click="router.push('/trade/' + coin.symbol.toLowerCase())"
             >
               <!-- Name + icon -->
@@ -300,10 +300,6 @@
                     style="transition: d 0.4s ease"
                   />
                 </svg>
-              </div>
-              <!-- Market Cap -->
-              <div class="flex flex-col items-center">
-                <p class="text-[10px] font-bold leading-none">{{ coin.marketCap }}</p>
               </div>
               <!-- Star -->
               <button class="justify-self-center" @click.stop="toggleFavorite(coin.symbol)">
@@ -527,7 +523,6 @@ interface Market {
   binancePair: string
   price: number
   change: number
-  marketCap: string
   chartPoints: number[]
   isNewListing?: boolean
 }
@@ -546,7 +541,6 @@ function buildMarketsFromStore() {
       binancePair: c.binancePair,
       price: t?.price ?? existing?.price ?? 0,
       change: t?.change ?? existing?.change ?? 0,
-      marketCap: marketStore.fmtCap(c.marketCap),
       chartPoints: existing?.chartPoints ?? [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60],
       isNewListing: false,
     }

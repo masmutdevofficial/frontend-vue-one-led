@@ -356,7 +356,7 @@
         <div v-if="showFilterSheet" @click="showFilterSheet = false" class="fixed inset-0 z-40 bg-black/40"></div>
       </Transition>
       <Transition enter-from-class="translate-y-full" enter-active-class="transition-transform duration-300" leave-to-class="translate-y-full" leave-active-class="transition-transform duration-300">
-        <div v-if="showFilterSheet" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full  -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
+        <div v-if="showFilterSheet" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full  -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
           <div class="flex justify-center pt-3"><div class="h-1 w-10 rounded-full bg-gray-200"></div></div>
           <div class="max-h-[80vh] overflow-y-auto px-4 pb-8 pt-3">
             <div class="flex items-center justify-between">
@@ -409,7 +409,7 @@
         <div v-if="showTradeModal" @click="showTradeModal = false" class="fixed inset-0 z-40 bg-black/40"></div>
       </Transition>
       <Transition enter-from-class="translate-y-full" enter-active-class="transition-transform duration-300" leave-to-class="translate-y-full" leave-active-class="transition-transform duration-300">
-        <div v-if="showTradeModal && selectedMerchant" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full  -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
+        <div v-if="showTradeModal && selectedMerchant" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full  -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
           <div class="flex justify-center pt-3"><div class="h-1 w-10 rounded-full bg-gray-200"></div></div>
           <div class="px-4 pb-8 pt-3">
             <!-- Merchant header -->
@@ -475,7 +475,7 @@
         <div v-if="showSuccess" @click="showSuccess = false" class="fixed inset-0 z-40 bg-black/40"></div>
       </Transition>
       <Transition enter-from-class="translate-y-full" enter-active-class="transition-transform duration-300" leave-to-class="translate-y-full" leave-active-class="transition-transform duration-300">
-        <div v-if="showSuccess" class="fixed inset-x-0 bottom-0 left-1/2 z-50 w-full  -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
+        <div v-if="showSuccess" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full  -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
           <div class="flex justify-center pt-3"><div class="h-1 w-10 rounded-full bg-gray-200"></div></div>
           <div class="flex flex-col items-center px-4 pb-10 pt-5 text-center">
             <div class="flex h-20 w-20 items-center justify-center rounded-full bg-[#e9fffc]">

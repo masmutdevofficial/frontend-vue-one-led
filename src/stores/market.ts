@@ -7,7 +7,6 @@ export interface CoinMeta {
   name: string         // 'Bitcoin'
   binancePair: string  // 'BTCUSDT'
   icon: string         // 'mdi:bitcoin' OR 'https://cdn.../btc.png'
-  marketCap: number
   isFeatured: boolean
 }
 
@@ -55,7 +54,6 @@ export const useMarketStore = defineStore('market', () => {
         name:        String(c.name ?? c.symbol ?? ''),
         binancePair: String(c.binance_pair ?? String(c.symbol ?? '') + 'USDT').toUpperCase(),
         icon:        String(c.icon ?? 'mdi:currency-usd'),
-        marketCap:   Number(c.market_cap) || 0,
         isFeatured:  Boolean(c.is_featured),
       }))
       loaded.value = true
@@ -66,13 +64,5 @@ export const useMarketStore = defineStore('market', () => {
     }
   }
 
-  /** Format market cap for display */
-  function fmtCap(n: number): string {
-    if (n >= 1e12) return '$' + (n / 1e12).toFixed(2) + 'T'
-    if (n >= 1e9)  return '$' + (n / 1e9).toFixed(2) + 'B'
-    if (n >= 1e6)  return '$' + (n / 1e6).toFixed(2) + 'M'
-    return '$' + n.toLocaleString()
-  }
-
-  return { coins, coinMap, tickerMap, loaded, loading, fetchCoins, fmtCap }
+  return { coins, coinMap, tickerMap, loaded, loading, fetchCoins }
 })
