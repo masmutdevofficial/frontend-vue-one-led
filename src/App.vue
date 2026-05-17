@@ -32,5 +32,8 @@ const { toasts } = useToast()
 .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
 .toast-enter-from  { opacity: 0; transform: translateY(12px); }
 .toast-leave-to    { opacity: 0; transform: translateY(12px); }
+#tv-attr-logo {
+  display:none !important;
+}
 </style>
 
