@@ -264,26 +264,26 @@
                 </div>
               </div>
               <!-- AUM / Copiers / Min. Copy -->
-              <div class="mt-1.5 grid grid-cols-3 gap-2">
-                <div class="flex items-start gap-1">
+              <div class="mt-1.5 flex items-start justify-between gap-1">
+                <div class="flex min-w-0 flex-1 items-start gap-0.5">
                   <Icon icon="mdi:bank-outline" class="mt-px shrink-0 text-[9px] text-gray-400" />
-                  <div>
+                  <div class="min-w-0">
                     <p class="text-[7px] font-bold text-gray-400">AUM</p>
-                    <p class="text-[9px] font-semibold text-[#17212f]">{{ trader.aum }}</p>
+                    <p class="truncate text-[9px] font-semibold text-[#17212f]">{{ trader.aum }}</p>
                   </div>
                 </div>
-                <div class="flex items-start gap-1">
+                <div class="flex min-w-0 flex-1 items-start gap-0.5">
                   <Icon icon="mdi:account-group-outline" class="mt-px shrink-0 text-[9px] text-gray-400" />
-                  <div>
+                  <div class="min-w-0">
                     <p class="text-[7px] font-bold text-gray-400">Copiers</p>
-                    <p class="text-[9px] font-semibold text-[#17212f]">{{ trader.copiers.toLocaleString() }}</p>
+                    <p class="truncate text-[9px] font-semibold text-[#17212f]">{{ trader.copiers.toLocaleString() }}</p>
                   </div>
                 </div>
-                <div class="flex items-start gap-1">
+                <div class="flex min-w-0 flex-1 items-start gap-0.5">
                   <Icon icon="mdi:wallet-outline" class="mt-px shrink-0 text-[9px] text-gray-400" />
-                  <div>
+                  <div class="min-w-0">
                     <p class="text-[7px] font-bold text-gray-400">Min. Copy</p>
-                    <p class="text-[9px] font-semibold text-[#17212f]">${{ trader.minCopy }}</p>
+                    <p class="truncate text-[9px] font-semibold text-[#17212f]">${{ trader.minCopy }}</p>
                   </div>
                 </div>
               </div>
