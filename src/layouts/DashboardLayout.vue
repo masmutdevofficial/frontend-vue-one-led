@@ -21,7 +21,7 @@
               ref="searchInputRef"
               v-model="searchQuery"
               type="text"
-              placeholder="Search coins, pairs…"
+              placeholder="Search coins, traders, P2P…"
               class="flex-1 bg-transparent text-[14px] font-medium text-[#1f2933] placeholder-gray-400 outline-none"
             />
             <button @click="closeSearch" class="shrink-0 active:scale-95 transition">
@@ -98,32 +98,64 @@
         leave-to-class="opacity-0 -translate-y-1"
       >
         <div
-          v-if="searchOpen && searchQuery.trim() && searchResults.length"
+          v-if="searchOpen && searchQuery.trim()"
           class="absolute top-[62px] inset-x-0 z-40 bg-white border-b border-gray-100 shadow-xl"
         >
-          <div class="mx-auto max-w-7xl px-4 py-2 max-h-[320px] overflow-y-auto">
-            <button
-              v-for="coin in searchResults"
-              :key="coin.symbol"
-              class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 active:bg-slate-100 transition text-left"
-              @click="onSearchResultClick(coin)"
-            >
-              <div :class="['grid size-9 shrink-0 place-items-center rounded-xl', coinIconClass(coin.symbol)]">
-                <img v-if="coin.icon.startsWith('http')" :src="coin.icon" class="size-5 object-contain rounded" alt="" />
-                <Icon v-else :icon="coin.icon" class="size-5" />
+          <div class="mx-auto max-w-7xl px-4 pb-3 max-h-[420px] overflow-y-auto">
+
+            <!-- No results -->
+            <div v-if="!searchGroups.length" class="flex flex-col items-center py-8 text-center">
+              <Icon icon="mdi:magnify-remove-outline" class="text-[44px] text-gray-200" />
+              <p class="mt-2 text-[13px] font-semibold text-gray-400">No results for "{{ searchQuery }}"</p>
+            </div>
+
+            <!-- Grouped results -->
+            <template v-else>
+              <div v-for="group in searchGroups" :key="group.label">
+                <!-- Category label -->
+                <p class="px-3 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  {{ group.label }}
+                </p>
+
+                <!-- Items -->
+                <button
+                  v-for="item in group.items"
+                  :key="item.id"
+                  class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 active:bg-slate-100 transition text-left"
+                  @click="onSearchResultClick(item)"
+                >
+                  <!-- Icon -->
+                  <div :class="['grid size-9 shrink-0 place-items-center rounded-xl overflow-hidden', item.iconBg]">
+                    <img v-if="item.iconIsUrl" :src="item.icon" class="size-9 object-cover" alt="" />
+                    <Icon v-else :icon="item.icon" class="size-5" />
+                  </div>
+
+                  <!-- Text -->
+                  <div class="flex-1 min-w-0">
+                    <p class="text-[13px] font-bold text-[#1f2933]">
+                      {{ item.title }}
+                      <span v-if="item.category === 'Coins'" class="font-medium text-gray-400">/USDT</span>
+                    </p>
+                    <p class="text-[11px] text-gray-400 truncate">{{ item.subtitle }}</p>
+                  </div>
+
+                  <!-- Right: live price (Coins) -->
+                  <div v-if="item.priceInfo" class="text-right shrink-0">
+                    <p class="text-[13px] font-semibold text-[#1f2933]">{{ item.priceInfo.price }}</p>
+                    <p class="text-[11px]" :class="item.priceInfo.isPositive ? 'text-green-500' : 'text-red-500'">{{ item.priceInfo.change }}</p>
+                  </div>
+
+                  <!-- Right: ROI badge (Copy Trader) -->
+                  <span v-else-if="item.badge" class="shrink-0 rounded-full bg-[#eafffd] px-2 py-0.5 text-[10px] font-bold text-[#0aa99e]">
+                    {{ item.badge }}
+                  </span>
+
+                  <!-- Right: arrow (Pages) -->
+                  <Icon v-else-if="item.category === 'Pages'" icon="mdi:chevron-right" class="shrink-0 text-[18px] text-gray-300" />
+                </button>
               </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[13px] font-bold text-[#1f2933]">{{ coin.symbol }}<span class="font-medium text-gray-400">/USDT</span></p>
-                <p class="text-[11px] text-gray-400 truncate">{{ coin.name }}</p>
-              </div>
-              <div v-if="getSearchTicker(coin.binancePair)" class="text-right shrink-0">
-                <p class="text-[13px] font-semibold text-[#1f2933]">{{ getSearchTicker(coin.binancePair)!.price }}</p>
-                <p class="text-[11px]" :class="getSearchTicker(coin.binancePair)!.isPositive ? 'text-green-500' : 'text-red-500'">{{ getSearchTicker(coin.binancePair)!.change }}</p>
-              </div>
-              <div v-else class="text-right shrink-0">
-                <p class="text-[13px] text-gray-300">—</p>
-              </div>
-            </button>
+            </template>
+
           </div>
         </div>
       </transition>
@@ -192,6 +224,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { cdnUrl } from '@/utils/cdn'
 import { useMarketStore, type CoinMeta, coinIconClass } from '@/stores/market'
+import { makeContentApi, type CopyTrader, p2pApi } from '@/services/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -219,17 +252,41 @@ const activeTopTab = computed(() => route.path === '/copy-trade' ? 'Copy Trade' 
 const topTabs = ['Spot', 'Copy Trade']
 
 // ── Search overlay ────────────────────────────────────────────
-const searchOpen = ref(false)
-const searchQuery = ref('')
-const searchInputRef = ref<HTMLInputElement | null>(null)
+const searchOpen      = ref(false)
+const searchQuery     = ref('')
+const searchInputRef  = ref<HTMLInputElement | null>(null)
+const cachedTraders   = ref<CopyTrader[]>([])
+const cachedMerchants = ref<any[]>([])
 
-const searchResults = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return []
-  return marketStore.coins
-    .filter(c => c.symbol.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
-    .slice(0, 8)
-})
+// ── Static pages searchable from the navbar ───────────────────
+const staticPages = [
+  { title: 'Market',       desc: 'Live crypto prices',        icon: 'mdi:chart-bar',                 route: '/market',      keywords: ['market', 'price', 'chart'] },
+  { title: 'Trade',        desc: 'Spot trading',              icon: 'mdi:swap-horizontal',            route: '/trade/btc',   keywords: ['trade', 'spot', 'buy', 'sell'] },
+  { title: 'Futures',      desc: 'Futures & perpetual',       icon: 'mdi:chart-line',                route: '/futures',     keywords: ['futures', 'perpetual', 'leverage', 'long', 'short'] },
+  { title: 'P2P Trading',  desc: 'Buy & sell with peers',     icon: 'mdi:account-group-outline',     route: '/p2p-trading', keywords: ['p2p', 'peer', 'merchant', 'buy', 'sell'] },
+  { title: 'Copy Trade',   desc: 'Follow top traders',        icon: 'mdi:content-copy',              route: '/copy-trade',  keywords: ['copy', 'trader', 'follow', 'roi'] },
+  { title: 'Staking',      desc: 'Earn passive income',       icon: 'mdi:bank-outline',              route: '/staking',     keywords: ['staking', 'earn', 'apr', 'flexible', 'locked'] },
+  { title: 'Events',       desc: 'Upcoming events',           icon: 'mdi:calendar-star',             route: '/events',      keywords: ['events', 'event', 'calendar'] },
+  { title: 'Campaigns',    desc: 'Promotions & bonuses',      icon: 'mdi:gift-outline',              route: '/campaigns',   keywords: ['campaigns', 'promo', 'bonus'] },
+  { title: 'Learn & Earn', desc: 'Learn to earn rewards',     icon: 'mdi:school-outline',            route: '/learn-earn',  keywords: ['learn', 'earn', 'education', 'quiz'] },
+  { title: 'News',         desc: 'Latest crypto news',        icon: 'mdi:newspaper-variant-outline', route: '/news',        keywords: ['news', 'article', 'latest'] },
+  { title: 'Rewards',      desc: 'Your rewards center',       icon: 'mdi:trophy-outline',            route: '/rewards',     keywords: ['rewards', 'points', 'bonus'] },
+  { title: 'Assets',       desc: 'Portfolio & balance',       icon: 'mdi:wallet-outline',            route: '/assets',      keywords: ['assets', 'wallet', 'balance', 'portfolio'] },
+  { title: 'Help Center',  desc: 'Support & FAQs',            icon: 'mdi:help-circle-outline',       route: '/help-center', keywords: ['help', 'support', 'faq'] },
+]
+
+interface SearchItem {
+  id: string
+  category: string
+  title: string
+  subtitle: string
+  icon: string
+  iconIsUrl: boolean
+  iconBg: string
+  route: string
+  priceInfo?: { price: string; change: string; isPositive: boolean }
+  badge?: string
+}
 
 function getSearchTicker(binancePair: string): { price: string; change: string; isPositive: boolean } | null {
   const t = marketStore.tickerMap.get(binancePair)
@@ -243,14 +300,118 @@ function getSearchTicker(binancePair: string): { price: string; change: string; 
   }
 }
 
-function onSearchResultClick(coin: CoinMeta) {
+const searchGroups = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return []
+
+  const items: SearchItem[] = []
+
+  // Coins
+  marketStore.coins
+    .filter(c => c.symbol.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
+    .slice(0, 5)
+    .forEach(c => items.push({
+      id: `coin-${c.symbol}`,
+      category: 'Coins',
+      title: c.symbol,
+      subtitle: c.name,
+      icon: c.icon,
+      iconIsUrl: c.icon.startsWith('http'),
+      iconBg: coinIconClass(c.symbol),
+      route: `/trade/${c.symbol.toLowerCase()}`,
+      priceInfo: getSearchTicker(c.binancePair) ?? undefined,
+    }))
+
+  // Copy Traders
+  cachedTraders.value
+    .filter(t =>
+      t.name.toLowerCase().includes(q) ||
+      t.username.toLowerCase().includes(q) ||
+      (t.tag ?? '').toLowerCase().includes(q)
+    )
+    .slice(0, 4)
+    .forEach(t => items.push({
+      id: `trader-${t.id}`,
+      category: 'Copy Trader',
+      title: t.name,
+      subtitle: `@${t.username}${t.tag ? ' · ' + t.tag : ''} · ${t.copiers.toLocaleString()} copiers`,
+      icon: t.avatar ? cdnUrl(t.avatar) : 'mdi:account-circle',
+      iconIsUrl: !!t.avatar,
+      iconBg: 'bg-violet-100 text-violet-500',
+      route: `/copy-trader/${t.username}`,
+      badge: `+${t.roi}% ROI`,
+    }))
+
+  // P2P Merchants
+  cachedMerchants.value
+    .filter(m =>
+      (m.name || '').toLowerCase().includes(q) ||
+      (m.asset ?? '').toLowerCase().includes(q)
+    )
+    .slice(0, 3)
+    .forEach(m => items.push({
+      id: `p2p-${m.id ?? m.name}`,
+      category: 'P2P',
+      title: m.name || 'Merchant',
+      subtitle: `${m.type === 'buy' ? 'Buy' : 'Sell'} ${m.asset ?? 'USDT'} · ${Number(m.completion_rate ?? 0).toFixed(1)}% completion`,
+      icon: m.avatar || 'mdi:account-circle-outline',
+      iconIsUrl: !!(m.avatar && (m.avatar.startsWith('http') || m.avatar.startsWith('/'))),
+      iconBg: 'bg-blue-100 text-blue-500',
+      route: '/p2p-trading',
+    }))
+
+  // Pages
+  staticPages
+    .filter(p =>
+      p.title.toLowerCase().includes(q) ||
+      p.keywords.some(k => k.includes(q))
+    )
+    .slice(0, 4)
+    .forEach(p => items.push({
+      id: `page-${p.route}`,
+      category: 'Pages',
+      title: p.title,
+      subtitle: p.desc,
+      icon: p.icon,
+      iconIsUrl: false,
+      iconBg: 'bg-gray-100 text-gray-500',
+      route: p.route,
+    }))
+
+  // Group by category preserving insertion order
+  const groupMap = new Map<string, SearchItem[]>()
+  for (const item of items) {
+    if (!groupMap.has(item.category)) groupMap.set(item.category, [])
+    groupMap.get(item.category)!.push(item)
+  }
+  return Array.from(groupMap.entries()).map(([label, groupItems]) => ({ label, items: groupItems }))
+})
+
+function onSearchResultClick(item: SearchItem) {
   closeSearch()
-  router.push('/market')
+  router.push(item.route)
+}
+
+async function fetchSearchTraders() {
+  if (!auth.accessToken) return
+  try {
+    const { traders } = await makeContentApi(auth.accessToken).getCopyTraders(50)
+    cachedTraders.value = traders
+  } catch { /* ignore */ }
+}
+
+async function fetchSearchMerchants() {
+  try {
+    const { merchants } = await p2pApi.getMerchants()
+    cachedMerchants.value = merchants
+  } catch { /* ignore */ }
 }
 
 async function openSearch() {
   searchOpen.value = true
   marketStore.fetchCoins()
+  if (!cachedTraders.value.length)   fetchSearchTraders()
+  if (!cachedMerchants.value.length) fetchSearchMerchants()
   await nextTick()
   searchInputRef.value?.focus()
 }
