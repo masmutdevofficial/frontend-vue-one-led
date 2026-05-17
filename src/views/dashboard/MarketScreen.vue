@@ -168,28 +168,11 @@
                 <p class="mt-1 text-[9px] text-gray-400">${{ formatPrice(coin.price) }}</p>
               </div>
 
-              <!-- 24h Change + mini spline chart -->
-              <div class="flex items-center justify-center gap-1">
+              <!-- 24h Change -->
+              <div class="flex items-center justify-center">
                 <p class="text-[10px] font-bold" :class="coin.change >= 0 ? 'text-emerald-500' : 'text-red-400'">
                   {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
                 </p>
-                <svg class="h-[26px] w-[44px] shrink-0" viewBox="0 0 52 26" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient :id="`cg-${coin.name}`" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stop-color="#62d9d3" stop-opacity="0.25" />
-                      <stop offset="100%" stop-color="#62d9d3" stop-opacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path :d="buildPath(coin.chartPoints, 52, 26, true)" :fill="`url(#cg-${coin.name})`" />
-                  <path
-                    :d="buildPath(coin.chartPoints, 52, 26)"
-                    fill="none"
-                    stroke="#62d9d3"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
               </div>
 
               <!-- Market Cap -->
