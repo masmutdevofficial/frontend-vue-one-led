@@ -9,20 +9,15 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const auth = useAuthStore()
 
+// ── Only transaction-related notification types ──────────────────────────────
+const ALLOWED_TYPES = new Set(['deposit', 'withdrawal', 'transfer'])
+
 // ── Icon mapping by notification type ────────────────────────────────────────
 interface NotifStyle { icon: string; iconClass: string }
 const typeStyle: Record<string, NotifStyle> = {
   deposit:    { icon: 'mdi:arrow-up-circle-outline',    iconClass: 'bg-orange-50 text-orange-400' },
   withdrawal: { icon: 'mdi:arrow-down-circle-outline',  iconClass: 'bg-red-50 text-red-400' },
   transfer:   { icon: 'mdi:swap-horizontal',            iconClass: 'bg-blue-50 text-sky-500' },
-  security:   { icon: 'mdi:shield-check-outline',       iconClass: 'bg-[#eafffb] text-[#20c7b7]' },
-  reward:     { icon: 'mdi:gift-outline',               iconClass: 'bg-[#eafffb] text-[#20c7b7]' },
-  course:     { icon: 'mdi:school-outline',             iconClass: 'bg-blue-50 text-sky-500' },
-  ama:        { icon: 'mdi:microphone-outline',         iconClass: 'bg-purple-50 text-purple-400' },
-  event:      { icon: 'mdi:calendar-star',              iconClass: 'bg-purple-50 text-purple-400' },
-  copy_trade: { icon: 'mdi:account-multiple-outline',   iconClass: 'bg-indigo-50 text-indigo-400' },
-  p2p:        { icon: 'mdi:handshake-outline',          iconClass: 'bg-yellow-50 text-yellow-500' },
-  system:     { icon: 'mdi:bell-outline',               iconClass: 'bg-gray-100 text-gray-500' },
 }
 function getStyle(type: string): NotifStyle {
   return typeStyle[type] ?? typeStyle.system
@@ -53,11 +48,9 @@ const loading = ref(false)
 
 // ── Hardcoded defaults ────────────────────────────────────────────────────────
 const defaultNotifications: Notification[] = [
-  { id: 0, title: 'Reward Claimed',     message: 'You have claimed +2.00 USDT from "What is Blockchain?"',              time: '2m ago',  icon: 'mdi:gift-outline',            iconClass: 'bg-[#eafffb] text-[#20c7b7]',   unread: true },
-  { id: 0, title: 'Course Completed',   message: 'Great job! You completed "What is Bitcoin?" and earned +2.00 USDT.',  time: '8m ago',  icon: 'mdi:school-outline',          iconClass: 'bg-blue-50 text-sky-500',        unread: true },
-  { id: 0, title: 'AMA Reminder',       message: 'Trading Strategies with Top Traders starts in 2 hours.',              time: '1h ago',  icon: 'mdi:bell-outline',            iconClass: 'bg-purple-50 text-purple-400',   unread: true },
-  { id: 0, title: 'Deposit Successful', message: 'Your deposit of 100 USDT via TRC20 has been confirmed.',              time: '3h ago',  icon: 'mdi:arrow-up-circle-outline', iconClass: 'bg-orange-50 text-orange-400',   unread: false },
-  { id: 0, title: 'Security Alert',     message: 'Your password was changed successfully.',                             time: '5h ago',  icon: 'mdi:shield-check-outline',    iconClass: 'bg-[#eafffb] text-[#20c7b7]',   unread: false },
+  { id: 0, title: 'Deposit Successful',  message: 'Your deposit of 100 USDT via TRC20 has been confirmed.',        time: '3h ago',  icon: 'mdi:arrow-up-circle-outline',   iconClass: 'bg-orange-50 text-orange-400', unread: true  },
+  { id: 0, title: 'Withdrawal Sent',     message: 'Your withdrawal of 50 USDT has been processed successfully.',  time: '5h ago',  icon: 'mdi:arrow-down-circle-outline', iconClass: 'bg-red-50 text-red-400',       unread: true  },
+  { id: 0, title: 'Transfer Complete',   message: 'You transferred 200 USDT to your Spot wallet successfully.',    time: '1d ago',  icon: 'mdi:swap-horizontal',           iconClass: 'bg-blue-50 text-sky-500',      unread: false },
 ]
 
 const notifications = ref<Notification[]>(defaultNotifications)
@@ -77,7 +70,8 @@ onMounted(async () => {
     const api = makeNotificationsApi(auth.accessToken)
     const data = await api.list()
     if (data.notifications.length > 0 || data.total === 0) {
-      notifications.value = data.notifications.map(n => ({
+      const txNotifs = data.notifications.filter(n => ALLOWED_TYPES.has(n.type))
+      notifications.value = txNotifs.map(n => ({
         id:        n.id,
         title:     n.title,
         message:   n.message,
@@ -87,7 +81,7 @@ onMounted(async () => {
         unread:    n.is_read === 0,
       }))
     }
-    unreadCount.value = data.unread
+    unreadCount.value = txNotifs.filter(n => n.is_read === 0).length
   } catch { /* silently use defaults */ } finally {
     loading.value = false
   }

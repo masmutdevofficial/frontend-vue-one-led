@@ -65,10 +65,10 @@
             <Icon icon="mdi:magnify" class="text-[29px] text-[#20242a]" />
           </button>
 
-          <button class="relative active:scale-95 transition" @click="router.push('/notifications')">
+          <button class="relative active:scale-95 transition" @click.stop="toggleNotifDropdown" data-notif-zone>
             <Icon icon="mdi:bell-outline" class="text-[27px] text-[#20242a]" />
             <!-- Notification dot with pulse -->
-            <span class="absolute top-[1px] right-[1px] flex h-[9px] w-[9px]">
+            <span v-if="notifUnread > 0" class="absolute top-[1px] right-[1px] flex h-[9px] w-[9px]">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1ecac2] opacity-75"></span>
               <span class="relative inline-flex rounded-full h-[9px] w-[9px] bg-[#1ecac2]"></span>
             </span>
@@ -87,6 +87,69 @@
           </button>
         </div>
       </div>
+
+      <!-- Notification dropdown -->
+      <transition
+        enter-active-class="transition duration-150 ease-out"
+        enter-from-class="opacity-0 -translate-y-1"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-100 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 -translate-y-1"
+      >
+        <div
+          v-if="notifOpen && !searchOpen"
+          class="absolute top-[62px] right-0 z-40 w-full max-w-[420px] bg-white border-b border-gray-100 shadow-xl rounded-b-2xl overflow-hidden"
+          data-notif-zone
+        >
+          <!-- Header -->
+          <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+            <p class="text-[13px] font-bold text-[#0b1638]">Notifications</p>
+            <button @click="notifOpen = false; router.push('/notifications')" class="text-[11px] font-semibold text-[#08a99f] active:opacity-60">View all</button>
+          </div>
+
+          <!-- Loading -->
+          <div v-if="notifLoading" class="flex flex-col gap-px">
+            <div v-for="i in 3" :key="i" class="flex gap-3 px-4 py-4 border-b border-gray-50">
+              <div class="h-10 w-10 shrink-0 animate-pulse rounded-full bg-gray-100"></div>
+              <div class="flex-1 space-y-2 pt-1">
+                <div class="h-3 w-2/3 animate-pulse rounded bg-gray-100"></div>
+                <div class="h-2 w-full animate-pulse rounded bg-gray-100"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Items -->
+          <template v-else>
+            <div
+              v-for="item in notifList"
+              :key="item.id"
+              class="flex items-start gap-3 border-b border-gray-50 px-4 py-3 last:border-0"
+              :class="item.unread ? 'bg-[#f6fffe]' : ''"
+            >
+              <div
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                :class="item.iconClass"
+              >
+                <Icon :icon="item.icon" class="text-[22px]" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start justify-between gap-2">
+                  <p class="text-[12px] font-semibold text-[#0b1638] leading-snug">{{ item.title }}</p>
+                  <span class="shrink-0 text-[11px] font-medium text-[#5b6d9a]">{{ item.time }}</span>
+                </div>
+                <p class="mt-0.5 text-[11px] font-medium leading-snug text-[#4b5575]">{{ item.message }}</p>
+              </div>
+            </div>
+
+            <!-- Empty -->
+            <div v-if="notifList.length === 0" class="flex flex-col items-center py-8 text-gray-400">
+              <Icon icon="mdi:bell-off-outline" class="text-[36px]" />
+              <p class="mt-2 text-[11px] font-semibold">No notifications</p>
+            </div>
+          </template>
+        </div>
+      </transition>
 
       <!-- Search results dropdown -->
       <transition
@@ -218,13 +281,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { cdnUrl } from '@/utils/cdn'
 import { useMarketStore, type CoinMeta, coinIconClass } from '@/stores/market'
-import { makeContentApi, type CopyTrader, p2pApi } from '@/services/api'
+import { makeContentApi, type CopyTrader, p2pApi, makeNotificationsApi } from '@/services/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -250,6 +313,101 @@ function onAvatarError() {
 
 const activeTopTab = computed(() => route.path === '/copy-trade' ? 'Copy Trade' : 'Spot')
 const topTabs = ['Spot', 'Copy Trade']
+
+// ── Notification dropdown ─────────────────────────────────────
+const NOTIF_TYPES = new Set(['deposit', 'withdrawal', 'transfer'])
+
+const notifOpen    = ref(false)
+const notifLoading = ref(false)
+const notifUnread  = ref(0)
+const notifList    = ref<Array<{ id: number; title: string; message: string; time: string; icon: string; iconClass: string; unread: boolean }>>([])
+
+const notifTypeStyle: Record<string, { icon: string; iconClass: string }> = {
+  deposit:    { icon: 'mdi:arrow-up-circle-outline',   iconClass: 'bg-orange-50 text-orange-400' },
+  withdrawal: { icon: 'mdi:arrow-down-circle-outline', iconClass: 'bg-red-50 text-red-400' },
+  transfer:   { icon: 'mdi:swap-horizontal',           iconClass: 'bg-blue-50 text-sky-500' },
+}
+
+function relativeTimeLayout(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1)  return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)  return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+async function fetchNotifUnreadCount() {
+  if (!auth.accessToken) return
+  try {
+    const api = makeNotificationsApi(auth.accessToken)
+    const data = await api.list(50, 0)
+    const txNotifs = (data.notifications ?? []).filter(n => NOTIF_TYPES.has(n.type))
+    notifUnread.value = txNotifs.filter(n => n.is_read === 0).length
+  } catch { /* silent */ }
+}
+
+async function toggleNotifDropdown() {
+  if (notifOpen.value) {
+    notifOpen.value = false
+    return
+  }
+  notifOpen.value = true
+  notifLoading.value = true
+  notifList.value = []
+
+  if (!auth.accessToken) {
+    notifLoading.value = false
+    return
+  }
+
+  try {
+    const api = makeNotificationsApi(auth.accessToken)
+    const data = await api.list(50, 0)
+    const txNotifs = (data.notifications ?? [])
+      .filter(n => NOTIF_TYPES.has(n.type))
+      .slice(0, 5)
+
+    notifList.value = txNotifs.map(n => {
+      const style = notifTypeStyle[n.type] ?? { icon: 'mdi:bell-outline', iconClass: 'bg-gray-100 text-gray-500' }
+      return {
+        id:        n.id,
+        title:     n.title,
+        message:   n.message,
+        time:      relativeTimeLayout(n.created_at),
+        icon:      style.icon,
+        iconClass: style.iconClass,
+        unread:    n.is_read === 0,
+      }
+    })
+
+    // Mark all as read when dropdown opens
+    const hasUnread = txNotifs.some(n => n.is_read === 0)
+    if (hasUnread) {
+      notifList.value.forEach(n => { n.unread = false })
+      notifUnread.value = 0
+      api.markAllRead().catch(() => { /* best-effort */ })
+    }
+  } catch { /* silent */ } finally {
+    notifLoading.value = false
+  }
+}
+
+function onClickOutsideNotif(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (!target.closest('[data-notif-zone]')) {
+    notifOpen.value = false
+  }
+}
+
+onMounted(() => {
+  fetchNotifUnreadCount()
+  document.addEventListener('click', onClickOutsideNotif, true)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onClickOutsideNotif, true)
+})
 
 // ── Search overlay ────────────────────────────────────────────
 const searchOpen      = ref(false)
