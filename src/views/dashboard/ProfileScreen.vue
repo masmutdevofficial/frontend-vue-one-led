@@ -41,6 +41,14 @@
 
             <p>For support, legal inquiries, or platform-related questions, please contact the Oneledger support team.</p>
           </div>
+
+          <button
+            type="button"
+            class="mt-6 w-full rounded-2xl bg-teal-500 py-3.5 text-sm font-semibold text-white transition active:scale-95 hover:bg-teal-600"
+            @click="showAbout = false"
+          >
+            I Understand
+          </button>
         </div>
       </div>
     </Transition>
@@ -350,11 +358,11 @@ const editForm = ref({
 
 function openEdit() {
   editForm.value = {
-    name:          auth.profile?.username ?? auth.user?.username ?? '',
-    email:         auth.profile?.email    ?? auth.user?.email    ?? '',
-    bank:          '',
-    bankAccount:   '',
-    countryRegion: '',
+    name:          auth.profile?.username    ?? auth.user?.username ?? '',
+    email:         auth.profile?.email       ?? auth.user?.email    ?? '',
+    bank:          auth.profile?.bank        ?? '',
+    bankAccount:   auth.profile?.bank_account ?? '',
+    countryRegion: auth.profile?.country     ?? '',
   }
   saveError.value = ''
   showEditProfile.value = true

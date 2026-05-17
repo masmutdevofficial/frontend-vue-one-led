@@ -116,8 +116,12 @@ export interface UserProfile {
   commission:    string
   twofa_enabled: boolean
   ktp_status:    string | null
+  ktp_image:     string | null
   credit_score:  number
   member_since:  string    // ISO datetime
+  bank:          string | null
+  bank_account:  string | null
+  country:       string | null
 }
 
 export interface UserBalance {
@@ -138,6 +142,12 @@ export function makeUserApi(token: string) {
       country?: string
     }) => api.put<{ ok: boolean }>('/me', body),
     getBalance:    () => api.get<UserBalance>('/balance'),
+    submitVerification: (body: {
+      full_name?: string
+      id_number?: string
+      id_image_url?: string
+      selfie_url?: string
+    }) => api.post<{ ok: boolean }>('/verification', body),
   }
 }
 
