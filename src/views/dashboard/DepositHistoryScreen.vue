@@ -36,15 +36,12 @@
 
                 <div class="mt-4 flex items-end gap-2">
                   <h2 class="text-[34px] font-semibold leading-none tracking-[0.08em] text-[#0b1638]">
-                    12,850.60
+                    {{ totalApproved.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                   </h2>
-                  <button class="mb-1 flex items-center gap-1 text-xs font-semibold text-[#5b6d9a]">
-                    USDT
-                    <Icon icon="mdi:chevron-down" class="text-[15px]" />
-                  </button>
+                  <span class="mb-1 text-xs font-semibold text-[#5b6d9a]">USDT</span>
                 </div>
 
-                <p class="mt-3 text-sm font-medium text-[#7a86a4]">≈ $12,850.60</p>
+                <p class="mt-3 text-sm font-medium text-[#7a86a4]">≈ ${{ totalApproved.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
               </div>
 
               <div class="relative flex h-26.25 w-35 items-center justify-center">
@@ -72,7 +69,7 @@
               <button
                 v-for="status in statuses"
                 :key="status"
-                @click="activeStatus = status"
+                @click="activeStatus = status; loadDeposits()"
                 class="relative h-10 rounded-xl px-4 text-xs font-semibold transition"
                 :class="activeStatus === status ? 'bg-[#f6f8fb] text-[#08a99f] shadow-sm' : 'text-[#5b6d9a]'"
               >
@@ -94,48 +91,58 @@
 
         <!-- DEPOSIT LIST -->
         <section class="mt-4 px-4">
-          <div class="space-y-3">
+          <!-- Loading -->
+          <div v-if="loading" class="flex flex-col items-center py-16 text-gray-400">
+            <Icon icon="mdi:loading" class="animate-spin text-4xl text-[#08a99f]" />
+            <p class="mt-3 text-xs font-semibold">Loading deposits…</p>
+          </div>
+
+          <div v-else class="space-y-3">
             <article
               v-for="item in filteredDeposits"
-              :key="item.asset + item.date"
+              :key="item.id"
               class="flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-4 py-5 shadow-sm"
             >
               <div class="flex items-center gap-4">
                 <div
                   class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
-                  :class="item.iconClass"
+                  :class="coinIconClass(item)"
                 >
-                  <Icon :icon="item.icon" class="text-[34px]" />
+                  <Icon :icon="coinIcon(item)" class="text-[34px]" />
                 </div>
 
                 <div>
                   <div class="flex items-center gap-2">
-                    <h3 class="text-[17px] font-semibold text-[#0b1638]">{{ item.asset }}</h3>
+                    <h3 class="text-[17px] font-semibold text-[#0b1638]">{{ coinName(item) }}</h3>
                     <span class="rounded-md bg-[#eafffb] px-2 py-0.5 text-[10px] font-semibold text-[#08a99f]">
-                      {{ item.network }}
+                      {{ networkName(item) }}
                     </span>
                   </div>
 
-                  <p class="mt-2 text-[13px] font-medium text-[#7a86a4]">{{ item.method }}</p>
+                  <p class="mt-2 text-[13px] font-medium text-[#7a86a4]">
+                    {{ item.method === 'Automatic' ? 'Auto deposit' : 'Manual deposit' }}
+                  </p>
 
                   <p class="mt-2 flex items-center gap-2 text-xs font-medium text-[#7a86a4]">
                     <Icon icon="mdi:wallet-outline" class="text-[15px]" />
-                    {{ item.destination }}
+                    To Spot Wallet
                   </p>
                 </div>
               </div>
 
               <div class="text-right">
-                <p class="text-[17px] font-semibold text-[#0b1638]">{{ item.amount }}</p>
+                <p class="text-[17px] font-semibold text-[#0b1638]">
+                  {{ Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }} {{ coinName(item) }}
+                </p>
 
-                <p class="mt-3 text-xs font-medium text-[#7a86a4]">{{ item.date }}</p>
+                <p class="mt-3 text-xs font-medium text-[#7a86a4]">{{ formatDate(item.created_at) }}</p>
 
                 <span
                   class="mt-3 inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-semibold"
-                  :class="statusClass(item.status)"
+                  :class="statusClass(item.status_deposit)"
                 >
-                  <Icon :icon="statusIcon(item.status)" class="text-[15px]" />
-                  {{ item.status }}
+                  <Icon :icon="statusIcon(item.status_deposit)" class="text-[15px]" />
+                  {{ displayStatus(item.status_deposit) }}
                 </span>
               </div>
             </article>
@@ -143,7 +150,7 @@
             <!-- Empty state -->
             <div v-if="filteredDeposits.length === 0" class="flex flex-col items-center py-16 text-gray-400">
               <Icon icon="mdi:inbox-outline" class="text-5xl" />
-              <p class="mt-3 text-xs font-semibold">No {{ activeStatus }} deposits</p>
+              <p class="mt-3 text-xs font-semibold">No deposits found</p>
             </div>
           </div>
         </section>
@@ -154,100 +161,92 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import { useAuthStore } from '@/stores/auth'
+import { makeWalletApi, type DepositRecord } from '@/services/api'
 
 const router = useRouter()
+const auth   = useAuthStore()
 
-const statuses = ['All', 'Completed', 'Pending'] as const
+const statuses = ['All', 'Completed', 'Pending', 'Rejected'] as const
 type Status = typeof statuses[number]
-const activeStatus = ref<Status>('All')
+const activeStatus  = ref<Status>('All')
+const deposits      = ref<DepositRecord[]>([])
+const totalApproved = ref(0)
+const loading       = ref(false)
 
-interface Deposit {
-  asset: string
-  network: string
-  amount: string
-  date: string
-  method: string
-  destination: string
-  status: string
-  icon: string
-  iconClass: string
+// Map UI tab to DB enum value
+const STATUS_MAP: Record<Status, string | undefined> = {
+  All: undefined, Completed: 'Approved', Pending: 'Pending', Rejected: 'Rejected',
 }
 
-const deposits: Deposit[] = [
-  {
-    asset: 'USDT',
-    network: 'TRC20',
-    amount: '2,500.00 USDT',
-    date: 'May 15, 2025 10:24 AM',
-    method: 'On-chain deposit',
-    destination: 'To Spot Wallet',
-    status: 'Completed',
-    icon: 'mdi:alpha-t-circle',
-    iconClass: 'bg-[#08a99f] text-white',
-  },
-  {
-    asset: 'BTC',
-    network: 'Bitcoin Network',
-    amount: '0.04500 BTC',
-    date: 'May 14, 2025 03:18 PM',
-    method: 'On-chain deposit',
-    destination: 'To Spot Wallet',
-    status: 'Completed',
-    icon: 'mdi:bitcoin',
-    iconClass: 'bg-orange-500 text-white',
-  },
-  {
-    asset: 'ETH',
-    network: 'ERC20',
-    amount: '3.200 ETH',
-    date: 'May 13, 2025 09:41 AM',
-    method: 'On-chain deposit',
-    destination: 'To Spot Wallet',
-    status: 'Completed',
-    icon: 'mdi:ethereum',
-    iconClass: 'bg-indigo-500 text-white',
-  },
-  {
-    asset: 'USDT',
-    network: 'TRC20',
-    amount: '1,200.00 USDT',
-    date: 'May 13, 2025 02:35 AM',
-    method: 'Internal transfer',
-    destination: 'To Spot Wallet',
-    status: 'Pending',
-    icon: 'mdi:alpha-t-circle',
-    iconClass: 'bg-[#08a99f] text-white',
-  },
-  {
-    asset: 'ETH',
-    network: 'ERC20',
-    amount: '1.1500 ETH',
-    date: 'May 11, 2025 11:07 PM',
-    method: 'P2P deposit',
-    destination: 'To Spot Wallet',
-    status: 'Completed',
-    icon: 'mdi:ethereum',
-    iconClass: 'bg-indigo-500 text-white',
-  },
-]
+const filteredDeposits = computed(() => {
+  if (activeStatus.value === 'All') return deposits.value
+  const dbStatus = STATUS_MAP[activeStatus.value]
+  return deposits.value.filter(d => d.status_deposit === dbStatus)
+})
 
-const filteredDeposits = computed(() =>
-  activeStatus.value === 'All'
-    ? deposits
-    : deposits.filter(d => d.status === activeStatus.value),
-)
-
-function statusClass(status: string) {
-  if (status === 'Completed') return 'bg-[#eafffb] text-[#08a99f]'
-  return 'bg-orange-50 text-orange-400'
+async function loadDeposits() {
+  if (!auth.accessToken) return
+  loading.value = true
+  try {
+    const data = await makeWalletApi(auth.accessToken).getDeposits()
+    deposits.value      = data.deposits
+    totalApproved.value = data.total_approved
+  } catch { /* silently fail */ }
+  finally { loading.value = false }
 }
 
-function statusIcon(status: string) {
-  if (status === 'Completed') return 'mdi:check-circle-outline'
-  return 'mdi:clock-outline'
+onMounted(loadDeposits)
+
+// ─── Helpers to derive display info from DB record ───────────────
+function coinName(d: DepositRecord): string {
+  if (!d.bank) return 'USDT'
+  const b = d.bank.trim().toUpperCase()
+  const known = ['USDT','BTC','ETH','BNB','SOL','XRP','ADA','LTC','TRX','MATIC','AVAX']
+  for (const c of known) if (b.includes(c)) return c
+  return b.length <= 10 ? b : 'USDT'
+}
+function networkName(d: DepositRecord): string {
+  if (!d.bank) return 'On-chain'
+  const b = d.bank.trim().toUpperCase()
+  if (b.includes('TRC20') || b.includes('TRON'))  return 'TRC20'
+  if (b.includes('ERC20') || b.includes('ETHER')) return 'ERC20'
+  if (b.includes('BEP20') || b.includes('BSC'))   return 'BEP20'
+  if (b.includes('BITCOIN'))                       return 'Bitcoin'
+  if (b.includes('SOLANA'))                        return 'Solana'
+  return 'On-chain'
+}
+function coinIcon(d: DepositRecord): string {
+  const m: Record<string, string> = { USDT:'mdi:alpha-t-circle', BTC:'mdi:bitcoin', ETH:'mdi:ethereum',
+    BNB:'mdi:currency-usd-circle', SOL:'mdi:star-circle', XRP:'mdi:alpha-x-circle' }
+  return m[coinName(d)] ?? 'mdi:currency-usd'
+}
+function coinIconClass(d: DepositRecord): string {
+  const m: Record<string, string> = { USDT:'bg-[#08a99f] text-white', BTC:'bg-orange-500 text-white',
+    ETH:'bg-indigo-500 text-white', BNB:'bg-yellow-400 text-white',
+    SOL:'bg-purple-500 text-white', XRP:'bg-slate-500 text-white' }
+  return m[coinName(d)] ?? 'bg-gray-200 text-gray-500'
+}
+function displayStatus(s: string) {
+  return s === 'Approved' ? 'Completed' : s
+}
+function statusClass(s: string) {
+  if (s === 'Approved') return 'bg-[#eafffb] text-[#08a99f]'
+  if (s === 'Pending')  return 'bg-orange-50 text-orange-400'
+  return 'bg-red-50 text-red-400'
+}
+function statusIcon(s: string) {
+  if (s === 'Approved') return 'mdi:check-circle-outline'
+  if (s === 'Pending')  return 'mdi:clock-outline'
+  return 'mdi:close-circle-outline'
+}
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })
+  } catch { return iso }
 }
 </script>

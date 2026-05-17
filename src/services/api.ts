@@ -192,6 +192,64 @@ export function makeTradeApi(token: string) {
   }
 }
 
+// ── Wallet API types ──────────────────────────────────────────────────────────
+
+export interface DepositRecord {
+  id:             string
+  amount:         string     // USDT amount
+  bank:           string | null  // coin/bank info stored by admin
+  method:         'Manual' | 'Automatic'
+  status_deposit: 'Approved' | 'Rejected' | 'Pending'
+  created_at:     string
+}
+
+export interface WithdrawalRecord {
+  id:                 string
+  amount:             string
+  network:            string | null  // stored as "COIN|NETWORK" e.g. "USDT|TRC20"
+  address:            string | null
+  method:             'Manual' | 'Automatic'
+  status_withdrawal:  'Completed' | 'Rejected' | 'Pending'
+  created_at:         string
+}
+
+export interface TransferRecord {
+  id:             string
+  type:           'internal' | 'user-to-user'
+  coin:           string
+  amount:         string
+  note:           string | null
+  created_at:     string
+  sender_name:    string | null
+  recipient_name: string | null
+  sender_id:      string
+  recipient_id:   string | null
+  direction:      'sent' | 'received'
+}
+
+/** Authenticated wallet endpoints (deposits, withdrawals, transfers) */
+export function makeWalletApi(token: string) {
+  const api = makeApi(token)
+  return {
+    getDeposits:    (status?: string) => {
+      const q = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : ''
+      return api.get<{ deposits: DepositRecord[]; total_approved: number }>(`/wallet/deposits${q}`)
+    },
+    getWithdrawals: (status?: string) => {
+      const q = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : ''
+      return api.get<{ withdrawals: WithdrawalRecord[]; total_completed: number }>(`/wallet/withdrawals${q}`)
+    },
+    submitWithdrawal: (body: { amount: number; address: string; network: string; coin: string }) =>
+      api.post<{ withdrawal: WithdrawalRecord }>('/wallet/withdrawals', body),
+    getTransfers:   () =>
+      api.get<{ transfers: TransferRecord[] }>('/wallet/transfers'),
+    sendTransfer:   (body: { recipient: string; amount: number; coin?: string; note?: string }) =>
+      api.post<{ transfer: { id: string; amount: number; coin: string; recipient_name: string } }>('/wallet/transfers', body),
+    getCoinBalances: () =>
+      api.get<{ balances: { coin: string; amount: string }[] }>('/trade/balances'),
+  }
+}
+
 /** Public P2P endpoints — no auth needed */
 export const p2pApi = {
   getMerchants: (type?: string, asset?: string) => {

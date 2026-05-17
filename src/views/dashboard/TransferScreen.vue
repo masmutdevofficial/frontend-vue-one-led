@@ -34,13 +34,13 @@
                 </button>
               </div>
               <div class="mt-3 flex items-end gap-2">
-                <h2 class="text-[26px] font-semibold leading-none tracking-tight">{{ showBalance ? '212,216.40' : '••••••' }}</h2>
+                <h2 class="text-[26px] font-semibold leading-none tracking-tight">{{ showBalance ? balanceDisplay : '••••••' }}</h2>
                 <button class="mb-1 flex items-center gap-1 text-[10px] font-semibold">
                   USDT
                   <Icon icon="mdi:chevron-down" class="text-[14px]" />
                 </button>
               </div>
-              <p class="mt-2 text-[10px] font-semibold text-gray-400">{{ showBalance ? '≈ $212,216.40' : '≈ $••••••' }}</p>
+              <p class="mt-2 text-[10px] font-semibold text-gray-400">{{ showBalance ? '≈ $' + balanceDisplay : '≈ $••••••' }}</p>
             </div>
 
             <!-- Illustration -->
@@ -113,7 +113,7 @@
             </div>
 
             <p class="mt-3 text-[10px] font-semibold text-gray-400">
-              Available: <span class="font-semibold text-[#667085]">212,216.40 USDT</span>
+              Available: <span class="font-semibold text-[#667085]">{{ balanceDisplay }} USDT</span>
             </p>
           </div>
 
@@ -209,26 +209,28 @@
 
       <!-- SEND -->
       <section class="mt-4 px-4">
+        <p v-if="sendError" class="mb-2 text-center text-[11px] font-semibold text-red-500">{{ sendError }}</p>
         <button
           @click="sendTransfer"
-          :disabled="!canSend"
+          :disabled="!canSend || sending"
           class="h-12 w-full rounded-xl text-[13px] font-semibold text-white shadow-sm transition-colors active:scale-[0.99]"
-          :class="canSend ? 'bg-[#08a99f]' : 'cursor-not-allowed bg-gray-300'"
+          :class="canSend && !sending ? 'bg-[#08a99f]' : 'cursor-not-allowed bg-gray-300'"
         >
-          Send Transfer
+          {{ sending ? 'Sending…' : 'Send Transfer' }}
         </button>
       </section>
     </div>
 
     <!-- BOTTOM BUTTON -->
     <div class="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 bg-[#f6f8fb] px-4 pb-4 pt-3">
+      <p v-if="sendError" class="mb-1 text-center text-[11px] font-semibold text-red-500">{{ sendError }}</p>
       <button
         @click="sendTransfer"
-        :disabled="!canSend"
+        :disabled="!canSend || sending"
         class="h-[48px] w-full rounded-xl text-[13px] font-semibold text-white shadow-sm transition-colors active:scale-[0.99]"
-        :class="canSend ? 'bg-[#08a99f]' : 'cursor-not-allowed bg-gray-300'"
+        :class="canSend && !sending ? 'bg-[#08a99f]' : 'cursor-not-allowed bg-gray-300'"
       >
-        Send Transfer
+        {{ sending ? 'Sending…' : 'Send Transfer' }}
       </button>
     </div>
 
@@ -354,25 +356,48 @@
               </div>
             </div>
 
-            <div class="mt-5 space-y-3">
+            <!-- Loading -->
+            <div v-if="loadingHistory" class="flex items-center justify-center py-10">
+              <Icon icon="mdi:loading" class="animate-spin text-3xl text-teal-500" />
+            </div>
+
+            <!-- Empty -->
+            <div v-else-if="transfersFromApi.length === 0" class="flex flex-col items-center py-10 text-gray-400">
+              <Icon icon="mdi:inbox-outline" class="text-4xl" />
+              <p class="mt-2 text-xs font-semibold">No transfer history yet</p>
+            </div>
+
+            <div v-else class="mt-5 space-y-3">
               <div
-                v-for="item in transferHistory"
+                v-for="item in transfersFromApi"
                 :key="item.id"
                 class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4"
               >
                 <div class="flex items-center gap-3">
-                  <div class="grid size-10 place-items-center rounded-xl" :class="item.type === 'Received' ? 'bg-teal-50 text-teal-500' : 'bg-slate-100 text-slate-500'">
-                    <Icon :icon="item.type === 'Received' ? 'mdi:arrow-down' : 'mdi:arrow-up'" class="size-5" />
+                  <div
+                    class="grid size-10 place-items-center rounded-xl"
+                    :class="item.direction === 'received' ? 'bg-teal-50 text-teal-500' : 'bg-slate-100 text-slate-500'"
+                  >
+                    <Icon :icon="item.direction === 'received' ? 'mdi:arrow-down' : 'mdi:arrow-up'" class="size-5" />
                   </div>
                   <div>
-                    <p class="text-sm font-semibold text-slate-950">{{ item.type }}</p>
-                    <p class="mt-0.5 text-xs font-semibold text-slate-400">{{ item.recipient }}</p>
-                    <p class="mt-0.5 text-[10px] font-semibold text-slate-400">{{ item.date }}</p>
+                    <p class="text-sm font-semibold text-slate-950">
+                      {{ item.direction === 'received' ? 'Received' : 'Sent' }}
+                    </p>
+                    <p class="mt-0.5 text-xs font-semibold text-slate-400">
+                      {{ item.direction === 'received' ? (item.sender_name ?? 'Unknown') : (item.recipient_name ?? 'Unknown') }}
+                    </p>
+                    <p class="mt-0.5 text-[10px] font-semibold text-slate-400">{{ formatDate(item.created_at) }}</p>
                   </div>
                 </div>
                 <div class="text-right">
-                  <p class="text-sm font-semibold" :class="item.type === 'Received' ? 'text-teal-500' : 'text-slate-950'">{{ item.amount }}</p>
-                  <span class="mt-1 inline-block rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-500">{{ item.status }}</span>
+                  <p
+                    class="text-sm font-semibold"
+                    :class="item.direction === 'received' ? 'text-teal-500' : 'text-slate-950'"
+                  >
+                    {{ item.direction === 'received' ? '+' : '-' }}{{ Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }} {{ item.coin }}
+                  </p>
+                  <span class="mt-1 inline-block rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-semibold text-teal-500">Completed</span>
                 </div>
               </div>
             </div>
@@ -382,7 +407,7 @@
               class="mt-6 w-full rounded-2xl bg-[#17212f] py-3.5 text-sm font-semibold text-white transition active:scale-95 hover:bg-[#2a3a4e]"
               @click="showTransferHistory = false"
             >
-              View History
+              Close
             </button>
           </div>
         </div>
@@ -392,12 +417,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import { useAuthStore } from '@/stores/auth'
+import { makeWalletApi, type TransferRecord } from '@/services/api'
 
 const router = useRouter()
+const auth   = useAuthStore()
 
 interface Recipient {
   name: string
@@ -406,41 +434,85 @@ interface Recipient {
 }
 
 // ─── State ─────────────────────────────────────────────────────────
-const showBalance = ref(true)
-const MAX_BALANCE = 212216.40
-const amount = ref('')
-const recipient = ref('')
-const note = ref('')
-const showSuccess = ref(false)
-const showTransferGuide = ref(false)
+const showBalance         = ref(true)
+const amount              = ref('')
+const recipient           = ref('')
+const note                = ref('')
+const showSuccess         = ref(false)
+const showTransferGuide   = ref(false)
 const showTransferHistory = ref(false)
 const activeRecipientType = ref('UID / Email')
-const recipientTypes = ['UID / Email', 'Email']
+const recipientTypes      = ['UID / Email', 'Email']
+const sending             = ref(false)
+const sendError           = ref('')
+
+// Live balance + transfers from API
+const transfersFromApi = ref<TransferRecord[]>([])
+const loadingHistory   = ref(false)
+
+const availableBalance = computed(() => Number(auth.user?.balance ?? 0))
+const balanceDisplay   = computed(() =>
+  availableBalance.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+)
 
 const canSend = computed(() =>
   recipient.value.trim().length > 0 &&
   Number(amount.value) > 0 &&
-  Number(amount.value) <= MAX_BALANCE
+  Number(amount.value) <= availableBalance.value
 )
+
+// ─── Fetch history ────────────────────────────────────────────────
+async function loadHistory() {
+  if (!auth.accessToken) return
+  loadingHistory.value = true
+  try {
+    const data = await makeWalletApi(auth.accessToken).getTransfers()
+    transfersFromApi.value = data.transfers
+  } catch { /* silently fail */ }
+  finally { loadingHistory.value = false }
+}
+
+onMounted(loadHistory)
 
 // ─── Actions ──────────────────────────────────────────────────────
 function setMax() {
-  amount.value = String(MAX_BALANCE)
+  amount.value = String(availableBalance.value)
 }
 
 function selectRecipient(r: Recipient) {
   recipient.value = r.uid
 }
 
-function sendTransfer() {
-  if (!canSend.value) return
-  showSuccess.value = true
+async function sendTransfer() {
+  if (!canSend.value || sending.value || !auth.accessToken) return
+  sending.value   = true
+  sendError.value = ''
+  try {
+    await makeWalletApi(auth.accessToken).sendTransfer({
+      recipient: recipient.value.trim(),
+      amount:    Number(amount.value),
+      note:      note.value || undefined,
+    })
+    await auth.refreshProfile().catch(() => {})
+    await loadHistory()
+    showSuccess.value = true
+  } catch (e: any) {
+    sendError.value = e?.message ?? 'Transfer failed. Please try again.'
+  } finally {
+    sending.value = false
+  }
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })
+  } catch { return iso }
 }
 
 const recentRecipients: Recipient[] = [
-  { name: 'Alex Chen', uid: 'UID 10243', avatar: 'https://i.pravatar.cc/100?img=12' },
-  { name: 'Sophia Li', uid: 'UID 89143', avatar: 'https://i.pravatar.cc/100?img=47' },
-  { name: 'James Wu', uid: 'UID 3845', avatar: 'https://i.pravatar.cc/100?img=52' },
+  { name: 'Alex Chen',    uid: 'UID 10243', avatar: 'https://i.pravatar.cc/100?img=12' },
+  { name: 'Sophia Li',   uid: 'UID 89143', avatar: 'https://i.pravatar.cc/100?img=47' },
+  { name: 'James Wu',    uid: 'UID 3845',  avatar: 'https://i.pravatar.cc/100?img=52' },
   { name: 'Ella Taylor', uid: 'UID 77899', avatar: null },
 ]
 
@@ -464,22 +536,6 @@ const securityTips = [
   'Double-check recipient information',
   'Never transfer assets to unknown users',
   'Enable 2FA and biometric security for additional protection',
-]
-
-interface TransferHistoryItem {
-  id: number
-  type: string
-  recipient: string
-  date: string
-  amount: string
-  status: string
-}
-
-const transferHistory: TransferHistoryItem[] = [
-  { id: 1, type: 'Sent',     recipient: 'Alex Chen · UID 10243',  date: 'May 25, 2024 09:21 AM', amount: '-500.00 USDT',    status: 'Completed' },
-  { id: 2, type: 'Received', recipient: 'Sophia Li · UID 89143',  date: 'May 24, 2024 08:15 PM', amount: '+1,200.00 USDT',  status: 'Completed' },
-  { id: 3, type: 'Sent',     recipient: 'James Wu · UID 3845',    date: 'May 23, 2024 06:42 PM', amount: '-750.00 USDT',    status: 'Completed' },
-  { id: 4, type: 'Sent',     recipient: 'Ella Taylor · UID 77899', date: 'May 22, 2024 03:10 PM', amount: '-300.00 USDT',   status: 'Completed' },
 ]
 </script>
 

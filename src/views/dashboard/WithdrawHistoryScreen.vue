@@ -36,12 +36,12 @@
 
                 <div class="mt-4 flex items-end gap-2">
                   <h2 class="text-[34px] font-semibold leading-none tracking-[0.08em] text-[#0b1638]">
-                    8,420.35
+                    {{ totalCompleted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                   </h2>
                   <span class="mb-1 text-xs font-semibold text-[#5b6d9a]">USDT</span>
                 </div>
 
-                <p class="mt-3 text-sm font-medium text-[#7a86a4]">≈ $8,420.35</p>
+                <p class="mt-3 text-sm font-medium text-[#7a86a4]">≈ ${{ totalCompleted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
               </div>
 
               <div class="relative flex h-26.25 w-35 items-center justify-center">
@@ -83,10 +83,15 @@
 
         <!-- WITHDRAW LIST -->
         <section class="mt-4 px-4">
-          <div class="space-y-3">
+          <!-- Loading -->
+          <div v-if="loading" class="flex items-center justify-center py-16">
+            <Icon icon="mdi:loading" class="animate-spin text-4xl text-teal-500" />
+          </div>
+
+          <div v-else class="space-y-3">
             <article
               v-for="item in filteredWithdrawals"
-              :key="item.asset + item.date"
+              :key="item.id"
               class="flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-4 py-5 shadow-sm"
             >
               <div class="flex items-center gap-4">
@@ -143,18 +148,52 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import { useAuthStore } from '@/stores/auth'
+import { makeWalletApi, type WithdrawalRecord } from '@/services/api'
 
 const router = useRouter()
+const auth   = useAuthStore()
 
 const statuses = ['All', 'Completed', 'Processing', 'Failed'] as const
 type Status = typeof statuses[number]
 const activeStatus = ref<Status>('All')
 
-interface Withdrawal {
+// ─── API state ─────────────────────────────────────────────────────
+const withdrawalsFromApi = ref<WithdrawalRecord[]>([])
+const totalCompleted     = ref(0)
+const loading            = ref(false)
+
+async function loadWithdrawals() {
+  if (!auth.accessToken) return
+  loading.value = true
+  try {
+    const data = await makeWalletApi(auth.accessToken).getWithdrawals()
+    withdrawalsFromApi.value = data.withdrawals
+    totalCompleted.value     = data.total_completed
+  } catch { /* silently fail */ }
+  finally { loading.value = false }
+}
+
+onMounted(loadWithdrawals)
+
+// ─── Coin/network meta ─────────────────────────────────────────────
+interface CoinMeta { icon: string; iconClass: string }
+const COIN_META: Record<string, CoinMeta> = {
+  USDT: { icon: 'mdi:alpha-t-circle',      iconClass: 'bg-[#08a99f] text-white' },
+  BTC:  { icon: 'mdi:bitcoin',             iconClass: 'bg-orange-500 text-white' },
+  ETH:  { icon: 'mdi:ethereum',            iconClass: 'bg-indigo-500 text-white' },
+  BNB:  { icon: 'mdi:currency-usd-circle', iconClass: 'bg-yellow-400 text-white' },
+  SOL:  { icon: 'mdi:star-circle',         iconClass: 'bg-purple-500 text-white' },
+  XRP:  { icon: 'mdi:alpha-x-circle',      iconClass: 'bg-slate-500 text-white' },
+}
+
+// ─── Derived display rows ──────────────────────────────────────────
+interface DisplayWithdrawal {
+  id: string
   asset: string
   network: string
   amount: string
@@ -166,78 +205,51 @@ interface Withdrawal {
   iconClass: string
 }
 
-const withdrawals: Withdrawal[] = [
-  {
-    asset: 'USDT',
-    network: 'TRC20',
-    amount: '1,500.00 USDT',
-    date: 'May 15, 2025 01:24 PM',
-    source: 'From Spot Wallet',
-    type: 'On-chain withdrawal',
-    status: 'Completed',
-    icon: 'mdi:alpha-t-circle',
-    iconClass: 'bg-[#08a99f] text-white',
-  },
-  {
-    asset: 'BTC',
-    network: 'Bitcoin Network',
-    amount: '0.02500 BTC',
-    date: 'May 14, 2025 08:18 AM',
-    source: 'From Spot Wallet',
-    type: 'On-chain withdrawal',
-    status: 'Completed',
-    icon: 'mdi:bitcoin',
-    iconClass: 'bg-orange-500 text-white',
-  },
-  {
-    asset: 'ETH',
-    network: 'ERC20',
-    amount: '2.000 ETH',
-    date: 'May 13, 2025 06:41 PM',
-    source: 'From Spot Wallet',
-    type: 'On-chain withdrawal',
-    status: 'Completed',
-    icon: 'mdi:ethereum',
-    iconClass: 'bg-indigo-500 text-white',
-  },
-  {
-    asset: 'USDT',
-    network: 'TRC20',
-    amount: '850.00 USDT',
-    date: 'May 12, 2025 10:35 AM',
-    source: 'From Spot Wallet',
-    type: 'On-chain withdrawal',
-    status: 'Processing',
-    icon: 'mdi:alpha-t-circle',
-    iconClass: 'bg-[#08a99f] text-white',
-  },
-  {
-    asset: 'ETH',
-    network: 'ERC20',
-    amount: '0.8500 ETH',
-    date: 'May 11, 2025 09:07 PM',
-    source: 'From Spot Wallet',
-    type: 'On-chain withdrawal',
-    status: 'Failed',
-    icon: 'mdi:ethereum',
-    iconClass: 'bg-indigo-500 text-white',
-  },
-]
+function parseRecord(w: WithdrawalRecord): DisplayWithdrawal {
+  const parts  = (w.network ?? 'USDT|TRC20').split('|')
+  const coin   = parts[0] || 'USDT'
+  const net    = parts[1] || parts[0] || 'TRC20'
+  const meta   = COIN_META[coin] ?? COIN_META.USDT
+  const rawStatus = w.status_withdrawal
+  const displayStatus =
+    rawStatus === 'Completed' ? 'Completed' :
+    rawStatus === 'Rejected'  ? 'Failed'    : 'Processing'
+  return {
+    id:        w.id,
+    asset:     coin,
+    network:   net,
+    amount:    `${Number(w.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} ${coin}`,
+    date:      formatDate(w.created_at),
+    source:    'From Spot Wallet',
+    type:      'On-chain withdrawal',
+    status:    displayStatus,
+    icon:      meta.icon,
+    iconClass: meta.iconClass,
+  }
+}
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })
+  } catch { return iso }
+}
+
+const mappedWithdrawals = computed(() => withdrawalsFromApi.value.map(parseRecord))
 
 const filteredWithdrawals = computed(() =>
   activeStatus.value === 'All'
-    ? withdrawals
-    : withdrawals.filter(w => w.status === activeStatus.value),
+    ? mappedWithdrawals.value
+    : mappedWithdrawals.value.filter(w => w.status === activeStatus.value),
 )
 
 function statusClass(status: string) {
-  if (status === 'Completed') return 'bg-[#eafffb] text-[#08a99f]'
+  if (status === 'Completed')  return 'bg-[#eafffb] text-[#08a99f]'
   if (status === 'Processing') return 'bg-orange-50 text-orange-400'
   return 'bg-red-50 text-red-400'
 }
 
 function statusIcon(status: string) {
-  if (status === 'Completed') return 'mdi:check-circle-outline'
+  if (status === 'Completed')  return 'mdi:check-circle-outline'
   if (status === 'Processing') return 'mdi:clock-outline'
   return 'mdi:close-circle-outline'
 }

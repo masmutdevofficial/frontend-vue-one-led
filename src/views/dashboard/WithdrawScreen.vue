@@ -11,10 +11,10 @@
         </button>
         <h1 class="text-[16px] font-semibold text-[#17212f]">Withdraw</h1>
         <div class="absolute right-4 flex items-center gap-4">
-          <button class="active:scale-95" @click="showWithdrawGuide = true">
+          <button class="active:scale-95" title="Withdrawal Guide" @click="showWithdrawGuide = true">
             <Icon icon="mdi:help-circle-outline" class="text-[21px] text-[#243142]" />
           </button>
-          <button class="active:scale-95" @click="router.push('/withdraw-history')">
+          <button class="active:scale-95" title="Withdrawal History" @click="router.push('/withdraw-history')">
             <Icon icon="mdi:file-document-outline" class="text-[21px] text-[#243142]" />
           </button>
         </div>
@@ -49,13 +49,10 @@
                 </button>
               </div>
               <div class="mt-3 flex items-end gap-2">
-                <h2 class="text-[26px] font-semibold leading-none tracking-tight">{{ showBalance ? '2,341.28' : '••••••' }}</h2>
-                <button class="mb-1 flex items-center gap-1 text-[10px] font-semibold">
-                  USDT
-                  <Icon icon="mdi:chevron-down" class="text-[14px]" />
-                </button>
+                <h2 class="text-[26px] font-semibold leading-none tracking-tight">{{ showBalance ? balanceDisplay : '••••••' }}</h2>
+                <span class="mb-1 text-[10px] font-semibold text-gray-500">{{ selectedCoin }}</span>
               </div>
-              <p class="mt-2 text-[10px] font-semibold text-gray-400">{{ showBalance ? '≈ $2,341.28 USDT' : '≈ $••••••' }}</p>
+              <p class="mt-2 text-[10px] font-semibold text-gray-400">{{ showBalance ? '≈ $' + balanceDisplay + ' ' + selectedCoin : '≈ $••••••' }}</p>
             </div>
 
             <!-- Illustration -->
@@ -68,13 +65,13 @@
       <section class="mt-4 px-4">
         <div class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           <!-- Select Asset -->
-          <button class="flex w-full items-center justify-between border-b border-gray-100 px-4 py-4 active:bg-gray-50">
+          <button @click="showCoinPicker = true" class="flex w-full items-center justify-between border-b border-gray-100 px-4 py-4 active:bg-gray-50">
             <span class="text-[11px] font-semibold text-[#344054]">Select Asset</span>
             <div class="flex items-center gap-2">
-              <span class="flex h-7 w-7 items-center justify-center rounded-full bg-[#e8fffc]">
-                <Icon icon="mdi:alpha-t-circle" class="text-[20px] text-[#10b8ad]" />
+              <span class="flex h-7 w-7 items-center justify-center rounded-full" :class="currentCoinMeta.bg">
+                <Icon :icon="currentCoinMeta.icon" class="text-[20px]" />
               </span>
-              <span class="text-[12px] font-semibold text-[#17212f]">USDT</span>
+              <span class="text-[12px] font-semibold text-[#17212f]">{{ selectedCoin }}</span>
               <Icon icon="mdi:chevron-down" class="text-[18px] text-gray-400" />
             </div>
           </button>
@@ -89,20 +86,20 @@
                 placeholder="Enter or paste address"
                 class="min-w-0 flex-1 bg-transparent text-right text-[11px] font-semibold text-[#17212f] outline-none placeholder:text-gray-400"
               />
-              <button class="shrink-0 active:scale-95">
+              <button class="shrink-0 active:scale-95" title="Scan QR code">
                 <Icon icon="mdi:scan-helper" class="text-[19px] text-[#344054]" />
               </button>
-              <button class="shrink-0 active:scale-95">
+              <button class="shrink-0 active:scale-95" title="Select from address book">
                 <Icon icon="mdi:contacts-outline" class="text-[19px] text-[#344054]" />
               </button>
             </div>
           </div>
 
           <!-- Network -->
-          <button class="flex w-full items-center justify-between border-b border-gray-100 px-4 py-4 active:bg-gray-50">
+          <button @click="showNetworkPicker = true" class="flex w-full items-center justify-between border-b border-gray-100 px-4 py-4 active:bg-gray-50">
             <span class="text-[11px] font-semibold text-[#344054]">Network</span>
             <div class="flex items-center gap-2">
-              <span class="text-[11px] font-semibold text-[#17212f]">Tron (TRC20)</span>
+              <span class="text-[11px] font-semibold text-[#17212f]">{{ selectedNetwork }}</span>
               <Icon icon="mdi:chevron-down" class="text-[18px] text-gray-400" />
             </div>
           </button>
@@ -118,7 +115,7 @@
                   placeholder="0.000000"
                   class="w-32.5 bg-transparent text-right text-[12px] font-semibold outline-none"
                 />
-                <span class="text-[11px] font-semibold text-gray-400">USDT</span>
+                <span class="text-[11px] font-semibold text-gray-400">{{ selectedCoin }}</span>
                 <button @click="setMax" class="text-[11px] font-semibold text-[#10b8ad]">Max</button>
               </div>
             </div>
@@ -126,22 +123,22 @@
             <div class="mt-4 space-y-3">
               <div class="flex items-center justify-between">
                 <p class="text-[10px] font-bold text-gray-400">Available</p>
-                <p class="text-[10px] font-semibold text-[#17212f]">2,341.28 USDT</p>
+                <p class="text-[10px] font-semibold text-[#17212f]">{{ maxBalanceDisplay }} {{ selectedCoin }}</p>
               </div>
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-1">
                   <p class="text-[10px] font-bold text-gray-400">Fee</p>
-                  <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" />
+                  <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" title="Network fee charged for processing your withdrawal" />
                 </div>
                 <p class="text-[10px] font-semibold text-[#17212f]">1.0000 USDT</p>
               </div>
               <div class="flex items-center justify-between border-t border-dashed border-gray-200 pt-3">
                 <div class="flex items-center gap-1">
                   <p class="text-[10px] font-bold text-gray-400">You Will Receive</p>
-                  <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" />
+                  <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" title="Amount you will receive after deducting the network fee" />
                 </div>
                 <div class="text-right">
-                  <p class="text-[12px] font-semibold text-[#10b8ad]">{{ receiveAmount }} USDT</p>
+                  <p class="text-[12px] font-semibold text-[#10b8ad]">{{ receiveAmount }} {{ selectedCoin }}</p>
                   <p class="mt-1 text-[9px] font-semibold text-gray-400">≈ ${{ receiveAmount }}</p>
                 </div>
               </div>
@@ -253,24 +250,27 @@
             </div>
             <div class="flex justify-between">
               <p class="text-[11px] font-bold text-gray-400">Network</p>
-              <p class="text-[11px] font-semibold text-[#17212f]">Tron (TRC20)</p>
+              <p class="text-[11px] font-semibold text-[#17212f]">{{ selectedNetwork }}</p>
             </div>
             <div class="flex justify-between">
               <p class="text-[11px] font-bold text-gray-400">Amount</p>
-              <p class="text-[11px] font-semibold text-[#17212f]">{{ amount }} USDT</p>
+              <p class="text-[11px] font-semibold text-[#17212f]">{{ amount }} {{ selectedCoin }}</p>
             </div>
             <div class="flex justify-between">
               <p class="text-[11px] font-bold text-gray-400">Fee</p>
-              <p class="text-[11px] font-semibold text-[#17212f]">1.0000 USDT</p>
+              <p class="text-[11px] font-semibold text-[#17212f]">1.0000 {{ selectedCoin }}</p>
             </div>
             <div class="flex justify-between border-t border-dashed border-gray-200 pt-3">
               <p class="text-[11px] font-bold text-gray-400">You Receive</p>
-              <p class="text-[11px] font-semibold text-[#10b8ad]">{{ receiveAmount }} USDT</p>
+              <p class="text-[11px] font-semibold text-[#10b8ad]">{{ receiveAmount }} {{ selectedCoin }}</p>
             </div>
           </div>
+          <p v-if="submitError" class="mt-2 text-center text-[11px] font-semibold text-red-500">{{ submitError }}</p>
           <div class="mt-5 flex gap-3">
             <button @click="showConfirm = false" class="h-12 flex-1 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-500 active:scale-95">Cancel</button>
-            <button @click="confirmWithdraw" class="h-12 flex-1 rounded-xl bg-[#08a99f] text-[12px] font-semibold text-white active:scale-95">Confirm</button>
+            <button @click="confirmWithdraw" :disabled="submitting" class="h-12 flex-1 rounded-xl bg-[#08a99f] text-[12px] font-semibold text-white active:scale-95 disabled:opacity-60">
+              {{ submitting ? 'Processing…' : 'Confirm' }}
+            </button>
           </div>
         </div>
       </div>
@@ -285,7 +285,7 @@
             <Icon icon="mdi:check-circle-outline" class="text-[52px] text-[#10b8ad]" />
           </div>
           <h3 class="mt-4 text-[16px] font-semibold text-[#17212f]">Withdrawal Submitted!</h3>
-          <p class="mt-2 text-[11px] font-semibold text-gray-400">{{ amount }} USDT · TRC20</p>
+          <p class="mt-2 text-[11px] font-semibold text-gray-400">{{ amount }} {{ selectedCoin }} · {{ selectedNetwork }}</p>
           <p class="mt-1 text-[10px] font-semibold text-gray-400">Estimated arrival: 10 – 60 minutes</p>
           <button
             @click="showSuccess = false; amount = ''; withdrawAddress = ''"
@@ -294,6 +294,78 @@
         </div>
       </div>
     </Transition>
+
+    <!-- ── COIN PICKER SHEET ── -->
+    <Teleport to="body">
+      <Transition name="sheet">
+        <div v-if="showCoinPicker" class="fixed inset-0 z-50 flex flex-col">
+          <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showCoinPicker = false"></div>
+          <div class="relative mt-auto w-full rounded-t-3xl bg-white px-5 pt-5 pb-10 shadow-2xl">
+            <div class="mb-4 flex items-center justify-between">
+              <h3 class="text-[15px] font-semibold text-[#17212f]">Select Asset</h3>
+              <button @click="showCoinPicker = false" class="grid h-8 w-8 place-items-center rounded-full bg-gray-100 text-gray-500">
+                <Icon icon="mdi:close" class="text-[18px]" />
+              </button>
+            </div>
+            <div class="space-y-2">
+              <button
+                v-for="coin in allCoins"
+                :key="coin"
+                @click="selectedCoin = coin; showCoinPicker = false"
+                class="flex w-full items-center gap-3 rounded-xl border px-4 py-3 transition active:bg-gray-50"
+                :class="selectedCoin === coin ? 'border-[#10b8ad] bg-[#eafffd]' : 'border-gray-100 bg-white'"
+              >
+                <span class="flex h-9 w-9 items-center justify-center rounded-full" :class="COIN_META[coin].bg">
+                  <Icon :icon="COIN_META[coin].icon" class="text-[22px]" />
+                </span>
+                <div class="text-left">
+                  <p class="text-[13px] font-semibold text-[#17212f]">{{ coin }}</p>
+                  <p class="text-[10px] font-semibold text-gray-400">{{ COIN_META[coin].label }}</p>
+                </div>
+                <Icon v-if="selectedCoin === coin" icon="mdi:check-circle" class="ml-auto text-[20px] text-[#10b8ad]" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ── NETWORK PICKER SHEET ── -->
+    <Teleport to="body">
+      <Transition name="sheet">
+        <div v-if="showNetworkPicker" class="fixed inset-0 z-50 flex flex-col">
+          <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showNetworkPicker = false"></div>
+          <div class="relative mt-auto w-full rounded-t-3xl bg-white px-5 pt-5 pb-10 shadow-2xl">
+            <div class="mb-4 flex items-center justify-between">
+              <h3 class="text-[15px] font-semibold text-[#17212f]">Select Network</h3>
+              <button @click="showNetworkPicker = false" class="grid h-8 w-8 place-items-center rounded-full bg-gray-100 text-gray-500">
+                <Icon icon="mdi:close" class="text-[18px]" />
+              </button>
+            </div>
+            <div class="mb-3 rounded-xl bg-amber-50 px-4 py-3">
+              <p class="text-[10px] font-semibold leading-relaxed text-amber-700">
+                Ensure the selected network matches the recipient's address. Sending to the wrong network may result in permanent loss of funds.
+              </p>
+            </div>
+            <div class="space-y-2">
+              <button
+                v-for="network in networks"
+                :key="network"
+                @click="selectedNetwork = network; showNetworkPicker = false"
+                class="flex w-full items-center justify-between rounded-xl border px-4 py-3 transition active:bg-gray-50"
+                :class="selectedNetwork === network ? 'border-[#10b8ad] bg-[#eafffd]' : 'border-gray-100 bg-white'"
+              >
+                <div>
+                  <p class="text-left text-[13px] font-semibold text-[#17212f]">{{ network }}</p>
+                  <p class="mt-0.5 text-left text-[10px] font-semibold text-gray-400">{{ selectedCoin }} · {{ network }}</p>
+                </div>
+                <Icon v-if="selectedNetwork === network" icon="mdi:check-circle" class="text-[20px] text-[#10b8ad]" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <!-- Withdrawal Guide Modal -->
     <Teleport to="body">
@@ -376,12 +448,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import { useAuthStore } from '@/stores/auth'
+import { makeWalletApi } from '@/services/api'
 
 const router = useRouter()
+const auth   = useAuthStore()
+
+// ─── Coin / Network data ────────────────────────────────────────────
+const COIN_NETWORKS: Record<string, string[]> = {
+  USDT: ['TRC20', 'ERC20', 'BEP20'],
+  BTC:  ['Bitcoin Network'],
+  ETH:  ['ERC20', 'BEP20'],
+  BNB:  ['BEP20'],
+  SOL:  ['Solana Network'],
+  XRP:  ['Ripple Network'],
+}
+
+interface CoinMeta { icon: string; bg: string; label: string }
+const COIN_META: Record<string, CoinMeta> = {
+  USDT: { icon: 'mdi:alpha-t-circle',      bg: 'bg-[#e8fffc] text-[#10b8ad]', label: 'Tether' },
+  BTC:  { icon: 'mdi:bitcoin',             bg: 'bg-orange-100 text-orange-500', label: 'Bitcoin' },
+  ETH:  { icon: 'mdi:ethereum',            bg: 'bg-indigo-100 text-indigo-500', label: 'Ethereum' },
+  BNB:  { icon: 'mdi:currency-usd-circle', bg: 'bg-yellow-100 text-yellow-500', label: 'BNB' },
+  SOL:  { icon: 'mdi:star-circle',         bg: 'bg-purple-100 text-purple-500', label: 'Solana' },
+  XRP:  { icon: 'mdi:alpha-x-circle',      bg: 'bg-slate-100 text-slate-500',   label: 'XRP' },
+}
+
+const allCoins = Object.keys(COIN_META)
 
 interface RecentAddress {
   name: string
@@ -390,21 +487,51 @@ interface RecentAddress {
 }
 
 // ─── State ─────────────────────────────────────────────────────────
-const showBalance = ref(true)
-const MAX_BALANCE = 2341.28
-const FEE = 1.0
-const amount = ref('')
-const withdrawAddress = ref('')
-const showConfirm = ref(false)
-const showSuccess = ref(false)
+const showBalance      = ref(true)
+const FEE              = 1.0
+const amount           = ref('')
+const withdrawAddress  = ref('')
+const showConfirm      = ref(false)
+const showSuccess      = ref(false)
 const showWithdrawGuide = ref(false)
-const activeTab = ref('Crypto')
-const tabs = ['Crypto', 'P2P']
+const showCoinPicker   = ref(false)
+const showNetworkPicker = ref(false)
+const activeTab        = ref('Crypto')
+const tabs             = ['Crypto', 'P2P']
+
+const selectedCoin    = ref('USDT')
+const selectedNetwork = ref('TRC20')
+
+// balances from API for non-USDT coins
+const coinBalances = ref<Record<string, number>>({})
+const submitting   = ref(false)
+const submitError  = ref('')
+
+// Keep network in sync when coin changes
+watch(selectedCoin, (coin) => {
+  selectedNetwork.value = COIN_NETWORKS[coin]?.[0] ?? 'TRC20'
+})
+
+const networks = computed(() => COIN_NETWORKS[selectedCoin.value] ?? ['TRC20'])
+
+// Available balance per selected coin
+const availableBalance = computed(() => {
+  if (selectedCoin.value === 'USDT') return Number(auth.user?.balance ?? 0)
+  return coinBalances.value[selectedCoin.value] ?? 0
+})
+
+const balanceDisplay = computed(() =>
+  availableBalance.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })
+)
+
+const maxBalanceDisplay = computed(() =>
+  availableBalance.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })
+)
 
 const canWithdraw = computed(() =>
   withdrawAddress.value.trim().length > 10 &&
   Number(amount.value) > FEE &&
-  Number(amount.value) <= MAX_BALANCE
+  Number(amount.value) <= availableBalance.value
 )
 
 const receiveAmount = computed(() => {
@@ -413,9 +540,24 @@ const receiveAmount = computed(() => {
   return (n - FEE).toFixed(6)
 })
 
+const currentCoinMeta = computed(() => COIN_META[selectedCoin.value] ?? COIN_META.USDT)
+
+// ─── Fetch coin balances on mount ──────────────────────────────────
+async function loadCoinBalances() {
+  if (!auth.accessToken) return
+  try {
+    const data = await makeWalletApi(auth.accessToken).getCoinBalances()
+    const map: Record<string, number> = {}
+    for (const b of data.balances) map[b.coin] = Number(b.amount)
+    coinBalances.value = map
+  } catch { /* silently fail */ }
+}
+
+onMounted(loadCoinBalances)
+
 // ─── Actions ──────────────────────────────────────────────────────
 function setMax() {
-  amount.value = String(MAX_BALANCE)
+  amount.value = String(availableBalance.value)
 }
 
 function selectAddress(addr: RecentAddress) {
@@ -424,16 +566,34 @@ function selectAddress(addr: RecentAddress) {
 
 function openConfirm() {
   if (!canWithdraw.value) return
+  submitError.value = ''
   showConfirm.value = true
 }
 
-function confirmWithdraw() {
-  showConfirm.value = false
-  showSuccess.value = true
+async function confirmWithdraw() {
+  if (!auth.accessToken) return
+  submitting.value  = true
+  submitError.value = ''
+  try {
+    await makeWalletApi(auth.accessToken).submitWithdrawal({
+      amount:  Number(amount.value),
+      address: withdrawAddress.value.trim(),
+      network: selectedNetwork.value,
+      coin:    selectedCoin.value,
+    })
+    await auth.refreshProfile().catch(() => {})
+    await loadCoinBalances()
+    showConfirm.value  = false
+    showSuccess.value  = true
+  } catch (e: any) {
+    submitError.value = e?.message ?? 'Withdrawal failed. Please try again.'
+  } finally {
+    submitting.value = false
+  }
 }
 
 const recentAddresses: RecentAddress[] = [
-  { name: 'Main Wallet', network: 'TRC20', address: 'TQk7Yt9...8uHd1q3M2' },
+  { name: 'Main Wallet',    network: 'TRC20', address: 'TQk7Yt9...8uHd1q3M2' },
   { name: 'Trading Wallet', network: 'TRC20', address: 'TNDf8k...Gm1L2QzY1R' },
   { name: 'Savings Wallet', network: 'TRC20', address: 'TvULkPj...3aFh9xMvD' },
 ]
