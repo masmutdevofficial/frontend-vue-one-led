@@ -80,7 +80,12 @@
 
           <!-- LEGEND -->
           <div class="flex-1 space-y-3">
+            <div v-if="allocations.length === 0" class="flex flex-col items-center py-4 text-gray-300">
+              <Icon icon="mdi:chart-donut" class="text-3xl" />
+              <p class="mt-2 text-[10px] font-semibold">No assets to display</p>
+            </div>
             <div
+              v-else
               v-for="item in allocations"
               :key="item.name"
               class="grid grid-cols-[1fr_48px_82px] items-center gap-2"
@@ -109,11 +114,16 @@
           </button>
         </div>
 
-        <div class="mt-4 grid grid-cols-[1.2fr_1fr_1fr_70px_52px] gap-2 text-[9px] font-bold text-gray-400">
+        <div v-if="filteredHoldings.length > 0" class="mt-4 grid grid-cols-[1.2fr_1fr_1fr_70px_52px] gap-2 text-[9px] font-bold text-gray-400">
           <span>Asset</span><span>Amount</span><span>Value (USDT)</span><span>24h Trend</span><span class="text-right">24h Change</span>
         </div>
 
-        <div class="mt-3 space-y-4">
+        <div v-if="filteredHoldings.length === 0" class="mt-6 flex flex-col items-center py-8 text-gray-300">
+          <Icon icon="mdi:wallet-outline" class="text-4xl" />
+          <p class="mt-2 text-[11px] font-semibold">No holdings yet</p>
+        </div>
+
+        <div v-else class="mt-3 space-y-4">
           <div
             v-for="coin in filteredHoldings"
             :key="coin.symbol"

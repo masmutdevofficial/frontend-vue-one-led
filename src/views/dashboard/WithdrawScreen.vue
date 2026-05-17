@@ -171,7 +171,12 @@
         </div>
 
         <div class="mt-3 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div v-if="recentAddresses.length === 0" class="flex flex-col items-center py-8 text-gray-300">
+            <Icon icon="mdi:map-marker-off-outline" class="text-3xl" />
+            <p class="mt-2 text-[10px] font-semibold">No recent addresses</p>
+          </div>
           <button
+            v-else
             v-for="address in recentAddresses"
             :key="address.address"
             @click="selectAddress(address)"
