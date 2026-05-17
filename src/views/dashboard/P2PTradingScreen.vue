@@ -522,7 +522,7 @@ interface PaymentOption { label: string; icon: string; color: string }
 interface Payment { icon: string; color: string; label: string }
 interface Merchant {
   name: string; avatar: string; completion: string; orders: string
-  online: string; onlineType: string; price: string; currency: string
+  online: string; onlineType: string; price: string; priceRaw: number; currency: string
   limit: string; available: string; action: string; type: string
   asset: string; region: string; payments: Payment[]; more: string
 }
@@ -593,6 +593,16 @@ const safetyTips = [
   'Verify payment in your bank account, not screenshots',
 ]
 
+// ─── Helpers ─────────────────────────────────────────────
+const INTEGER_CURRENCIES = new Set(['IDR', 'VND', 'JPY', 'KRW', 'NGN', 'CLP'])
+
+function formatPrice(value: number, currency: string): string {
+  if (INTEGER_CURRENCIES.has(currency)) {
+    return value.toLocaleString('id-ID', { maximumFractionDigits: 0 })
+  }
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 // ─── API fetch ────────────────────────────────────────────
 function mapApiMerchant(m: any): Merchant {
   const payments: Payment[] = Array.isArray(m.payments) ? m.payments : []
@@ -605,7 +615,8 @@ function mapApiMerchant(m: any): Merchant {
     orders:     Number(m.total_trades ?? 0).toLocaleString(),
     online:     m.online_type === 'online' ? 'Online' : 'In Trade',
     onlineType: m.online_type ?? 'online',
-    price:      String(m.price ?? '1.000'),
+    priceRaw:   Number(m.price ?? 0),
+    price:      formatPrice(Number(m.price ?? 0), m.currency ?? 'USD'),
     currency:   m.currency   ?? 'USD',
     limit:      `$${Number(m.limit_min ?? 0).toLocaleString()} – $${Number(m.limit_max ?? 0).toLocaleString()}`,
     available:  m.available  ?? '–',
@@ -653,11 +664,9 @@ const filteredMerchants = computed(() => {
     }
     return true
   })
-  list.sort((a, b) => {
-    const pa = parseFloat(a.price.replace(/,/g, ''))
-    const pb = parseFloat(b.price.replace(/,/g, ''))
-    return sortOrder.value === 'asc' ? pa - pb : pb - pa
-  })
+  list.sort((a, b) =>
+    sortOrder.value === 'asc' ? a.priceRaw - b.priceRaw : b.priceRaw - a.priceRaw
+  )
   return list
 })
 
@@ -678,14 +687,14 @@ const bestMerchant = computed(() => filteredMerchants.value[0] ?? null)
 const quickReceive = computed(() => {
   const n = parseFloat(quickAmount.value)
   if (!n || !bestMerchant.value) return '0.00'
-  const price = parseFloat(bestMerchant.value.price.replace(/,/g, ''))
+  const price = bestMerchant.value.priceRaw
   return price ? (n / price).toFixed(6) : '0.00'
 })
 
 const tradeReceive = computed(() => {
   const n = parseFloat(tradeAmount.value)
   if (!n || !selectedMerchant.value) return '0.00'
-  const price = parseFloat(selectedMerchant.value.price.replace(/,/g, ''))
+  const price = selectedMerchant.value.priceRaw
   return price ? (n / price).toFixed(6) : '0.00'
 })
 
