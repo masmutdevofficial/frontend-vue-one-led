@@ -23,6 +23,8 @@ import TradeScreen from '../views/dashboard/TradeScreen.vue'
 import FuturesScreen from '../views/dashboard/FuturesScreen.vue'
 import CopyTraderProfileScreen from '../views/dashboard/CopyTraderProfileScreen.vue'
 import SecurityScreen from '../views/dashboard/SecurityScreen.vue'
+import LoginHistoryScreen from '../views/dashboard/LoginHistoryScreen.vue'
+import ManageDevicesScreen from '../views/dashboard/ManageDevicesScreen.vue'
 import TrackingFundsScreen from '../views/dashboard/TrackingFundsScreen.vue'
 import HelpCenterScreen from '../views/dashboard/HelpCenterScreen.vue'
 import VerificationScreen from '../views/dashboard/VerificationScreen.vue'
@@ -74,6 +76,8 @@ const routes = [
   { path: '/futures',           meta: { requiresAuth: true }, component: FuturesScreen },
   { path: '/copy-trader/:username', meta: { requiresAuth: true }, component: CopyTraderProfileScreen },
   { path: '/security',          meta: { requiresAuth: true }, component: SecurityScreen },
+  { path: '/login-history',     meta: { requiresAuth: true }, component: LoginHistoryScreen },
+  { path: '/manage-devices',    meta: { requiresAuth: true }, component: ManageDevicesScreen },
   { path: '/tracking-funds',    meta: { requiresAuth: true }, component: TrackingFundsScreen },
   { path: '/help-center',       meta: { requiresAuth: true }, component: HelpCenterScreen },
   { path: '/verification',      meta: { requiresAuth: true }, component: VerificationScreen },
