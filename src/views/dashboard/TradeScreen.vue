@@ -3,7 +3,7 @@
     <div class="min-h-screen bg-[#f6f8fb] pb-8 text-[#17212f]">
 
       <!-- ═══════════ MARKET HEADER ═══════════ -->
-      <section class="px-3 pt-3 md:px-6 lg:px-8">
+      <section class="relative px-3 pt-3 md:px-6 lg:px-8">
         <div class="rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-sm">
 
           <!-- Mobile layout -->
@@ -14,10 +14,10 @@
                   <CoinIcon :icon="coin.icon" :symbol="coin.symbol" icon-class="text-[26px]" img-class="h-6 w-6 rounded-full" />
                 </div>
                 <div>
-                  <div class="flex items-center gap-1">
+                  <button class="flex items-center gap-1" @click.stop="showCoinPicker = !showCoinPicker">
                     <h1 class="text-[16px] font-semibold text-[#17212f]">{{ coin.symbol }}/USDT</h1>
-                    <Icon icon="mdi:chevron-down" class="text-[16px] text-gray-400" />
-                  </div>
+                    <Icon icon="mdi:chevron-down" class="text-[16px] text-gray-400 transition-transform" :class="showCoinPicker ? 'rotate-180' : ''" />
+                  </button>
                   <p class="text-[11px] font-semibold text-gray-400">{{ coin.fullName }}</p>
                 </div>
               </div>
@@ -44,10 +44,10 @@
                 <CoinIcon :icon="coin.icon" :symbol="coin.symbol" icon-class="text-[36px]" img-class="h-8 w-8 rounded-full" />
               </div>
               <div>
-                <div class="flex items-center gap-2">
+                <button class="flex items-center gap-2" @click.stop="showCoinPicker = !showCoinPicker">
                   <h1 class="text-[22px] font-semibold text-[#17212f]">{{ coin.symbol }}/USDT</h1>
-                  <Icon icon="mdi:chevron-down" class="text-[22px] text-[#17212f]" />
-                </div>
+                  <Icon icon="mdi:chevron-down" class="text-[22px] text-[#17212f] transition-transform" :class="showCoinPicker ? 'rotate-180' : ''" />
+                </button>
                 <p class="mt-1 text-[13px] font-semibold text-gray-400">{{ coin.fullName }}</p>
               </div>
             </div>
@@ -68,6 +68,58 @@
             </div>
           </div>
         </div>
+
+        <!-- ── Coin Picker Dropdown ── -->
+        <div
+          v-if="showCoinPicker"
+          class="absolute left-3 right-3 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl md:left-6 md:right-6 lg:left-8 lg:right-8"
+          @click.stop
+        >
+          <!-- Search input -->
+          <div class="border-b border-gray-100 px-4 py-3">
+            <div class="flex items-center gap-2 rounded-xl bg-[#f6f8fb] px-3 py-2">
+              <Icon icon="mdi:magnify" class="shrink-0 text-[18px] text-gray-400" />
+              <input
+                v-model="coinPickerSearch"
+                placeholder="Search coin..."
+                class="w-full bg-transparent text-[13px] font-semibold text-[#17212f] outline-none placeholder:text-gray-400"
+                autofocus
+              />
+            </div>
+          </div>
+          <!-- Coin list -->
+          <div class="max-h-64 overflow-y-auto">
+            <div
+              v-for="c in filteredPickerCoins"
+              :key="c.symbol"
+              class="flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-[#f6f8fb] active:bg-gray-100"
+              @click="selectCoin(c.symbol)"
+            >
+              <div class="flex items-center gap-3">
+                <CoinIcon :icon="c.icon" :symbol="c.symbol" icon-class="text-[22px]" img-class="h-7 w-7 rounded-full" />
+                <div>
+                  <p class="text-[13px] font-semibold text-[#17212f]">{{ c.symbol }}/USDT</p>
+                  <p class="text-[10px] font-semibold text-gray-400">{{ c.name }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-[12px] font-semibold text-[#17212f]">{{ formatPrice(tickerMap.get(c.symbol + 'USDT')?.price ?? 0) }}</p>
+                <p
+                  class="text-[10px] font-semibold"
+                  :class="(tickerMap.get(c.symbol + 'USDT')?.change ?? 0) >= 0 ? 'text-[#10b8ad]' : 'text-red-400'"
+                >
+                  {{ ((tickerMap.get(c.symbol + 'USDT')?.change ?? 0) >= 0 ? '+' : '') + (tickerMap.get(c.symbol + 'USDT')?.change ?? 0).toFixed(2) }}%
+                </p>
+              </div>
+            </div>
+            <div v-if="filteredPickerCoins.length === 0" class="py-8 text-center text-[13px] font-semibold text-gray-400">
+              No coins found
+            </div>
+          </div>
+        </div>
+
+        <!-- Click outside overlay -->
+        <div v-if="showCoinPicker" class="fixed inset-0 z-40" @click="showCoinPicker = false"></div>
       </section>
 
       <!-- ═══════════ CHART CARD ═══════════ -->
@@ -216,10 +268,18 @@
             </div>
           </div>
 
+          <!-- Error message -->
+          <p v-if="placeOrderError" class="mt-2 text-[11px] font-semibold text-red-400">{{ placeOrderError }}</p>
+
           <button
-            class="mt-5 h-12 w-full rounded-xl text-[14px] font-semibold text-white active:scale-[0.99] md:text-[15px]"
+            class="mt-5 h-12 w-full rounded-xl text-[14px] font-semibold text-white active:scale-[0.99] md:text-[15px] disabled:opacity-60"
             :class="activeSide === 'Buy' ? 'bg-[#08a99f]' : 'bg-red-400'"
-          >{{ activeSide }} {{ coin.symbol }}</button>
+            :disabled="placeOrderLoading"
+            @click="placeOrder"
+          >
+            <span v-if="placeOrderLoading">Placing...</span>
+            <span v-else>{{ activeSide }} {{ coin.symbol }}</span>
+          </button>
         </div>
 
         <!-- ORDER BOOK -->
@@ -300,98 +360,186 @@
           <div class="flex items-center justify-between border-b border-gray-100 px-4">
             <div class="flex h-13 items-center gap-5 overflow-x-auto md:gap-8">
               <button
-                v-for="tab in orderTabs"
-                :key="tab"
-                @click="activeBottomTab = tab"
+                v-for="(tab, i) in orderTabs"
+                :key="tabKeys[i]"
+                @click="onTabChange(tabKeys[i])"
                 class="relative h-full shrink-0 text-[13px] font-semibold md:text-[14px]"
-                :class="activeBottomTab === tab ? 'text-[#10b8ad]' : 'text-gray-500'"
+                :class="activeBottomTab === tabKeys[i] ? 'text-[#10b8ad]' : 'text-gray-500'"
               >
                 {{ tab }}
-                <span v-if="activeBottomTab === tab" class="absolute bottom-0 left-0 right-0 h-0.75 rounded-full bg-[#10b8ad]"></span>
+                <span v-if="activeBottomTab === tabKeys[i]" class="absolute bottom-0 left-0 right-0 h-0.75 rounded-full bg-[#10b8ad]"></span>
               </button>
             </div>
-            <button class="flex shrink-0 items-center gap-1 text-[12px] font-semibold text-gray-500 md:text-[13px]">
+            <button
+              class="flex shrink-0 items-center gap-1 text-[12px] font-semibold text-gray-500 md:text-[13px]"
+              @click="cancelAll"
+            >
               <Icon icon="mdi:swap-horizontal" class="text-[16px] md:text-[18px]" />
               Cancel All
             </button>
           </div>
 
-          <!-- Mobile: card view -->
-          <div class="divide-y divide-gray-100 md:hidden">
-            <div v-for="order in openOrders" :key="order.pair" class="px-4 py-4">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                  <div class="flex h-9 w-9 items-center justify-center rounded-full" :class="order.iconClass">
-                    <Icon :icon="order.icon" class="text-[20px]" />
-                  </div>
-                  <div>
-                    <div class="flex items-center gap-1.5">
-                      <p class="text-[13px] font-semibold text-[#17212f]">{{ order.pair }}</p>
-                      <span
-                        class="rounded-md px-1.5 py-0.5 text-[9px] font-bold"
-                        :class="order.side === 'Buy' ? 'bg-[#eafffd] text-[#10b8ad]' : 'bg-red-50 text-red-400'"
-                      >{{ order.side }}</span>
-                    </div>
-                    <p class="mt-0.5 text-[10px] font-semibold text-gray-400">{{ order.type }}</p>
-                  </div>
-                </div>
-                <button class="rounded-xl border border-red-100 bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-400 active:scale-95">Cancel</button>
-              </div>
-              <div class="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[#f6f8fb] px-3 py-2.5">
-                <div>
-                  <p class="text-[9px] font-bold text-gray-400">Price</p>
-                  <p class="mt-0.5 text-[11px] font-semibold text-[#17212f]">{{ order.price }}</p>
-                </div>
-                <div>
-                  <p class="text-[9px] font-bold text-gray-400">Amount</p>
-                  <p class="mt-0.5 text-[11px] font-semibold text-[#17212f]">{{ order.amount }}</p>
-                </div>
-                <div>
-                  <p class="text-[9px] font-bold text-gray-400">Filled</p>
-                  <p class="mt-0.5 text-[11px] font-semibold text-[#17212f]">{{ order.filled }}</p>
-                </div>
-              </div>
-            </div>
+          <!-- Loading state -->
+          <div v-if="isLoadingOrders" class="py-8 text-center text-[13px] font-semibold text-gray-400">
+            Loading...
           </div>
 
-          <!-- Desktop: table view -->
-          <div class="hidden md:block">
-            <div class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.7fr] gap-2 border-b border-gray-100 px-4 py-3 text-[11px] font-bold text-gray-400">
-              <span>Pair / Type</span>
-              <span>Side</span>
-              <span>Price</span>
-              <span>Amount</span>
-              <span>Filled</span>
-              <span>Total</span>
-              <span class="text-right">Action</span>
+          <!-- ── OPEN ORDERS TAB ── -->
+          <template v-else-if="activeBottomTab === 'open-orders'">
+            <!-- Empty state -->
+            <div v-if="openOrdersList.length === 0" class="py-10 text-center text-[13px] font-semibold text-gray-400">
+              No open orders
             </div>
-            <div>
-              <div
-                v-for="order in openOrders"
-                :key="order.pair"
-                class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.7fr] items-center gap-2 border-b border-gray-100 px-4 py-4 last:border-b-0"
-              >
-                <div class="flex items-center gap-3">
-                  <div class="flex h-8 w-8 items-center justify-center rounded-full" :class="order.iconClass">
-                    <Icon :icon="order.icon" class="text-[20px]" />
+            <!-- Mobile: card view -->
+            <div v-else class="divide-y divide-gray-100 md:hidden">
+              <div v-for="order in openOrdersList" :key="order.id" class="px-4 py-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                      <CoinIcon :icon="marketStore.coinMap.get(order.symbol.replace('USDT',''))?.icon ?? 'mdi:currency-usd'" :symbol="order.symbol.replace('USDT','')" icon-class="text-[18px]" img-class="h-6 w-6 rounded-full" />
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <p class="text-[13px] font-semibold text-[#17212f]">{{ order.symbol.replace('USDT', '/USDT') }}</p>
+                        <span class="rounded-md px-1.5 py-0.5 text-[9px] font-bold" :class="order.side === 'Buy' ? 'bg-[#eafffd] text-[#10b8ad]' : 'bg-red-50 text-red-400'">{{ order.side }}</span>
+                      </div>
+                      <p class="mt-0.5 text-[10px] font-semibold text-gray-400">{{ order.type }}</p>
+                    </div>
+                  </div>
+                  <button class="rounded-xl border border-red-100 bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-400 active:scale-95" @click="cancelOrder(order.id)">Cancel</button>
+                </div>
+                <div class="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[#f6f8fb] px-3 py-2.5">
+                  <div>
+                    <p class="text-[9px] font-bold text-gray-400">Price</p>
+                    <p class="mt-0.5 text-[11px] font-semibold text-[#17212f]">{{ order.price ? formatPrice(Number(order.price)) : 'Market' }}</p>
                   </div>
                   <div>
-                    <p class="text-[13px] font-semibold text-[#17212f]">{{ order.pair }}</p>
-                    <p class="mt-1 text-[11px] font-semibold text-gray-400">{{ order.type }}</p>
+                    <p class="text-[9px] font-bold text-gray-400">Amount</p>
+                    <p class="mt-0.5 text-[11px] font-semibold text-[#17212f]">{{ Number(order.amount).toFixed(4) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-[9px] font-bold text-gray-400">Filled</p>
+                    <p class="mt-0.5 text-[11px] font-semibold text-[#17212f]">{{ Number(order.amount) > 0 ? ((Number(order.filled) / Number(order.amount)) * 100).toFixed(0) + '%' : '0%' }}</p>
                   </div>
                 </div>
-                <span class="text-[13px] font-semibold" :class="order.sideClass">{{ order.side }}</span>
-                <span class="text-[13px] font-semibold text-[#17212f]">{{ order.price }}</span>
-                <span class="text-[13px] font-semibold text-[#17212f]">{{ order.amount }}</span>
-                <div>
-                  <p class="text-[13px] font-semibold text-[#17212f]">{{ order.filled }}</p>
-                  <p class="mt-1 text-[11px] font-semibold text-gray-400">{{ order.filledSub }}</p>
-                </div>
-                <span class="text-[13px] font-semibold text-[#17212f]">{{ order.total }}</span>
-                <button class="text-right text-[13px] font-semibold text-red-400 active:scale-95">Cancel</button>
               </div>
             </div>
-          </div>
+            <!-- Desktop: table view -->
+            <div v-if="openOrdersList.length > 0" class="hidden md:block">
+              <div class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.7fr] gap-2 border-b border-gray-100 px-4 py-3 text-[11px] font-bold text-gray-400">
+                <span>Pair / Type</span><span>Side</span><span>Price</span><span>Amount</span><span>Filled</span><span>Total</span><span class="text-right">Action</span>
+              </div>
+              <div>
+                <div
+                  v-for="order in openOrdersList"
+                  :key="order.id"
+                  class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.7fr] items-center gap-2 border-b border-gray-100 px-4 py-4 last:border-b-0"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                      <CoinIcon :icon="marketStore.coinMap.get(order.symbol.replace('USDT',''))?.icon ?? 'mdi:currency-usd'" :symbol="order.symbol.replace('USDT','')" icon-class="text-[18px]" img-class="h-6 w-6 rounded-full" />
+                    </div>
+                    <div>
+                      <p class="text-[13px] font-semibold text-[#17212f]">{{ order.symbol.replace('USDT', '/USDT') }}</p>
+                      <p class="mt-1 text-[11px] font-semibold text-gray-400">{{ order.type }}</p>
+                    </div>
+                  </div>
+                  <span class="text-[13px] font-semibold" :class="order.side === 'Buy' ? 'text-[#10b8ad]' : 'text-red-400'">{{ order.side }}</span>
+                  <span class="text-[13px] font-semibold text-[#17212f]">{{ order.price ? formatPrice(Number(order.price)) : 'Market' }}</span>
+                  <span class="text-[13px] font-semibold text-[#17212f]">{{ Number(order.amount).toFixed(4) }}</span>
+                  <div>
+                    <p class="text-[13px] font-semibold text-[#17212f]">{{ Number(order.amount) > 0 ? ((Number(order.filled) / Number(order.amount)) * 100).toFixed(0) + '%' : '0%' }}</p>
+                    <p class="mt-1 text-[11px] font-semibold text-gray-400">{{ Number(order.filled).toFixed(4) }}</p>
+                  </div>
+                  <span class="text-[13px] font-semibold text-[#17212f]">{{ order.total ? formatPrice(Number(order.total)) : '—' }}</span>
+                  <button class="text-right text-[13px] font-semibold text-red-400 active:scale-95" @click="cancelOrder(order.id)">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- ── POSITIONS TAB ── -->
+          <template v-else-if="activeBottomTab === 'positions'">
+            <div v-if="openPositionsList.length === 0" class="py-10 text-center text-[13px] font-semibold text-gray-400">
+              No open positions
+            </div>
+            <div v-else class="divide-y divide-gray-100">
+              <div v-for="pos in openPositionsList" :key="pos.id" class="px-4 py-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <p class="text-[13px] font-semibold text-[#17212f]">{{ pos.symbol.replace('USDT', '/USDT') }}</p>
+                      <span class="rounded-md px-1.5 py-0.5 text-[9px] font-bold" :class="pos.side === 'Long' ? 'bg-[#eafffd] text-[#10b8ad]' : 'bg-red-50 text-red-400'">{{ pos.side }}</span>
+                      <span class="rounded-md bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-gray-500">{{ pos.leverage }}x</span>
+                    </div>
+                    <p class="mt-0.5 text-[10px] font-semibold text-gray-400">Entry: {{ formatPrice(Number(pos.entry_price)) }} · Liq: {{ pos.liquidation_price ? formatPrice(Number(pos.liquidation_price)) : '—' }}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-[12px] font-semibold text-[#17212f]">Size: {{ Number(pos.size).toFixed(4) }}</p>
+                    <p class="text-[11px] font-semibold text-gray-400">Margin: {{ formatPrice(Number(pos.margin)) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- ── HISTORY TAB ── -->
+          <template v-else-if="activeBottomTab === 'history'">
+            <div v-if="historyList.length === 0" class="py-10 text-center text-[13px] font-semibold text-gray-400">
+              No trade history
+            </div>
+            <div v-else class="divide-y divide-gray-100 md:hidden">
+              <div v-for="order in historyList" :key="order.id" class="px-4 py-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                      <CoinIcon :icon="marketStore.coinMap.get(order.symbol.replace('USDT',''))?.icon ?? 'mdi:currency-usd'" :symbol="order.symbol.replace('USDT','')" icon-class="text-[18px]" img-class="h-6 w-6 rounded-full" />
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-1.5">
+                        <p class="text-[13px] font-semibold text-[#17212f]">{{ order.symbol.replace('USDT', '/USDT') }}</p>
+                        <span class="rounded-md px-1.5 py-0.5 text-[9px] font-bold" :class="order.side === 'Buy' ? 'bg-[#eafffd] text-[#10b8ad]' : 'bg-red-50 text-red-400'">{{ order.side }}</span>
+                        <span class="rounded-md px-1.5 py-0.5 text-[9px] font-bold" :class="order.status === 'filled' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'">{{ order.status }}</span>
+                      </div>
+                      <p class="mt-0.5 text-[10px] font-semibold text-gray-400">{{ order.type }} · {{ new Date(order.created_at).toLocaleDateString() }}</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-[12px] font-semibold text-[#17212f]">{{ order.total ? formatPrice(Number(order.total)) : '—' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Desktop history table -->
+            <div v-if="historyList.length > 0" class="hidden md:block">
+              <div class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.7fr] gap-2 border-b border-gray-100 px-4 py-3 text-[11px] font-bold text-gray-400">
+                <span>Pair / Type</span><span>Side</span><span>Price</span><span>Amount</span><span>Filled</span><span>Total</span><span class="text-right">Status</span>
+              </div>
+              <div>
+                <div
+                  v-for="order in historyList"
+                  :key="order.id"
+                  class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.7fr] items-center gap-2 border-b border-gray-100 px-4 py-4 last:border-b-0"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                      <CoinIcon :icon="marketStore.coinMap.get(order.symbol.replace('USDT',''))?.icon ?? 'mdi:currency-usd'" :symbol="order.symbol.replace('USDT','')" icon-class="text-[18px]" img-class="h-6 w-6 rounded-full" />
+                    </div>
+                    <div>
+                      <p class="text-[13px] font-semibold text-[#17212f]">{{ order.symbol.replace('USDT', '/USDT') }}</p>
+                      <p class="mt-1 text-[11px] font-semibold text-gray-400">{{ order.type }}</p>
+                    </div>
+                  </div>
+                  <span class="text-[13px] font-semibold" :class="order.side === 'Buy' ? 'text-[#10b8ad]' : 'text-red-400'">{{ order.side }}</span>
+                  <span class="text-[13px] font-semibold text-[#17212f]">{{ order.price ? formatPrice(Number(order.price)) : 'Market' }}</span>
+                  <span class="text-[13px] font-semibold text-[#17212f]">{{ Number(order.amount).toFixed(4) }}</span>
+                  <span class="text-[13px] font-semibold text-[#17212f]">{{ Number(order.filled).toFixed(4) }}</span>
+                  <span class="text-[13px] font-semibold text-[#17212f]">{{ order.total ? formatPrice(Number(order.total)) : '—' }}</span>
+                  <span class="text-right text-[11px] font-bold capitalize" :class="order.status === 'filled' ? 'text-green-600' : 'text-gray-400'">{{ order.status }}</span>
+                </div>
+              </div>
+            </div>
+          </template>
 
         </div>
       </section>
@@ -407,6 +555,8 @@ import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CoinIcon from '@/components/CoinIcon.vue'
 import { useMarketWs } from '@/services/marketWs'
 import { useMarketStore } from '@/stores/market'
+import { useAuthStore } from '@/stores/auth'
+import { makeTradeApi, type SpotOrder, type FuturesPosition } from '@/services/api'
 import {
   createChart,
   CandlestickSeries,
@@ -437,6 +587,7 @@ const CATALOG_FALLBACK: Record<string, CoinData> = {
 }
 
 const marketStore = useMarketStore()
+const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -543,7 +694,6 @@ const activeTimeframe  = ref('1H')
 const activePanelTab   = ref<'trade' | 'orderbook'>('trade')
 const activeSide       = ref<'Buy' | 'Sell'>('Buy')
 const activeOrderType  = ref('Limit')
-const activeBottomTab  = ref('Open Orders (1)')
 
 const timeframes  = ['1H', '4H', '1D', '1W', 'More']
 const sides: ('Buy' | 'Sell')[] = ['Buy', 'Sell']
@@ -554,8 +704,11 @@ const isFavorite       = ref(false)
 const orderPrice       = ref(0)
 const orderAmount      = ref(0.1)
 const sliderPct        = ref(10)
-const availableBalance = ref(10000)   // USDT
-const availableCoin    = ref(0.5)     // coin units
+
+// Balance — synced from auth store (USDT) and coin balances API
+const coinBalanceMap   = ref<Record<string, number>>({})
+const availableBalance = computed(() => Number(auth.user?.balance ?? 0))
+const availableCoin    = computed(() => coinBalanceMap.value[coin.value.symbol] ?? 0)
 
 const orderTotal = computed(() => formatPrice(orderPrice.value * orderAmount.value))
 const availableDisplay = computed(() =>
@@ -652,6 +805,9 @@ onMounted(() => {
   initOrderBook(c.price)
   initChart()
   timer = setInterval(tick, 600)
+  // Fetch trade data
+  fetchOpenOrders()
+  fetchCoinBalances()
 })
 
 onUnmounted(() => {
@@ -852,32 +1008,140 @@ function updateLiveCandle() {
   if (lastVolume) try { volumeSeries.update(lastVolume) } catch { /* ignore out-of-order */ }
 }
 
-const orderTabs = ['Open Orders (1)', 'Positions (1)', 'History']
+const orderTabs = computed(() => [
+  `Open Orders (${openOrdersList.value.length})`,
+  `Positions (${openPositionsList.value.length})`,
+  'History',
+])
 
-interface OpenOrder {
-  icon: string
-  iconClass: string
-  pair: string
-  type: string
-  side: string
-  sideClass: string
-  price: string
-  amount: string
-  filled: string
-  filledSub: string
-  total: string
+// ── Trade API ─────────────────────────────────────────────────
+const tradeApi = computed(() => auth.accessToken ? makeTradeApi(auth.accessToken) : null)
+
+// ── Order lists ───────────────────────────────────────────────
+const openOrdersList    = ref<SpotOrder[]>([])
+const historyList       = ref<SpotOrder[]>([])
+const openPositionsList = ref<FuturesPosition[]>([])
+const isLoadingOrders   = ref(false)
+const placeOrderError   = ref('')
+const placeOrderLoading = ref(false)
+
+async function fetchCoinBalances() {
+  if (!tradeApi.value) return
+  try {
+    const { balances } = await tradeApi.value.getBalances()
+    const map: Record<string, number> = {}
+    for (const b of balances) map[b.coin.toUpperCase()] = Number(b.amount)
+    coinBalanceMap.value = map
+  } catch { /* ignore */ }
 }
 
-const openOrders: OpenOrder[] = [
-  {
-    icon: 'mdi:bitcoin', iconClass: 'bg-orange-100 text-orange-500',
-    pair: 'BTC/USDT', type: 'Limit', side: 'Buy', sideClass: 'text-[#10b8ad]',
-    price: '64,000.00', amount: '0.1000', filled: '40%', filledSub: '0.0400', total: '2,560.00',
-  },
-  {
-    icon: 'mdi:ethereum', iconClass: 'bg-indigo-100 text-indigo-500',
-    pair: 'ETH/USDT', type: 'Limit', side: 'Sell', sideClass: 'text-red-400',
-    price: '3,220.00', amount: '1.0000', filled: '0%', filledSub: '0.0000', total: '3,220.00',
-  },
-]
+async function fetchOpenOrders() {
+  if (!tradeApi.value) return
+  isLoadingOrders.value = true
+  try {
+    const { orders } = await tradeApi.value.getOrders('open')
+    openOrdersList.value = orders
+  } catch { /* ignore */ } finally {
+    isLoadingOrders.value = false
+  }
+}
+
+async function fetchHistory() {
+  if (!tradeApi.value) return
+  isLoadingOrders.value = true
+  try {
+    const { orders } = await tradeApi.value.getOrders('history')
+    historyList.value = orders
+  } catch { /* ignore */ } finally {
+    isLoadingOrders.value = false
+  }
+}
+
+async function fetchPositions() {
+  if (!tradeApi.value) return
+  isLoadingOrders.value = true
+  try {
+    const { positions } = await tradeApi.value.getPositions()
+    openPositionsList.value = positions
+  } catch { /* ignore */ } finally {
+    isLoadingOrders.value = false
+  }
+}
+
+async function cancelOrder(id: string) {
+  if (!tradeApi.value) return
+  try {
+    await tradeApi.value.cancelOrder(id)
+    await fetchOpenOrders()
+    await fetchCoinBalances()
+  } catch { /* ignore */ }
+}
+
+async function cancelAll() {
+  if (!tradeApi.value) return
+  try {
+    await tradeApi.value.cancelAll()
+    await fetchOpenOrders()
+    await fetchCoinBalances()
+  } catch { /* ignore */ }
+}
+
+async function placeOrder() {
+  if (!tradeApi.value) return
+  placeOrderError.value = ''
+  placeOrderLoading.value = true
+  try {
+    const body: Parameters<ReturnType<typeof makeTradeApi>['placeOrder']>[0] = {
+      symbol: coin.value.symbol + 'USDT',
+      side:   activeSide.value,
+      type:   activeOrderType.value === 'Stop' ? 'Stop-Limit' : activeOrderType.value as 'Market' | 'Limit',
+      amount: orderAmount.value,
+    }
+    if (activeOrderType.value !== 'Market') body.price = orderPrice.value
+    await tradeApi.value.placeOrder(body)
+    await fetchOpenOrders()
+    await fetchCoinBalances()
+    // Refresh user balance from auth store
+    if (auth.accessToken) {
+      const { makeUserApi } = await import('@/services/api')
+      try {
+        const userProfile = await makeUserApi(auth.accessToken).getProfile()
+        if (auth.user) auth.user.balance = userProfile.balance
+      } catch { /* ignore */ }
+    }
+  } catch (err: any) {
+    placeOrderError.value = err?.message ?? 'Failed to place order.'
+  } finally {
+    placeOrderLoading.value = false
+  }
+}
+
+const activeBottomTab  = ref<'open-orders' | 'positions' | 'history'>('open-orders')
+const tabKeys: Array<'open-orders' | 'positions' | 'history'> = ['open-orders', 'positions', 'history']
+
+function onTabChange(key: 'open-orders' | 'positions' | 'history') {
+  activeBottomTab.value = key
+  if (key === 'open-orders') fetchOpenOrders()
+  else if (key === 'positions') fetchPositions()
+  else if (key === 'history') fetchHistory()
+}
+
+// ── Coin picker state ──────────────────────────────────────────
+const showCoinPicker   = ref(false)
+const coinPickerSearch = ref('')
+
+const filteredPickerCoins = computed(() => {
+  const q = coinPickerSearch.value.trim().toLowerCase()
+  const coins = marketStore.coins
+  const results = q
+    ? coins.filter(c => c.symbol.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
+    : coins
+  return results.slice(0, 20)
+})
+
+function selectCoin(symbol: string) {
+  showCoinPicker.value = false
+  coinPickerSearch.value = ''
+  router.push('/trade/' + symbol.toLowerCase())
+}
 </script>

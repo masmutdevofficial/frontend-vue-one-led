@@ -141,6 +141,57 @@ export function makeUserApi(token: string) {
   }
 }
 
+// ── Trade API types ───────────────────────────────────────────────────────────
+
+export interface SpotOrder {
+  id:         string
+  symbol:     string
+  side:       'Buy' | 'Sell'
+  type:       'Market' | 'Limit' | 'Stop-Limit'
+  amount:     string
+  price:      string | null
+  filled:     string
+  total:      string | null
+  status:     'open' | 'filled' | 'partially_filled' | 'cancelled'
+  created_at: string
+}
+
+export interface FuturesPosition {
+  id:                string
+  symbol:            string
+  side:              'Long' | 'Short'
+  size:              string
+  entry_price:       string
+  mark_price:        string | null
+  margin:            string
+  leverage:          number
+  liquidation_price: string | null
+  margin_mode:       'Cross' | 'Isolated'
+  take_profit:       string | null
+  stop_loss:         string | null
+  status:            'open' | 'closed'
+  created_at:        string
+}
+
+/** Authenticated trade endpoints */
+export function makeTradeApi(token: string) {
+  const api = makeApi(token)
+  return {
+    getOrders:    (status: 'open' | 'history' = 'open', symbol?: string) => {
+      const q = new URLSearchParams({ status })
+      if (symbol) q.set('symbol', symbol)
+      return api.get<{ orders: SpotOrder[] }>(`/trade/orders?${q}`)
+    },
+    placeOrder:   (body: { symbol: string; side: 'Buy' | 'Sell'; type: string; amount: number; price?: number; stop_price?: number }) =>
+      api.post<{ order: SpotOrder }>('/trade/orders', body),
+    cancelOrder:  (id: string) =>
+      request<{ success: boolean }>('PATCH', `/trade/orders/${encodeURIComponent(id)}/cancel`, undefined, token),
+    cancelAll:    () => api.post<{ cancelled: number }>('/trade/orders/cancel-all', {}),
+    getPositions: () => api.get<{ positions: FuturesPosition[] }>('/trade/positions'),
+    getBalances:  () => api.get<{ balances: { coin: string; amount: string }[] }>('/trade/balances'),
+  }
+}
+
 /** Public P2P endpoints — no auth needed */
 export const p2pApi = {
   getMerchants: (type?: string, asset?: string) => {

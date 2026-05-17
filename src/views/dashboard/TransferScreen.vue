@@ -92,7 +92,6 @@
                 <span class="text-[12px] font-semibold text-[#17212f]">USDT</span>
                 <span class="text-[10px] font-bold text-gray-400">Tether</span>
               </div>
-              <Icon icon="mdi:chevron-down" class="text-[18px] text-gray-400" />
             </div>
           </button>
 
