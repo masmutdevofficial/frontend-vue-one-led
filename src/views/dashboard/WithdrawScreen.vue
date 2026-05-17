@@ -227,7 +227,7 @@
       enter-from-class="translate-y-full"
       leave-to-class="translate-y-full"
     >
-      <div v-if="Number(amount) > 0" class="fixed bottom-0 left-1/2 z-30 w-full max-w-107.5 -translate-x-1/2 border-t border-gray-100 bg-white px-4 pb-6 pt-3 shadow-lg">
+      <div v-if="Number(amount) > 0" class="fixed bottom-[75px] left-1/2 z-50 w-full max-w-107.5 -translate-x-1/2 border-t border-gray-100 bg-white px-4 pb-3 pt-3 shadow-lg">
         <button
           @click="openConfirm"
           :disabled="!canWithdraw"
