@@ -73,6 +73,19 @@
           <img src="/images/apple-logo.png" alt="apple logo" class="size-5 object-contain" />
           <span>Continue with Apple</span>
         </button>
+        <button
+          v-if="passkeySupported"
+          type="button"
+          :disabled="passkeyLoading"
+          class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+          @click="handlePasskeyLogin"
+        >
+          <Icon v-if="!passkeyLoading" icon="mdi:fingerprint" class="size-5 text-teal-500" />
+          <svg v-else class="size-5 animate-spin text-teal-500" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31" stroke-dashoffset="12" />
+          </svg>
+          <span>{{ passkeyLoading ? 'Verifying…' : 'Continue with Passkey' }}</span>
+        </button>
       </div>
 
       <p class="mt-5 text-center text-sm font-medium text-slate-500">
@@ -87,7 +100,9 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 import { useAuthStore, ApiError } from '../../stores/auth'
+import { authApi } from '../../services/api'
 import { useToast } from '../../composables/useToast'
 import { useOAuth } from '../../composables/useOAuth'
 
@@ -96,10 +111,12 @@ const auth     = useAuthStore()
 const toast    = useToast()
 const { signInWithGoogle, signInWithApple } = useOAuth()
 
-const email       = ref('')
-const password    = ref('')
+const email        = ref('')
+const password     = ref('')
 const showPassword = ref(false)
-const loading     = ref(false)
+const loading      = ref(false)
+const passkeyLoading = ref(false)
+const passkeySupported = ref(browserSupportsWebAuthn())
 
 async function handleLogin() {
   if (!email.value || !password.value) {
@@ -114,6 +131,40 @@ async function handleLogin() {
     toast.error(err instanceof ApiError ? err.message : 'Login failed. Please try again.')
   } finally {
     loading.value = false
+  }
+}
+
+async function handlePasskeyLogin() {
+  if (!passkeySupported.value) {
+    toast.error('Passkeys are not supported on this device.')
+    return
+  }
+  if (!email.value.trim()) {
+    toast.warning('Please enter your email address first.')
+    return
+  }
+  passkeyLoading.value = true
+  try {
+    // Step 1: get challenge options from server
+    const { _token, ...optionsJSON } = await authApi.webauthnOptions(email.value.trim())
+
+    // Step 2: trigger biometric prompt
+    const assertion = await startAuthentication({ optionsJSON: optionsJSON as PublicKeyCredentialRequestOptionsJSON })
+
+    // Step 3: verify assertion and receive JWT
+    const data = await authApi.webauthnVerify({ _token, ...assertion })
+
+    // Step 4: apply session and navigate
+    await auth.loginFromOAuth(data)
+    router.push('/dashboard')
+  } catch (err: any) {
+    if (err?.name === 'NotAllowedError') {
+      toast.error('Biometric authentication was cancelled.')
+    } else {
+      toast.error(err instanceof ApiError ? err.message : (err?.message ?? 'Passkey login failed.'))
+    }
+  } finally {
+    passkeyLoading.value = false
   }
 }
 </script>

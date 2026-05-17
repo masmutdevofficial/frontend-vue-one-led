@@ -88,6 +88,14 @@ export const authApi = {
   /** OAuth — Apple: send id_token + authorization code from Apple Sign-in */
   oauthApple: (id_token: string, code: string) =>
     request<{ access_token: string; refresh_token: string; expires_in: number; user: WalletUser }>('POST', '/auth/oauth/apple', { id_token, code }),
+
+  /** WebAuthn — step 1: get authentication options (challenge) for an email */
+  webauthnOptions: (email: string) =>
+    request<Record<string, unknown> & { _token: string }>('POST', '/auth/webauthn/options', { email }),
+
+  /** WebAuthn — step 2: verify authenticator assertion and receive JWT */
+  webauthnVerify: (body: Record<string, unknown>) =>
+    request<{ access_token: string; refresh_token: string; expires_in: number; user: WalletUser }>('POST', '/auth/webauthn/verify', body),
 }
 
 /** Authenticated API call factory — pass access token */

@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import {
+  startRegistration,
+  startAuthentication,
+  browserSupportsWebAuthn,
+} from '@simplewebauthn/browser'
 import DashboardLayout from '../../layouts/DashboardLayout.vue'
 import { makeApi, ApiError } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
@@ -13,8 +18,56 @@ const toast  = useToast()
 
 function api() { return makeApi(auth.accessToken!) }
 
-// ─── Biometric toggle ────────────────────────────────────────────────────────
-const biometricEnabled = ref(true)
+// ─── Biometric ───────────────────────────────────────────────────────────────
+const biometricEnabled  = ref(false)
+const biometricSupported = ref(false)
+const biometricBusy     = ref(false)
+
+onMounted(async () => {
+  biometricSupported.value = browserSupportsWebAuthn()
+  if (!biometricSupported.value) return
+  try {
+    const { enabled } = await api().get<{ enabled: boolean }>('/webauthn/status')
+    biometricEnabled.value = enabled
+  } catch { /* ignore */ }
+})
+
+async function toggleBiometric() {
+  if (!biometricSupported.value) {
+    toast.show('Your browser does not support passkeys.', 'error')
+    return
+  }
+  if (biometricBusy.value) return
+  biometricBusy.value = true
+
+  try {
+    if (!biometricEnabled.value) {
+      // ── Register passkey ──────────────────────────────────────────────────
+      const optionsJSON = await api().get<PublicKeyCredentialCreationOptionsJSON>(
+        '/webauthn/register/options',
+      )
+      const regResponse = await startRegistration({ optionsJSON })
+      await api().post('/webauthn/register/verify', regResponse)
+      biometricEnabled.value = true
+      toast.show('Biometric login enabled!', 'success')
+    } else {
+      // ── Remove passkeys ───────────────────────────────────────────────────
+      await api().delete('/webauthn/credential')
+      biometricEnabled.value = false
+      toast.show('Biometric login disabled.', 'success')
+    }
+  } catch (err) {
+    if ((err as Error).name === 'NotAllowedError') {
+      toast.show('Passkey prompt was cancelled.', 'error')
+    } else if ((err as Error).name === 'InvalidStateError') {
+      toast.show('This authenticator is already registered.', 'error')
+    } else {
+      toast.show(err instanceof ApiError ? err.message : 'Biometric setup failed.', 'error')
+    }
+  } finally {
+    biometricBusy.value = false
+  }
+}
 
 // ─── Active view: null = list, 'password' | 'history' | 'devices' ────────────
 type View = null | 'password' | 'history' | 'devices'
@@ -174,11 +227,20 @@ const securityItems = [
 
             <template v-if="item.type === 'toggle'">
               <button
-                @click.stop="biometricEnabled = !biometricEnabled"
-                class="relative h-8 w-14 shrink-0 rounded-full transition-colors duration-200"
+                @click.stop="toggleBiometric"
+                :disabled="biometricBusy || !biometricSupported"
+                class="relative h-8 w-14 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-40"
                 :class="biometricEnabled ? 'bg-[#12c7b2]' : 'bg-gray-200'"
+                :title="!biometricSupported ? 'Not supported on this device' : ''"
               >
                 <span
+                  v-if="biometricBusy"
+                  class="absolute inset-0 flex items-center justify-center"
+                >
+                  <svg class="size-4 animate-spin text-white" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31" stroke-dashoffset="12" /></svg>
+                </span>
+                <span
+                  v-else
                   class="absolute top-0.75 h-6.5 w-6.5 rounded-full bg-white shadow-sm transition-all duration-200"
                   :class="biometricEnabled ? 'left-6.75' : 'left-0.75'"
                 ></span>
