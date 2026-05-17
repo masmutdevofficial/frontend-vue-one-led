@@ -129,16 +129,22 @@
             <div>
               <div class="flex items-center gap-1 text-[11px] font-bold text-gray-400">
                 My Balance
-                <Icon icon="mdi:eye-outline" class="text-[13px]" />
+                <button @click="showBalance = !showBalance" class="active:scale-90">
+                  <Icon :icon="showBalance ? 'mdi:eye-outline' : 'mdi:eye-off-outline'" class="text-[13px]" />
+                </button>
               </div>
               <div class="mt-3 flex items-end gap-2">
-                <h2 class="text-[27px] font-semibold leading-none tracking-tight">212,216.40</h2>
+                <h2 class="text-[27px] font-semibold leading-none tracking-tight">
+                  {{ showBalance ? balanceDisplay : '••••••' }}
+                </h2>
                 <button class="mb-1 flex items-center gap-1 text-[10px] font-semibold">
                   USDT
                   <Icon icon="mdi:chevron-down" class="text-[14px]" />
                 </button>
               </div>
-              <p class="mt-2 text-[11px] font-semibold text-gray-400">≈ $212,216.40</p>
+              <p class="mt-2 text-[11px] font-semibold text-gray-400">
+                {{ showBalance ? '≈ $' + balanceDisplay : '≈ $••••••' }}
+              </p>
             </div>
 
             <!-- Coin Illustration -->
@@ -152,16 +158,38 @@
         <div class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           <div class="flex items-center justify-between px-4 py-4">
             <h2 class="text-[14px] font-semibold text-[#17212f]">Recent Transactions</h2>
-            <button class="flex items-center gap-1 text-[10px] font-semibold text-[#18b8b0]">
+            <button @click="router.push('/deposit-history')" class="flex items-center gap-1 text-[10px] font-semibold text-[#18b8b0]">
               See All
               <Icon icon="mdi:arrow-right" class="text-[13px]" />
             </button>
           </div>
 
-          <div>
+          <!-- loading -->
+          <div v-if="txLoading" class="space-y-px">
+            <div v-for="i in 3" :key="i" class="flex items-center justify-between border-t border-gray-100 px-4 py-4 animate-pulse">
+              <div class="flex items-center gap-3">
+                <div class="h-[38px] w-[38px] rounded-full bg-gray-100"></div>
+                <div class="space-y-1.5">
+                  <div class="h-2.5 w-24 rounded bg-gray-100"></div>
+                  <div class="h-2 w-16 rounded bg-gray-100"></div>
+                </div>
+              </div>
+              <div class="space-y-1.5 text-right">
+                <div class="h-2.5 w-20 rounded bg-gray-100 ml-auto"></div>
+                <div class="h-2 w-14 rounded bg-gray-100 ml-auto"></div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="recentDeposits.length === 0" class="flex flex-col items-center py-10 text-gray-300">
+            <Icon icon="mdi:inbox-outline" class="text-4xl" />
+            <p class="mt-2 text-[11px] font-semibold">No deposits yet</p>
+          </div>
+
+          <div v-else>
             <div
-              v-for="item in transactions"
-              :key="item.type + item.date"
+              v-for="item in recentDeposits"
+              :key="item.id"
               class="flex items-center justify-between border-t border-gray-100 px-4 py-4"
             >
               <div class="flex items-center gap-3">
@@ -174,8 +202,11 @@
                 </div>
               </div>
               <div class="text-right">
-                <p class="text-[12px] font-semibold text-[#18b8b0]">{{ item.amount }}</p>
-                <p class="mt-1 text-[10px] font-semibold text-gray-400">{{ item.status }}</p>
+                <p class="text-[12px] font-semibold text-[#18b8b0]">{{ showBalance ? item.amount : '••••••' }}</p>
+                <p class="mt-1 text-[10px] font-semibold"
+                  :class="item.status === 'Approved' ? 'text-[#18b8b0]' : item.status === 'Pending' ? 'text-amber-500' : 'text-red-400'">
+                  {{ item.status }}
+                </p>
               </div>
             </div>
           </div>
@@ -186,46 +217,63 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
+import { useAuthStore } from '@/stores/auth'
+import { makeWalletApi } from '@/services/api'
 
 const router = useRouter()
-const showSupport = ref(false)
+const auth   = useAuthStore()
+const showSupport    = ref(false)
 const showHelpCenter = ref(false)
+const showBalance    = ref(true)
 
-interface AddMethod {
-  title: string
-  desc: string
-  img: string
+// ── Balance ─────────────────────────────────────────────────────────
+const balanceDisplay = computed(() => {
+  const n = parseFloat(auth.user?.balance ?? '0') || 0
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+})
+
+// ── Recent deposits ─────────────────────────────────────────────────
+interface DepositItem { id: string; type: string; date: string; amount: string; status: string; icon: string }
+const recentDeposits = ref<DepositItem[]>([])
+const txLoading      = ref(false)
+
+function fmtDate(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1)
+  const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  if (d.toDateString() === now.toDateString())       return `Today, ${time}`
+  if (d.toDateString() === yesterday.toDateString()) return `Yesterday, ${time}`
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ', ' + time
 }
 
-interface Transaction {
-  type: string
-  date: string
-  amount: string
-  status: string
-  icon: string
+async function loadDeposits() {
+  if (!auth.accessToken) return
+  txLoading.value = true
+  try {
+    const data = await makeWalletApi(auth.accessToken).getDeposits()
+    recentDeposits.value = data.deposits.slice(0, 5).map(d => ({
+      id:     d.id,
+      type:   d.method === 'Manual' ? 'Crypto Deposit' : 'Deposit',
+      date:   fmtDate(d.created_at),
+      amount: '+' + parseFloat(d.amount as unknown as string).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USDT',
+      status: d.status_deposit,
+      icon:   'mdi:arrow-down',
+    }))
+  } catch { /* silently fail */ }
+  finally { txLoading.value = false }
 }
 
+onMounted(loadDeposits)
+
+interface AddMethod { title: string; desc: string; img: string }
 const addMethods: AddMethod[] = [
-  {
-    title: 'Crypto Deposit',
-    desc: 'Transfer crypto from an external wallet via blockchain network.',
-    img: '/images/add-funds-crypto-deposit.webp',
-  },
-  {
-    title: 'P2P Trading',
-    desc: 'Buy crypto from other users securely via P2P.',
-    img: '/images/add-funds-p2p.webp',
-  },
-]
-
-const transactions: Transaction[] = [
-  { type: 'Crypto Deposit', date: 'May 25, 2024 09:21 AM', amount: '+2,000.00 USDT', status: 'Completed', icon: 'mdi:arrow-down' },
-  { type: 'P2P Buy', date: 'May 24, 2024 08:15 PM', amount: '+1,500.00 USDT', status: 'Completed', icon: 'mdi:account-group' },
-  { type: 'Crypto Deposit', date: 'May 23, 2024 06:42 PM', amount: '+3,250.00 USDT', status: 'Completed', icon: 'mdi:arrow-down' },
+  { title: 'Crypto Deposit', desc: 'Transfer crypto from an external wallet via blockchain network.', img: '/images/add-funds-crypto-deposit.webp' },
+  { title: 'P2P Trading',    desc: 'Buy crypto from other users securely via P2P.',                  img: '/images/add-funds-p2p.webp' },
 ]
 </script>
 

@@ -39,6 +39,8 @@ import CopyTradeHistoryScreen from '../views/dashboard/CopyTradeHistoryScreen.vu
 import NewsScreen from '../views/dashboard/NewsScreen.vue'
 import StakingScreen from '../views/dashboard/StakingScreen.vue'
 import GoogleCallbackScreen from '../views/auth/GoogleCallbackScreen.vue'
+import TransactionsScreen from '../views/dashboard/TransactionsScreen.vue'
+import RecentAddressesScreen from '../views/dashboard/RecentAddressesScreen.vue'
 
 /** Routes accessible only when NOT logged in */
 const guestOnly = ['/login', '/register', '/forgot', '/otp']
@@ -92,6 +94,8 @@ const routes = [
   { path: '/copy-trade-history', meta: { requiresAuth: true }, component: CopyTradeHistoryScreen },
   { path: '/news',              meta: { requiresAuth: true }, component: NewsScreen },
   { path: '/staking',           meta: { requiresAuth: true }, component: StakingScreen },
+  { path: '/transactions',      meta: { requiresAuth: true }, component: TransactionsScreen },
+  { path: '/recent-addresses',  meta: { requiresAuth: true }, component: RecentAddressesScreen },
   { path: '/:pathMatch(.*)*',   name: 'not-found',            component: NotFoundScreen },
 ]
 

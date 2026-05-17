@@ -164,7 +164,7 @@
       <section class="mt-4 px-4">
         <div class="flex items-center justify-between">
           <h2 class="text-[14px] font-semibold text-[#17212f]">Recent Addresses</h2>
-          <button class="flex items-center gap-1 text-[10px] font-semibold text-[#10b8ad]">
+          <button @click="router.push('/recent-addresses')" class="flex items-center gap-1 text-[10px] font-semibold text-[#10b8ad]">
             View All
             <Icon icon="mdi:arrow-right" class="text-[13px]" />
           </button>
@@ -553,7 +553,10 @@ async function loadCoinBalances() {
   } catch { /* silently fail */ }
 }
 
-onMounted(loadCoinBalances)
+onMounted(() => {
+  loadCoinBalances()
+  loadRecentAddresses()
+})
 
 // ─── Actions ──────────────────────────────────────────────────────
 function setMax() {
@@ -592,11 +595,28 @@ async function confirmWithdraw() {
   }
 }
 
-const recentAddresses: RecentAddress[] = [
-  { name: 'Main Wallet',    network: 'TRC20', address: 'TQk7Yt9...8uHd1q3M2' },
-  { name: 'Trading Wallet', network: 'TRC20', address: 'TNDf8k...Gm1L2QzY1R' },
-  { name: 'Savings Wallet', network: 'TRC20', address: 'TvULkPj...3aFh9xMvD' },
-]
+const recentAddresses = ref<RecentAddress[]>([])
+
+async function loadRecentAddresses() {
+  if (!auth.accessToken) return
+  try {
+    const data = await makeWalletApi(auth.accessToken).getWithdrawals()
+    const seen = new Set<string>()
+    const result: RecentAddress[] = []
+    for (const w of data.withdrawals) {
+      const parts   = (w.network ?? '').split('|')
+      const coin    = parts.length > 1 ? parts[0] : 'USDT'
+      const network = parts.length > 1 ? parts[1] : (w.network ?? '')
+      const key     = w.address + '|' + network
+      if (!seen.has(key)) {
+        seen.add(key)
+        result.push({ name: coin + ' Wallet', network, address: w.address ?? '' })
+      }
+      if (result.length >= 3) break
+    }
+    recentAddresses.value = result
+  } catch { /* silently fail */ }
+}
 
 const withdrawGuideSteps = [
   'Select the asset you want to withdraw',

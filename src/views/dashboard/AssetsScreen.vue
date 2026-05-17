@@ -57,14 +57,18 @@
       <section class="mt-3 bg-white px-4 py-4 shadow-sm rounded-2xl">
         <div class="flex items-center gap-1">
           <h2 class="text-[14px] font-semibold text-[#18202b]">Asset Allocation</h2>
-          <Icon icon="mdi:information-outline" class="text-[14px] text-gray-400" />
+          <Icon
+            icon="mdi:information-outline"
+            class="text-[14px] text-gray-400"
+            title="Distribution of your portfolio across different crypto assets based on current market value"
+          />
         </div>
 
         <div class="mt-4 flex items-center gap-5">
           <!-- DONUT CHART -->
           <div
             class="relative flex h-[126px] w-[126px] shrink-0 items-center justify-center rounded-full"
-            style="background: conic-gradient(#04c7bd 0deg 126.9deg, #2e7df6 126.9deg 218.4deg, #8b4cf6 218.4deg 273.2deg, #f6b51e 273.2deg 310.5deg, #0bbf96 310.5deg 342.1deg, #d6dde5 342.1deg 360deg);"
+            :style="donutStyle"
           >
             <div class="flex h-[78px] w-[78px] flex-col items-center justify-center rounded-full bg-white shadow-sm">
               <p class="text-[13px] font-semibold leading-none text-[#26313d] tabular-nums">
@@ -86,7 +90,7 @@
                 <span class="text-[10px] font-bold text-[#26313d]">{{ item.name }}</span>
               </div>
               <span class="text-right text-[10px] font-semibold text-[#26313d]">{{ item.percent }}</span>
-              <span class="text-right text-[10px] font-semibold text-[#26313d]">{{ showBalance ? item.amount : '\u2022\u2022\u2022\u2022' }}</span>
+              <span class="text-right text-[10px] font-semibold text-[#26313d]">{{ showBalance ? item.amount : '••••' }}</span>
             </div>
           </div>
         </div>
@@ -174,15 +178,37 @@
       <section class="mt-3 bg-white px-4 py-4 shadow-sm rounded-2xl">
         <div class="flex items-center justify-between">
           <h2 class="text-[14px] font-semibold text-[#18202b]">Recent Transactions</h2>
-          <button class="text-[10px] font-bold text-[#1fb9b2]">
+          <button @click="router.push('/transactions')" class="text-[10px] font-bold text-[#1fb9b2]">
             See All <Icon icon="mdi:arrow-right" class="inline text-[12px]" />
           </button>
         </div>
 
-        <div class="mt-4 space-y-4">
+        <!-- loading skeleton -->
+        <div v-if="txLoading" class="mt-4 space-y-4">
+          <div v-for="i in 3" :key="i" class="flex items-center justify-between animate-pulse">
+            <div class="flex items-center gap-3">
+              <div class="h-8 w-8 rounded-full bg-gray-100"></div>
+              <div class="space-y-1.5">
+                <div class="h-2.5 w-20 rounded bg-gray-100"></div>
+                <div class="h-2 w-12 rounded bg-gray-100"></div>
+              </div>
+            </div>
+            <div class="space-y-1.5 text-right">
+              <div class="h-2.5 w-20 rounded bg-gray-100 ml-auto"></div>
+              <div class="h-2 w-14 rounded bg-gray-100 ml-auto"></div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="transactions.length === 0" class="mt-6 flex flex-col items-center py-8 text-gray-300">
+          <Icon icon="mdi:receipt-text-outline" class="text-4xl" />
+          <p class="mt-2 text-[11px] font-semibold">No transactions yet</p>
+        </div>
+
+        <div v-else class="mt-4 space-y-4">
           <div
             v-for="item in transactions"
-            :key="item.type + item.asset"
+            :key="item.id"
             class="flex items-center justify-between"
           >
             <div class="flex items-center gap-3">
@@ -196,11 +222,14 @@
             </div>
             <div class="text-right">
               <p class="text-[11px] font-semibold leading-none" :class="item.positive ? 'text-[#1fb9b2]' : 'text-[#26313d]'">
-                {{ showBalance ? item.amount : '\u2022\u2022\u2022\u2022' }}
+                {{ showBalance ? item.amount : '••••' }}
               </p>
               <p class="mt-1 text-[9px] font-semibold text-gray-400">{{ item.time }}</p>
             </div>
-            <span class="w-[62px] text-right text-[9px] font-bold text-[#1fb9b2]">{{ item.status }}</span>
+            <span
+              class="w-[62px] text-right text-[9px] font-bold"
+              :class="item.status === 'Approved' || item.status === 'Completed' ? 'text-[#1fb9b2]' : item.status === 'Pending' ? 'text-amber-500' : 'text-red-400'"
+            >{{ item.status }}</span>
           </div>
         </div>
       </section>
@@ -215,7 +244,7 @@ import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CoinIcon from '@/components/CoinIcon.vue'
 import { useAuthStore } from '@/stores/auth'
-import { makeUserApi } from '@/services/api'
+import { makeUserApi, makeWalletApi } from '@/services/api'
 import { useMarketStore, coinIconClass } from '@/stores/market'
 
 const router = useRouter()
@@ -254,11 +283,20 @@ function fmtCoin(n: number, sym: string): string {
   if (n >= 1)   return n.toFixed(5)
   return n.toFixed(7)
 }
+function fmtDate(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1)
+  const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  if (d.toDateString() === now.toDateString())       return `Today, ${time}`
+  if (d.toDateString() === yesterday.toDateString()) return `Yesterday, ${time}`
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + time
+}
 
 // ── Balance chart points (10 pts scrolling) ───────────────────────────
 const balancePoints = ref<number[]>([38, 50, 42, 58, 44, 66, 52, 70, 60, 75])
 
-// ── Coin metadata — lookup from market store (with static fallback) ───────────
+// ── Coin metadata ────────────────────────────────────────────────────
 const COIN_META_FALLBACK: Record<string, { name: string; icon: string; price: number }> = {
   BTC:  { name: 'Bitcoin',   icon: 'mdi:bitcoin',                 price: 64923  },
   ETH:  { name: 'Ethereum',  icon: 'mdi:ethereum',                price: 3215   },
@@ -288,17 +326,8 @@ interface HoldingLive {
   amount: number; value: number; change: number; chartPts: number[]
 }
 
-// Default demo holdings (used when API has no real data)
-const DEFAULT_HOLDINGS: HoldingLive[] = [
-  { symbol: 'BTC',  name: 'Bitcoin',  icon: 'mdi:bitcoin',                 iconClass: coinIconClass('BTC'),  amount: 1.2456789,   value: 74831.80, change:  1.24, chartPts: [38, 50, 40, 60, 46, 70, 55, 72] },
-  { symbol: 'ETH',  name: 'Ethereum', icon: 'mdi:ethereum',                iconClass: coinIconClass('ETH'),  amount: 16.78901234, value: 53953.27, change:  2.35, chartPts: [30, 44, 36, 54, 42, 63, 52, 68] },
-  { symbol: 'SOL',  name: 'Solana',   icon: 'mdi:circle-multiple-outline', iconClass: coinIconClass('SOL'),  amount: 188.245,     value: 32249.80, change: -0.45, chartPts: [68, 56, 62, 50, 58, 44, 50, 38] },
-  { symbol: 'BNB',  name: 'BNB',      icon: 'mdi:alpha-b-circle',          iconClass: coinIconClass('BNB'),  amount: 36.789,      value: 21967.23, change:  0.88, chartPts: [40, 52, 36, 55, 44, 60, 52, 66] },
-  { symbol: 'USDT', name: 'TetherUS', icon: 'mdi:alpha-t-circle',          iconClass: coinIconClass('USDT'), amount: 18614.20,    value: 18614.20, change:  0.01, chartPts: [50, 54, 49, 56, 52, 57, 54, 59] },
-]
-
-const holdingsLive = ref<HoldingLive[]>(DEFAULT_HOLDINGS)
-const totalBalance = ref(DEFAULT_HOLDINGS.reduce((s, h) => s + h.value, 0))
+const holdingsLive = ref<HoldingLive[]>([])
+const totalBalance = ref(0)
 
 const filteredHoldings = computed(() =>
   hideSmallBalances.value
@@ -306,18 +335,55 @@ const filteredHoldings = computed(() =>
     : holdingsLive.value
 )
 
+// ── Dynamic allocation (computed from actual holdings) ──────────────
+const ALLOC_COLORS     = ['#04c7bd', '#2e7df6', '#8b4cf6', '#f6b51e', '#0bbf96', '#d6dde5']
+const ALLOC_DOT_CLASSES = ['bg-[#04c7bd]', 'bg-[#2e7df6]', 'bg-[#8b4cf6]', 'bg-[#f6b51e]', 'bg-[#0bbf96]', 'bg-[#d6dde5]']
+
+const allocations = computed(() => {
+  const total = holdingsLive.value.reduce((s, h) => s + h.value, 0)
+  if (!total) return []
+  const sorted = [...holdingsLive.value].sort((a, b) => b.value - a.value)
+  const top5 = sorted.slice(0, 5)
+  const othersValue = sorted.slice(5).reduce((s, h) => s + h.value, 0)
+  const result = top5.map((h, i) => ({
+    name: h.symbol,
+    percent: ((h.value / total) * 100).toFixed(2) + '%',
+    amount: fmt(h.value) + ' USDT',
+    dot: ALLOC_DOT_CLASSES[i],
+    color: ALLOC_COLORS[i],
+    valuePct: h.value / total,
+  }))
+  if (othersValue > 0) {
+    result.push({ name: 'Others', percent: ((othersValue / total) * 100).toFixed(2) + '%', amount: fmt(othersValue) + ' USDT', dot: ALLOC_DOT_CLASSES[5], color: ALLOC_COLORS[5], valuePct: othersValue / total })
+  }
+  return result
+})
+
+const donutStyle = computed(() => {
+  if (!allocations.value.length) return 'background: #d6dde5'
+  let deg = 0
+  const parts = allocations.value.map(a => {
+    const start = deg; deg += a.valuePct * 360
+    return `${a.color} ${start.toFixed(1)}deg ${deg.toFixed(1)}deg`
+  })
+  return `background: conic-gradient(${parts.join(', ')})`
+})
+
 // ── Live tick ────────────────────────────────────────────────────────
 let timer: ReturnType<typeof setInterval>
 
 function tick() {
   holdingsLive.value = holdingsLive.value.map(h => {
-    const delta     = (Math.random() - 0.499) * 0.0012
-    const newValue  = h.value * (1 + delta)
+    // Use live price from market store if available
+    const meta   = getCoinMeta(h.symbol)
+    const newValue  = h.symbol === 'USDT' ? h.amount : h.amount * meta.price
+    const delta  = (Math.random() - 0.499) * 0.0012
+    const tickedValue = h.symbol === 'USDT' ? newValue : newValue * (1 + delta)
     const newChange = Math.round((h.change + (Math.random() - 0.49) * 0.06) * 100) / 100
-    const last      = h.chartPts[h.chartPts.length - 1]
-    const bias      = newChange >= 0 ? 0.42 : 0.58
-    const newPt     = Math.max(4, Math.min(96, last + (Math.random() - bias) * 12))
-    return { ...h, value: newValue, change: newChange, chartPts: [...h.chartPts.slice(1), newPt] }
+    const last   = h.chartPts[h.chartPts.length - 1]
+    const bias   = newChange >= 0 ? 0.42 : 0.58
+    const newPt  = Math.max(4, Math.min(96, last + (Math.random() - bias) * 12))
+    return { ...h, value: tickedValue, change: newChange, chartPts: [...h.chartPts.slice(1), newPt] }
   })
   totalBalance.value = holdingsLive.value.reduce((s, h) => s + h.value, 0)
   const lastBal = balancePoints.value[balancePoints.value.length - 1]
@@ -325,58 +391,86 @@ function tick() {
   balancePoints.value = [...balancePoints.value.slice(1), newBal]
 }
 
-onMounted(() => {
+// ── Recent Transactions ─────────────────────────────────────────────
+interface TxItem {
+  id: string; type: string; asset: string; icon: string
+  amount: string; time: string; status: string; positive: boolean; created_at: string
+}
+const transactions = ref<TxItem[]>([])
+const txLoading    = ref(false)
+
+async function loadTransactions() {
+  if (!auth.accessToken) return
+  txLoading.value = true
+  try {
+    const [depData, wdrData, trfData] = await Promise.all([
+      makeWalletApi(auth.accessToken).getDeposits(),
+      makeWalletApi(auth.accessToken).getWithdrawals(),
+      makeWalletApi(auth.accessToken).getTransfers(),
+    ])
+    const items: TxItem[] = []
+    for (const d of depData.deposits) {
+      items.push({ id: d.id, type: 'Deposit', asset: 'USDT', icon: 'mdi:arrow-down-circle-outline', amount: '+' + fmt(parseFloat(d.amount as unknown as string)) + ' USDT', time: fmtDate(d.created_at), status: d.status_deposit, positive: true, created_at: d.created_at })
+    }
+    for (const w of wdrData.withdrawals) {
+      const parts = (w.network ?? '').split('|')
+      const coin = parts.length > 1 ? parts[0] : 'USDT'
+      items.push({ id: w.id, type: 'Withdrawal', asset: coin, icon: 'mdi:arrow-up-circle-outline', amount: '-' + fmt(parseFloat(w.amount as unknown as string)) + ' ' + coin, time: fmtDate(w.created_at), status: w.status_withdrawal, positive: false, created_at: w.created_at })
+    }
+    for (const t of trfData.transfers) {
+      const isIn = t.direction === 'received'
+      const label = isIn ? `from ${t.sender_name ?? '?'}` : `to ${t.recipient_name ?? '?'}`
+      items.push({ id: t.id, type: isIn ? 'Transfer In' : 'Transfer Out', asset: `${t.coin} ${label}`, icon: 'mdi:swap-horizontal-circle-outline', amount: (isIn ? '+' : '-') + fmt(parseFloat(t.amount as unknown as string)) + ' ' + t.coin, time: fmtDate(t.created_at), status: 'Completed', positive: isIn, created_at: t.created_at })
+    }
+    items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    transactions.value = items.slice(0, 5)
+  } catch { /* silently fail */ }
+  finally { txLoading.value = false }
+}
+
+// ── On mount ─────────────────────────────────────────────────────────
+onMounted(async () => {
   timer = setInterval(tick, 900)
-  marketStore.fetchCoins()
-  // Fetch real balance from backend
-  if (auth.accessToken) {
-    makeUserApi(auth.accessToken).getBalance().then(d => {
-      const rawTotal = parseFloat(d.total as unknown as string) || 0
-      if (d.balances.length > 0) {
-        const apiHoldings: HoldingLive[] = d.balances.map(b => {
-          const amt  = parseFloat(b.amount as unknown as string) || 0
-          const meta = getCoinMeta(b.coin.toUpperCase())
-          const value = amt * meta.price
-          return { symbol: b.coin.toUpperCase(), name: meta.name, icon: meta.icon, iconClass: meta.iconClass, amount: amt, value, change: 0, chartPts: [50, 52, 50, 54, 51, 55, 53, 56] }
-        })
-        holdingsLive.value = apiHoldings
-        totalBalance.value = rawTotal || apiHoldings.reduce((s, h) => s + h.value, 0)
-      } else if (rawTotal > 0) {
-        // Only USDT balance in users table, no coin breakdown
-        totalBalance.value = rawTotal
-        holdingsLive.value = [{
-          symbol: 'USDT', name: 'TetherUS', icon: 'mdi:alpha-t-circle', iconClass: coinIconClass('USDT'),
-          amount: rawTotal, value: rawTotal, change: 0, chartPts: [50, 52, 50, 54, 51, 55, 53, 56],
-        }]
-      }
-    }).catch(() => {/* use defaults */})
-  }
+  await marketStore.fetchCoins()
+
+  if (!auth.accessToken) return
+
+  try {
+    const d = await makeUserApi(auth.accessToken).getBalance()
+    const rawUsdt = parseFloat(d.total as unknown as string) || 0
+    const apiHoldings: HoldingLive[] = []
+
+    // Add non-USDT coin balances
+    for (const b of d.balances) {
+      const sym = b.coin.toUpperCase()
+      if (sym === 'USDT') continue
+      const amt  = parseFloat(b.amount as unknown as string) || 0
+      if (amt <= 0) continue
+      const meta = getCoinMeta(sym)
+      apiHoldings.push({ symbol: sym, name: meta.name, icon: meta.icon, iconClass: meta.iconClass, amount: amt, value: amt * meta.price, change: 0, chartPts: [50, 52, 50, 54, 51, 55, 53, 56] })
+    }
+
+    // Always add USDT from users.balance
+    if (rawUsdt > 0) {
+      const meta = getCoinMeta('USDT')
+      apiHoldings.push({ symbol: 'USDT', name: 'TetherUS', icon: meta.icon, iconClass: meta.iconClass, amount: rawUsdt, value: rawUsdt, change: 0, chartPts: [50, 52, 50, 54, 51, 55, 53, 56] })
+    }
+
+    if (apiHoldings.length > 0) {
+      holdingsLive.value = apiHoldings
+      totalBalance.value = apiHoldings.reduce((s, h) => s + h.value, 0)
+    }
+  } catch { /* keep empty */ }
+
+  await loadTransactions()
 })
 onUnmounted(() => clearInterval(timer))
 
 // ── Static data ─────────────────────────────────────────────────────────
-interface QuickAction  { name: string; icon: string }
-interface Allocation   { name: string; percent: string; amount: string; dot: string }
-interface Transaction  { type: string; asset: string; icon: string; amount: string; time: string; status: string; positive: boolean }
-
+interface QuickAction { name: string; icon: string }
 const quickActions: QuickAction[] = [
   { name: 'Add Funds', icon: 'mdi:wallet-plus-outline' },
   { name: 'Transfer',  icon: 'mdi:swap-horizontal' },
   { name: 'Withdraw',  icon: 'mdi:tray-arrow-up' },
-]
-
-const allocations: Allocation[] = [
-  { name: 'BTC',    percent: '35.26%', amount: '74,831.8 USDT',    dot: 'bg-[#04c7bd]' },
-  { name: 'ETH',    percent: '25.41%', amount: '53,953.27 USDT',   dot: 'bg-[#2e7df6]' },
-  { name: 'SOL',    percent: '15.21%', amount: '32,249.8 USDT',    dot: 'bg-[#8b4cf6]' },
-  { name: 'BNB',    percent: '10.35%', amount: '21,967.23 USDT',   dot: 'bg-[#f6b51e]' },
-  { name: 'USDT',   percent: '8.77%',  amount: '18,614.20 USDT',   dot: 'bg-[#0bbf96]' },
-  { name: 'Others', percent: '5.00%',  amount: '10,600.00 USDT',   dot: 'bg-[#d6dde5]' },
-]
-
-const transactions: Transaction[] = [
-  { type: 'Deposit',  asset: 'USDT',       icon: 'mdi:arrow-down-circle-outline',        amount: '+2,000.00 USDT', time: 'Today, 09:21 AM',      status: 'Completed', positive: true  },
-  { type: 'Transfer', asset: 'To Funding', icon: 'mdi:swap-horizontal-circle-outline',   amount: '-1,500.00 USDT', time: 'Today, 08:15 AM',      status: 'Completed', positive: false },
-  { type: 'Buy',      asset: 'BTC',        icon: 'mdi:cart-outline',                     amount: '+0.025 BTC',     time: 'Yesterday, 04:24 PM',  status: 'Completed', positive: true  },
 ]
 </script>
