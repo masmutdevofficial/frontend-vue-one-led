@@ -295,6 +295,47 @@ export const p2pApi = {
   },
 }
 
+// ── Staking API types ─────────────────────────────────────────────────────────
+
+export interface StakingPosition {
+  id:                        string
+  amount:                    string
+  status:                    'active' | 'completed' | 'withdrawn'
+  started_at:                string
+  matures_at:                string | null
+  ended_at:                  string | null
+  product_id:                number
+  coin:                      string
+  type:                      'flexible' | 'locked'
+  apr:                       number
+  duration_days:             number | null
+  early_withdrawal_fee_pct:  number
+}
+
+export interface StakingSummary {
+  total_staked:     string
+  daily_reward:     string
+  avg_apr:          string
+  active_positions: number
+}
+
+/** Authenticated staking endpoints */
+export function makeStakingApi(token: string) {
+  const api = makeApi(token)
+  return {
+    getSummary:  () =>
+      api.get<StakingSummary>('/staking/summary'),
+    getPositions: (status?: string) => {
+      const q = status ? `?status=${status}` : ''
+      return api.get<{ positions: StakingPosition[] }>(`/staking/positions${q}`)
+    },
+    stakeProduct: (product_id: number, amount: number) =>
+      api.post<{ ok: boolean; position_id: string }>('/staking/stake', { product_id, amount }),
+    unstakePosition: (id: string) =>
+      api.post<{ ok: boolean; returned_amount: string; fee_deducted: string; coin: string }>(`/staking/positions/${encodeURIComponent(id)}/unstake`, {}),
+  }
+}
+
 // ── Content API types ─────────────────────────────────────────────────────────
 
 export interface StakingProduct {

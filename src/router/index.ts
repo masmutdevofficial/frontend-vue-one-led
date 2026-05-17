@@ -38,6 +38,7 @@ import RewardsScreen from '../views/dashboard/RewardsScreen.vue'
 import CopyTradeHistoryScreen from '../views/dashboard/CopyTradeHistoryScreen.vue'
 import NewsScreen from '../views/dashboard/NewsScreen.vue'
 import StakingScreen from '../views/dashboard/StakingScreen.vue'
+import StakingTransactionsScreen from '../views/dashboard/StakingTransactionsScreen.vue'
 import GoogleCallbackScreen from '../views/auth/GoogleCallbackScreen.vue'
 import TransactionsScreen from '../views/dashboard/TransactionsScreen.vue'
 import RecentAddressesScreen from '../views/dashboard/RecentAddressesScreen.vue'
@@ -51,7 +52,7 @@ const authRequired = [
   '/p2p-trading', '/withdraw', '/withdraw-history', '/deposit-history', '/transfer',
   '/copy-trade', '/copy-trade-history', '/events', '/trade', '/futures', '/security',
   '/tracking-funds', '/help-center', '/verification', '/notifications',
-  '/notification-settings', '/campaigns', '/learn-earn', '/ama', '/rewards', '/news', '/staking',
+  '/notification-settings', '/campaigns', '/learn-earn', '/ama', '/rewards', '/news', '/staking', '/staking-transactions',
 ]
 
 const routes = [
@@ -93,7 +94,8 @@ const routes = [
   { path: '/rewards',           meta: { requiresAuth: true }, component: RewardsScreen },
   { path: '/copy-trade-history', meta: { requiresAuth: true }, component: CopyTradeHistoryScreen },
   { path: '/news',              meta: { requiresAuth: true }, component: NewsScreen },
-  { path: '/staking',           meta: { requiresAuth: true }, component: StakingScreen },
+  { path: '/staking',                 meta: { requiresAuth: true }, component: StakingScreen },
+  { path: '/staking-transactions',     meta: { requiresAuth: true }, component: StakingTransactionsScreen },
   { path: '/transactions',      meta: { requiresAuth: true }, component: TransactionsScreen },
   { path: '/recent-addresses',  meta: { requiresAuth: true }, component: RecentAddressesScreen },
   { path: '/:pathMatch(.*)*',   name: 'not-found',            component: NotFoundScreen },

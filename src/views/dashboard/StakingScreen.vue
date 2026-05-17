@@ -35,16 +35,13 @@
 
                 <div class="mt-4 flex items-end gap-2">
                   <h1 class="text-[30px] font-semibold leading-none tracking-tight text-[#0b1638]">
-                    {{ showBalance ? '58,420.80' : '••••••••' }}
+                    {{ showBalance ? formatAmount(summary.total_staked) : '••••••••' }}
                   </h1>
-                  <button class="mb-1 flex items-center gap-1 text-[12px] font-semibold text-[#5b6d9a]">
-                    USDT
-                    <Icon icon="mdi:chevron-down" class="text-[16px]" />
-                  </button>
+                  <span class="mb-1 text-[12px] font-semibold text-[#5b6d9a]">USDT</span>
                 </div>
 
                 <p class="mt-3 text-[13px] font-medium text-[#7a86a4]">
-                  {{ showBalance ? '≈ $58,420.80' : '≈ $••••••••' }}
+                  {{ showBalance ? '≈ $' + formatAmount(summary.total_staked) : '≈ $••••••••' }}
                 </p>
               </div>
 
@@ -72,22 +69,22 @@
                   Est. Daily Reward
                   <Icon icon="mdi:information-outline" class="text-[13px]" />
                 </div>
-                <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">24.35 USDT</p>
-                <p class="mt-1 text-[11px] font-medium text-[#7a86a4]">≈ $24.35</p>
+                <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">{{ formatAmount(summary.daily_reward) }} USDT</p>
+                <p class="mt-1 text-[11px] font-medium text-[#7a86a4]">≈ ${{ formatAmount(summary.daily_reward) }}</p>
               </div>
               <div class="px-4">
                 <div class="flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
                   Avg APR
                   <Icon icon="mdi:information-outline" class="text-[13px]" />
                 </div>
-                <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">4.27%</p>
+                <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">{{ summary.avg_apr }}%</p>
               </div>
               <div class="pl-4">
                 <div class="flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
                   Active Positions
                   <Icon icon="mdi:information-outline" class="text-[13px]" />
                 </div>
-                <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">4</p>
+                <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">{{ summary.active_positions }}</p>
               </div>
             </div>
           </div>
@@ -148,6 +145,42 @@
           </article>
         </section>
 
+        <!-- MY POSITIONS -->
+        <section v-if="userPositions.length > 0" class="mt-5">
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="text-[13px] font-semibold text-[#0b1638]">My Positions</h2>
+            <button
+              @click="router.push('/staking-transactions')"
+              class="text-[12px] font-semibold text-[#20c7b7]"
+            >
+              View All
+            </button>
+          </div>
+          <article
+            v-for="pos in userPositions"
+            :key="pos.id"
+            class="mb-2 flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-sm"
+          >
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" :class="coinClass(pos.coin)">
+              <CoinIcon :icon="coinIconResolved(pos.coin)" :symbol="pos.coin" icon-class="text-[24px]" img-class="h-6 w-6 rounded-full" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-[14px] font-semibold text-[#0b1638]">{{ pos.coin }}</p>
+              <p class="text-[11px] font-medium text-[#7a86a4]">{{ pos.type === 'flexible' ? 'Flexible' : (pos.duration_days ? pos.duration_days + ' Days' : 'Locked') }}</p>
+            </div>
+            <div class="shrink-0 text-right">
+              <p class="text-[13px] font-semibold text-[#0b1638]">{{ formatAmount(pos.amount) }}</p>
+              <p class="text-[11px] font-semibold text-[#20c7b7]">{{ Number(pos.apr).toFixed(2) }}% APR</p>
+            </div>
+            <button
+              @click="openUnstake(pos)"
+              class="ml-2 h-9 shrink-0 rounded-xl border border-gray-200 px-3 text-[12px] font-semibold text-[#4b5575] active:scale-95"
+            >
+              Unstake
+            </button>
+          </article>
+        </section>
+
         <!-- HOW STAKING WORKS -->
         <section
           class="mt-5 flex items-center justify-between rounded-2xl border border-[#dff8f6] bg-[#fbfffe] px-5 py-5 shadow-sm"
@@ -178,9 +211,9 @@
         leave-active-class="transition-opacity duration-300"
       >
         <div
-          v-if="selectedProduct || showHowItWorks || showTnC"
+          v-if="selectedProduct || showHowItWorks || showTnC || unstakeTarget"
           class="fixed inset-0 z-50 bg-black/50"
-          @click="selectedProduct = null; showHowItWorks = false; showTnC = false"
+          @click="selectedProduct = null; showHowItWorks = false; showTnC = false; unstakeTarget = null"
         ></div>
       </Transition>
 
@@ -233,9 +266,10 @@
             </div>
             <button
               @click="confirmStake"
-              class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-semibold text-white active:scale-95"
+              :disabled="stakeLoading"
+              class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-semibold text-white active:scale-95 disabled:opacity-60"
             >
-              Confirm Stake
+              {{ stakeLoading ? 'Processing…' : 'Confirm Stake' }}
             </button>
           </div>
         </div>
@@ -353,6 +387,61 @@
           </div>
         </div>
       </Transition>
+
+      <!-- UNSTAKE CONFIRM SHEET -->
+      <Transition
+        enter-from-class="translate-y-full"
+        enter-active-class="transition-transform duration-300"
+        leave-to-class="translate-y-full"
+        leave-active-class="transition-transform duration-300"
+      >
+        <div
+          v-if="unstakeTarget"
+          class="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-107.5 rounded-t-3xl bg-white shadow-2xl"
+        >
+          <div class="flex justify-center pt-3">
+            <div class="h-1 w-10 rounded-full bg-gray-200"></div>
+          </div>
+          <div class="px-5 pb-10 pt-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-[15px] font-semibold text-[#17212f]">Unstake {{ unstakeTarget.coin }}</h3>
+              <button @click="unstakeTarget = null">
+                <Icon icon="mdi:close" class="text-[22px] text-gray-400" />
+              </button>
+            </div>
+            <div class="mt-4 rounded-xl bg-[#f6f8fb] p-4 space-y-2">
+              <div class="flex justify-between">
+                <p class="text-[11px] font-bold text-gray-400">Amount</p>
+                <p class="text-[11px] font-semibold text-[#17212f]">{{ formatAmount(unstakeTarget.amount) }} {{ unstakeTarget.coin }}</p>
+              </div>
+              <div class="flex justify-between">
+                <p class="text-[11px] font-bold text-gray-400">APR</p>
+                <p class="text-[11px] font-semibold text-[#20c7b7]">{{ Number(unstakeTarget.apr).toFixed(2) }}%</p>
+              </div>
+              <div v-if="unstakeTarget.matures_at" class="flex justify-between">
+                <p class="text-[11px] font-bold text-gray-400">Matures At</p>
+                <p class="text-[11px] font-semibold text-[#17212f]">{{ fmtDate(unstakeTarget.matures_at) }}</p>
+              </div>
+              <div v-if="isEarlyWithdrawal(unstakeTarget)" class="flex justify-between">
+                <p class="text-[11px] font-bold text-rose-400">Early Fee ({{ unstakeTarget.early_withdrawal_fee_pct }}%)</p>
+                <p class="text-[11px] font-semibold text-rose-500">
+                  -{{ (Number(unstakeTarget.amount) * Number(unstakeTarget.early_withdrawal_fee_pct) / 100).toFixed(4) }} {{ unstakeTarget.coin }}
+                </p>
+              </div>
+            </div>
+            <p v-if="isEarlyWithdrawal(unstakeTarget)" class="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-[11px] font-medium leading-relaxed text-rose-600">
+              ⚠ Withdrawing before maturity will forfeit accrued rewards and apply a fee.
+            </p>
+            <button
+              @click="confirmUnstake"
+              :disabled="unstakeLoading"
+              class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-semibold text-white active:scale-95 disabled:opacity-60"
+            >
+              {{ unstakeLoading ? 'Processing…' : 'Confirm Unstake' }}
+            </button>
+          </div>
+        </div>
+      </Transition>
     </Teleport>
   </DashboardLayout>
 </template>
@@ -363,15 +452,18 @@ import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CoinIcon from '@/components/CoinIcon.vue'
-import { makeContentApi } from '@/services/api'
+import { makeContentApi, makeStakingApi, type StakingPosition } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useMarketStore, coinIconClass } from '@/stores/market'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const auth = useAuthStore()
 const marketStore = useMarketStore()
+const toast = useToast()
 
 interface StakingProduct {
+  id: number
   asset: string
   subtitle: string
   icon: string
@@ -387,14 +479,43 @@ const tabs = ['Flexible', 'Locked']
 const selectedProduct = ref<StakingProduct | null>(null)
 const showHowItWorks = ref(false)
 const stakeAmount = ref('')
+const stakeLoading = ref(false)
 
 const showTnC = ref(false)
 const tncScrolledToBottom = ref(false)
 const tncScrollEl = ref<HTMLElement | null>(null)
 
+// Unstake
+const unstakeTarget = ref<StakingPosition | null>(null)
+const unstakeLoading = ref(false)
+
+// Summary
+const summary = ref({ total_staked: '0', daily_reward: '0', avg_apr: '0.00', active_positions: 0 })
+
+// User's active positions
+const userPositions = ref<StakingPosition[]>([])
+
 function onTncScroll(e: Event) {
   const el = e.target as HTMLElement
   tncScrolledToBottom.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 8
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function formatAmount(val: string | number): string {
+  const n = Number(val)
+  if (isNaN(n)) return '0.00'
+  if (n === 0) return '0.00'
+  if (n >= 1000) return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return n.toFixed(4).replace(/\.?0+$/, '') || '0'
+}
+
+function fmtDate(d: string): string {
+  return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function isEarlyWithdrawal(pos: StakingPosition): boolean {
+  if (!pos.matures_at) return false
+  return Date.now() < new Date(pos.matures_at).getTime()
 }
 
 // ── Coin helpers — resolve from market store, fallback to static ──────────────
@@ -407,14 +528,27 @@ function coinClass(coin: string): string {
 
 // ── Defaults (shown when API unavailable) ────────────────────────────────────
 const defaultProducts: StakingProduct[] = [
-  { asset: 'USDT', subtitle: 'Flexible Staking', icon: 'mdi:alpha-t-circle',          iconClass: coinIconClass('USDT'), apr: '4.00%', minAmount: '10 USDT',   type: 'Flexible' },
-  { asset: 'ETH',  subtitle: 'Flexible Staking', icon: 'mdi:ethereum',                iconClass: coinIconClass('ETH'),  apr: '3.85%', minAmount: '0.01 ETH',  type: 'Flexible' },
-  { asset: 'BTC',  subtitle: '30 Days',          icon: 'mdi:bitcoin',                 iconClass: coinIconClass('BTC'),  apr: '5.20%', minAmount: '0.001 BTC', type: 'Locked' },
-  { asset: 'SOL',  subtitle: '30 Days',          icon: 'mdi:circle-multiple-outline', iconClass: coinIconClass('SOL'),  apr: '6.10%', minAmount: '0.1 SOL',   type: 'Locked' },
-  { asset: 'BNB',  subtitle: '60 Days',          icon: 'mdi:alpha-b-circle',          iconClass: coinIconClass('BNB'),  apr: '5.80%', minAmount: '0.05 BNB',  type: 'Locked' },
+  { id: 0, asset: 'USDT', subtitle: 'Flexible Staking', icon: 'mdi:alpha-t-circle',          iconClass: coinIconClass('USDT'), apr: '4.00%', minAmount: '10 USDT',   type: 'Flexible' },
+  { id: 0, asset: 'ETH',  subtitle: 'Flexible Staking', icon: 'mdi:ethereum',                iconClass: coinIconClass('ETH'),  apr: '3.85%', minAmount: '0.01 ETH',  type: 'Flexible' },
+  { id: 0, asset: 'BTC',  subtitle: '30 Days',          icon: 'mdi:bitcoin',                 iconClass: coinIconClass('BTC'),  apr: '5.20%', minAmount: '0.001 BTC', type: 'Locked' },
+  { id: 0, asset: 'SOL',  subtitle: '30 Days',          icon: 'mdi:circle-multiple-outline', iconClass: coinIconClass('SOL'),  apr: '6.10%', minAmount: '0.1 SOL',   type: 'Locked' },
+  { id: 0, asset: 'BNB',  subtitle: '60 Days',          icon: 'mdi:alpha-b-circle',          iconClass: coinIconClass('BNB'),  apr: '5.80%', minAmount: '0.05 BNB',  type: 'Locked' },
 ]
 
 const stakingProducts = ref<StakingProduct[]>(defaultProducts)
+
+async function loadSummaryAndPositions() {
+  if (!auth.accessToken) return
+  const stakingApi = makeStakingApi(auth.accessToken)
+  try {
+    const [sumData, posData] = await Promise.all([
+      stakingApi.getSummary(),
+      stakingApi.getPositions('active'),
+    ])
+    summary.value = sumData
+    userPositions.value = posData.positions
+  } catch { /* silently ignore */ }
+}
 
 onMounted(async () => {
   marketStore.fetchCoins()
@@ -424,6 +558,7 @@ onMounted(async () => {
     const data = await api.getStakingProducts()
     if (data.products.length > 0) {
       stakingProducts.value = data.products.map(p => ({
+        id:        p.id,
         asset:     p.coin,
         subtitle:  p.type === 'flexible' ? 'Flexible Staking' : `${p.duration_days ?? 30} Days`,
         icon:      coinIconResolved(p.coin),
@@ -434,6 +569,7 @@ onMounted(async () => {
       }))
     }
   } catch { /* silently use defaults */ }
+  loadSummaryAndPositions()
 })
 
 const filteredProducts = computed(() =>
@@ -445,9 +581,53 @@ function openStake(item: StakingProduct) {
   stakeAmount.value = ''
 }
 
-function confirmStake() {
-  selectedProduct.value = null
-  stakeAmount.value = ''
+async function confirmStake() {
+  if (!selectedProduct.value || !auth.accessToken) return
+  const amount = parseFloat(stakeAmount.value)
+  if (!amount || amount <= 0) {
+    toast.warning('Please enter a valid amount.')
+    return
+  }
+  if (selectedProduct.value.id === 0) {
+    toast.warning('This product is not available right now.')
+    return
+  }
+  stakeLoading.value = true
+  try {
+    const stakingApi = makeStakingApi(auth.accessToken)
+    await stakingApi.stakeProduct(selectedProduct.value.id, amount)
+    toast.success(`Successfully staked ${amount} ${selectedProduct.value.asset}!`)
+    selectedProduct.value = null
+    stakeAmount.value = ''
+    // Reload user balance + summary
+    auth.refreshProfile().catch(() => {})
+    loadSummaryAndPositions()
+  } catch (err: any) {
+    toast.error(err?.message ?? 'Failed to stake. Please try again.')
+  } finally {
+    stakeLoading.value = false
+  }
+}
+
+function openUnstake(pos: StakingPosition) {
+  unstakeTarget.value = pos
+}
+
+async function confirmUnstake() {
+  if (!unstakeTarget.value || !auth.accessToken) return
+  unstakeLoading.value = true
+  try {
+    const stakingApi = makeStakingApi(auth.accessToken)
+    const res = await stakingApi.unstakePosition(unstakeTarget.value.id)
+    toast.success(`Unstaked! ${Number(res.returned_amount).toFixed(4)} ${res.coin} returned to your balance.`)
+    unstakeTarget.value = null
+    auth.refreshProfile().catch(() => {})
+    loadSummaryAndPositions()
+  } catch (err: any) {
+    toast.error(err?.message ?? 'Failed to unstake. Please try again.')
+  } finally {
+    unstakeLoading.value = false
+  }
 }
 
 const howItWorksSteps = [
