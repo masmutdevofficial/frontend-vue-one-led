@@ -1124,16 +1124,16 @@ function updateLiveCandle() {
   const barTime = nowSec - (nowSec % (interval * 60))
 
   if (barTime !== lastCandleTime) {
-    // new bar
+    // new bar — open a fresh candle; leave volume as-is (no reliable per-bar volume from WS)
     lastCandleTime = barTime
     lastCandle = {
-      time: barTime as any,
-      open: livePrice.value,
-      high: livePrice.value,
-      low:  livePrice.value,
+      time:  barTime as any,
+      open:  livePrice.value,
+      high:  livePrice.value,
+      low:   livePrice.value,
       close: livePrice.value,
     }
-    lastVolume = { time: barTime as any, value: 0, color: '#10b8ad66' }
+    lastVolume = null // don't push a fake new volume bar
   } else if (lastCandle) {
     lastCandle = {
       ...lastCandle,
@@ -1141,14 +1141,10 @@ function updateLiveCandle() {
       low:   Math.min(lastCandle.low,   livePrice.value),
       close: livePrice.value,
     }
-    lastVolume = {
-      time: barTime as any,
-      value: (lastVolume?.value ?? 0) + baseCoin.value.price * 0.05,
-      color: livePrice.value >= lastCandle.open ? '#10b8ad66' : '#ef535066',
-    }
+    // Don't update volume — we don't have accurate per-bar volume from the WS ticker
   }
   if (lastCandle) try { candleSeries.update(lastCandle) } catch { /* ignore out-of-order */ }
-  if (lastVolume) try { volumeSeries.update(lastVolume) } catch { /* ignore out-of-order */ }
+  // volumeSeries.update intentionally omitted — keeps volume bars from klines accurate
 }
 
 const orderTabs = computed(() => [
