@@ -1047,12 +1047,16 @@ function initChart() {
       horzLines: { color: '#f3f4f6' },
     },
     crosshair: { mode: 1 },
-    rightPriceScale: { borderVisible: false },
+    rightPriceScale: {
+      borderVisible: false,
+      autoScale: true,  // Y-axis scales to VISIBLE bars only, not all setData() bars
+    },
     timeScale: {
       borderVisible: false,
       timeVisible: true,
       secondsVisible: false,
       fixRightEdge: true,   // prevent scrolling into future empty space
+      fixLeftEdge: true,    // prevent scrolling past the first loaded bar
       rightOffset: 3,       // small padding on right so live candle isn't clipped
     },
     handleScroll: true,
@@ -1103,21 +1107,21 @@ async function loadChartData() {
     const sym = coin.value.symbol.toUpperCase()
     const { candles, volumes } = await fetchBinanceKlines(sym, activeTimeframe.value)
     if (!candleSeries || !volumeSeries) return // chart destroyed while fetching
-    // Only keep the most recent 40 bars so the price scale fits the visible data correctly.
-    // lightweight-charts auto-scales Y to all setData() entries, not just visible range.
-    const recent        = candles.slice(-40)
-    const recentVolumes = volumes.slice(-40)
-    candleSeries.setData(recent)
-    volumeSeries.setData(recentVolumes)
+    // Load ALL bars into the chart. rightPriceScale.autoScale=true means the
+    // Y-axis only considers bars visible in the current viewport — not all data.
+    // This avoids the old "slice to 40" workaround while giving full scroll history.
+    candleSeries.setData(candles)
+    volumeSeries.setData(volumes)
     // Seed the live-candle tracker with the last real candle
-    if (recent.length > 0) {
-      const last = recent[recent.length - 1]
+    if (candles.length > 0) {
+      const last = candles[candles.length - 1]
       lastCandleTime = last.time as number
       lastCandle     = { ...last }
-      lastVolume     = { ...recentVolumes[recentVolumes.length - 1] }
+      lastVolume     = { ...volumes[volumes.length - 1] }
     }
-    // fitContent now only covers 40 bars — both X and Y scale correctly
-    lwChart?.timeScale().fitContent()
+    // Show last 50 bars on initial load — user can scroll left to see the rest
+    const total = candles.length
+    lwChart?.timeScale().setVisibleLogicalRange({ from: total - 50, to: total - 1 + 3 })
   } finally {
     chartLoading.value = false
   }
