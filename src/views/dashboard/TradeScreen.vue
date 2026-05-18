@@ -151,7 +151,11 @@
           </div>
 
           <!-- CHART AREA -->
-          <div ref="chartContainerEl" class="h-72 w-full"></div>
+          <div ref="chartContainerEl" class="relative h-72 w-full">
+            <div v-if="chartLoading" class="absolute inset-0 z-10 flex items-center justify-center bg-white/70">
+              <div class="h-6 w-6 animate-spin rounded-full border-2 border-[#10b8ad] border-t-transparent"></div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -298,11 +302,11 @@
             </button>
             <button
               @click="activeOrderBookTab = 'trades'"
-              class="text-[14px] font-semibold md:text-[15px]"
+              class="relative text-[14px] font-semibold md:text-[15px]"
               :class="activeOrderBookTab === 'trades' ? 'text-[#10b8ad]' : 'text-gray-400'"
             >
               Trades
-              <span v-if="activeOrderBookTab === 'trades'" class="block absolute bottom-0 left-4 right-4 h-0.75 rounded-full bg-[#10b8ad]"></span>
+              <span v-if="activeOrderBookTab === 'trades'" class="absolute bottom-0 left-4 right-4 h-0.75 rounded-full bg-[#10b8ad]"></span>
             </button>
           </div>
 
@@ -896,12 +900,12 @@ watch(baseCoin, (c) => {
   initOrderBook(c.price)
   initRecentTrades(c.price)
   lastCandleTime = 0; lastCandle = null; lastVolume = null
-  initChart()
+  initChart() // recreate chart for new coin
 })
 
 watch(activeTimeframe, () => {
   lastCandleTime = 0; lastCandle = null; lastVolume = null
-  initChart()
+  loadChartData() // reload data only, keep chart structure
 })
 
 // ── WS live price for current pair ───────────────────────────────
@@ -915,6 +919,19 @@ watch(tickerMap, (map) => {
   liveMarkPrice.value = t.price
   if (activeOrderType.value === 'Market') orderPrice.value = t.price
   updateLiveCandle()
+})
+
+// ── Sync orderPrice with live price ─────────────────────────────────────────
+let _orderPriceSynced = false
+watch(currentBinancePair, () => { _orderPriceSynced = false })
+watch(livePrice, (price) => {
+  if (price > 0 && !_orderPriceSynced) {
+    _orderPriceSynced = true
+    orderPrice.value  = price
+  }
+})
+watch(activeOrderType, (type) => {
+  if (type === 'Market') orderPrice.value = livePrice.value
 })
 
 function toggleFavorite() {
@@ -931,35 +948,65 @@ let lwChart: IChartApi | null = null
 let candleSeries: ISeriesApi<'Candlestick'> | null = null
 let volumeSeries: ISeriesApi<'Histogram'> | null = null
 
-// timeframe → bar count & seconds-per-bar
-const tfConfig: Record<string, { bars: number; interval: number }> = {
-  '1H':  { bars: 60,  interval: 60 },
-  '4H':  { bars: 60,  interval: 240 },
-  '1D':  { bars: 60,  interval: 1440 },
-  '1W':  { bars: 52,  interval: 10080 },
-  'More': { bars: 60, interval: 240 },
+// timeframe → seconds-per-bar (for live candle updates)
+const tfConfig: Record<string, { interval: number }> = {
+  '1H':  { interval: 60 },
+  '4H':  { interval: 240 },
+  '1D':  { interval: 1440 },
+  '1W':  { interval: 10080 },
+  'More': { interval: 240 },
 }
 
-function generateOHLC(basePrice: number, tf: string) {
-  const { bars, interval } = tfConfig[tf] ?? tfConfig['1H']
+// Binance kline interval codes
+const tfToBinance: Record<string, string> = {
+  '1H': '1h', '4H': '4h', '1D': '1d', '1W': '1w', 'More': '4h',
+}
+
+const chartLoading = ref(false)
+
+async function fetchBinanceKlines(
+  symbol: string, tf: string,
+): Promise<{ candles: CandlestickData[]; volumes: HistogramData[] }> {
+  const interval = tfToBinance[tf] ?? '1h'
+  const limit    = tf === '1W' ? 52 : 100
+  try {
+    const res = await fetch(
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`,
+    )
+    if (!res.ok) throw new Error('Binance API error')
+    const raw: [number, string, string, string, string, string][] = await res.json()
+    const candles: CandlestickData[] = []
+    const volumes: HistogramData[]   = []
+    for (const k of raw) {
+      const t = Math.floor(k[0] / 1000) as any
+      const o = parseFloat(k[1]), h = parseFloat(k[2])
+      const l = parseFloat(k[3]), c = parseFloat(k[4])
+      const v = parseFloat(k[5])
+      candles.push({ time: t, open: o, high: h, low: l, close: c })
+      volumes.push({ time: t, value: v, color: c >= o ? '#10b8ad66' : '#ef535066' })
+    }
+    return { candles, volumes }
+  } catch {
+    return _fallbackOHLC()
+  }
+}
+
+function _fallbackOHLC(): { candles: CandlestickData[]; volumes: HistogramData[] } {
+  const interval = (tfConfig[activeTimeframe.value] ?? tfConfig['1H']).interval
   const intervalSec = interval * 60
   const nowSec = Math.floor(Date.now() / 1000)
-  // Align last bar to the current bar boundary so updateLiveCandle() uses the same time
   const currentBarTime = nowSec - (nowSec % intervalSec)
   const candles: CandlestickData[] = []
   const volumes: HistogramData[] = []
-  let price = basePrice * (0.92 + Math.random() * 0.06)
-
-  for (let i = bars - 1; i >= 0; i--) {
+  let price = baseCoin.value.price * (0.94 + Math.random() * 0.05)
+  for (let i = 99; i >= 0; i--) {
     const t = currentBarTime - i * intervalSec
     const o = price
-    const change = price * (Math.random() - 0.495) * 0.018
-    const c = Math.max(price * 0.001, price + change)
+    const c = Math.max(price * 0.001, price + price * (Math.random() - 0.495) * 0.018)
     const h = Math.max(o, c) * (1 + Math.random() * 0.005)
     const l = Math.min(o, c) * (1 - Math.random() * 0.005)
-    const vol = basePrice * (0.5 + Math.random() * 2.5)
     candles.push({ time: t as any, open: o, high: h, low: l, close: c })
-    volumes.push({ time: t as any, value: vol, color: c >= o ? '#10b8ad66' : '#ef535066' })
+    volumes.push({ time: t as any, value: baseCoin.value.price * (0.5 + Math.random() * 2.5), color: c >= o ? '#10b8ad66' : '#ef535066' })
     price = c
   }
   return { candles, volumes }
@@ -1012,10 +1059,8 @@ function initChart() {
     scaleMargins: { top: 0.82, bottom: 0 },
   })
 
-  const { candles, volumes } = generateOHLC(baseCoin.value.price, activeTimeframe.value)
-  candleSeries.setData(candles)
-  volumeSeries.setData(volumes)
-  lwChart.timeScale().fitContent()
+  // Data is loaded asynchronously after chart is created
+  loadChartData()
 
   // Resize observer
   const ro = new ResizeObserver(() => {
@@ -1028,6 +1073,28 @@ function initChart() {
   })
   ro.observe(chartContainerEl.value)
   ;(chartContainerEl.value as any).__lwRo = ro
+}
+
+async function loadChartData() {
+  if (!candleSeries || !volumeSeries) return
+  chartLoading.value = true
+  try {
+    const sym = coin.value.symbol.toUpperCase()
+    const { candles, volumes } = await fetchBinanceKlines(sym, activeTimeframe.value)
+    if (!candleSeries || !volumeSeries) return // chart destroyed while fetching
+    candleSeries.setData(candles)
+    volumeSeries.setData(volumes)
+    // Seed the live-candle tracker with the last real candle
+    if (candles.length > 0) {
+      const last = candles[candles.length - 1]
+      lastCandleTime = last.time as number
+      lastCandle     = { ...last }
+      lastVolume     = { ...volumes[volumes.length - 1] }
+    }
+    lwChart?.timeScale().fitContent()
+  } finally {
+    chartLoading.value = false
+  }
 }
 
 function destroyChart() {

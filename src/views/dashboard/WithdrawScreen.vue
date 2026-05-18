@@ -86,8 +86,8 @@
                 placeholder="Enter or paste address"
                 class="min-w-0 flex-1 bg-transparent text-right text-[11px] font-semibold text-[#17212f] outline-none placeholder:text-gray-400"
               />
-              <button class="shrink-0 active:scale-95" title="Scan QR code">
-                <Icon icon="mdi:scan-helper" class="text-[19px] text-[#344054]" />
+              <button class="shrink-0 active:scale-95" title="Paste from clipboard" @click="pasteAddress">
+                <Icon icon="mdi:content-paste" class="text-[19px] text-[#344054]" />
               </button>
               <button class="shrink-0 active:scale-95" title="Select from address book">
                 <Icon icon="mdi:contacts-outline" class="text-[19px] text-[#344054]" />
@@ -128,14 +128,14 @@
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-1">
                   <p class="text-[10px] font-bold text-gray-400">Fee</p>
-                  <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" title="Network fee charged for processing your withdrawal" />
+                  <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" title="Network fee deducted from your withdrawal. Paid to the blockchain network for processing your transaction." />
                 </div>
-                <p class="text-[10px] font-semibold text-[#17212f]">1.0000 USDT</p>
+                <p class="text-[10px] font-semibold text-[#17212f]">{{ currentNetworkFee.toFixed(4) }} {{ selectedCoin }}</p>
               </div>
               <div class="flex items-center justify-between border-t border-dashed border-gray-200 pt-3">
                 <div class="flex items-center gap-1">
                   <p class="text-[10px] font-bold text-gray-400">You Will Receive</p>
-                  <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" title="Amount you will receive after deducting the network fee" />
+                  <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" title="Withdrawal amount minus the network fee. This is the actual amount that will arrive in the destination wallet." />
                 </div>
                 <div class="text-right">
                   <p class="text-[12px] font-semibold text-[#10b8ad]">{{ receiveAmount }} {{ selectedCoin }}</p>
@@ -202,17 +202,6 @@
         </div>
       </section>
 
-      <!-- BUTTON -->
-      <section class="mt-5 px-4">
-        <button
-          @click="openConfirm"
-          :disabled="!canWithdraw"
-          class="h-12 w-full rounded-xl text-[13px] font-semibold text-white shadow-sm transition-colors active:scale-[0.99]"
-          :class="canWithdraw ? 'bg-[#08a99f]' : 'cursor-not-allowed bg-gray-300'"
-        >
-          Withdraw Now
-        </button>
-      </section>
     </div>
 
     <!-- BACKDROP -->
@@ -263,7 +252,7 @@
             </div>
             <div class="flex justify-between">
               <p class="text-[11px] font-bold text-gray-400">Fee</p>
-              <p class="text-[11px] font-semibold text-[#17212f]">1.0000 {{ selectedCoin }}</p>
+              <p class="text-[11px] font-semibold text-[#17212f]">{{ currentNetworkFee.toFixed(4) }} {{ selectedCoin }}</p>
             </div>
             <div class="flex justify-between border-t border-dashed border-gray-200 pt-3">
               <p class="text-[11px] font-bold text-gray-400">You Receive</p>
@@ -292,8 +281,21 @@
           <h3 class="mt-4 text-[16px] font-semibold text-[#17212f]">Withdrawal Submitted!</h3>
           <p class="mt-2 text-[11px] font-semibold text-gray-400">{{ amount }} {{ selectedCoin }} · {{ selectedNetwork }}</p>
           <p class="mt-1 text-[10px] font-semibold text-gray-400">Estimated arrival: 10 – 60 minutes</p>
+          <!-- Polling status badge -->
+          <div class="mt-3 flex items-center justify-center gap-2">
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold"
+              :class="latestWithdrawalStatus === 'Completed' ? 'bg-emerald-100 text-emerald-700' : latestWithdrawalStatus === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'"
+            >
+              <span v-if="latestWithdrawalStatus === 'Pending'" class="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500"></span>
+              <span v-else-if="latestWithdrawalStatus === 'Completed'" class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+              <span v-else class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+              {{ latestWithdrawalStatus }}
+            </span>
+            <span v-if="latestWithdrawalStatus === 'Pending'" class="text-[10px] text-gray-400">Checking status…</span>
+          </div>
           <button
-            @click="showSuccess = false; amount = ''; withdrawAddress = ''"
+            @click="showSuccess = false; amount = ''; withdrawAddress = ''; stopPolling()"
             class="mt-6 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-semibold text-white active:scale-95"
           >Done</button>
         </div>
@@ -453,7 +455,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
@@ -464,7 +466,7 @@ const router = useRouter()
 const auth   = useAuthStore()
 
 // ─── Coin / Network data ────────────────────────────────────────────
-const COIN_NETWORKS: Record<string, string[]> = {
+const COIN_NETWORKS_FALLBACK: Record<string, string[]> = {
   USDT: ['TRC20', 'ERC20', 'BEP20'],
   BTC:  ['Bitcoin Network'],
   ETH:  ['ERC20', 'BEP20'],
@@ -472,6 +474,9 @@ const COIN_NETWORKS: Record<string, string[]> = {
   SOL:  ['Solana Network'],
   XRP:  ['Ripple Network'],
 }
+
+// API-fetched networks: coin → [{ name, fee_fixed, min_amount }]
+const apiNetworks = ref<Record<string, { name: string; fee_fixed: number; min_amount: number }[]>>({})
 
 interface CoinMeta { icon: string; bg: string; label: string }
 const COIN_META: Record<string, CoinMeta> = {
@@ -493,7 +498,6 @@ interface RecentAddress {
 
 // ─── State ─────────────────────────────────────────────────────────
 const showBalance      = ref(true)
-const FEE              = 1.0
 const amount           = ref('')
 const withdrawAddress  = ref('')
 const showConfirm      = ref(false)
@@ -514,10 +518,23 @@ const submitError  = ref('')
 
 // Keep network in sync when coin changes
 watch(selectedCoin, (coin) => {
-  selectedNetwork.value = COIN_NETWORKS[coin]?.[0] ?? 'TRC20'
+  const nets = apiNetworks.value[coin]
+  selectedNetwork.value = nets?.[0]?.name ?? (COIN_NETWORKS_FALLBACK[coin]?.[0] ?? 'TRC20')
 })
 
-const networks = computed(() => COIN_NETWORKS[selectedCoin.value] ?? ['TRC20'])
+// Network names list for picker
+const networks = computed(() => {
+  const nets = apiNetworks.value[selectedCoin.value]
+  if (nets?.length) return nets.map(n => n.name)
+  return COIN_NETWORKS_FALLBACK[selectedCoin.value] ?? ['TRC20']
+})
+
+// Fee for the currently selected network
+const currentNetworkFee = computed(() => {
+  const nets = apiNetworks.value[selectedCoin.value] ?? []
+  const net = nets.find(n => n.name === selectedNetwork.value)
+  return net?.fee_fixed ?? 1
+})
 
 // Available balance per selected coin
 const availableBalance = computed(() => {
@@ -535,14 +552,15 @@ const maxBalanceDisplay = computed(() =>
 
 const canWithdraw = computed(() =>
   withdrawAddress.value.trim().length > 10 &&
-  Number(amount.value) > FEE &&
+  Number(amount.value) > currentNetworkFee.value &&
   Number(amount.value) <= availableBalance.value
 )
 
 const receiveAmount = computed(() => {
   const n = Number(amount.value)
-  if (!n || n <= FEE) return '0.000000'
-  return (n - FEE).toFixed(6)
+  const fee = currentNetworkFee.value
+  if (!n || n <= fee) return '0.000000'
+  return (n - fee).toFixed(6)
 })
 
 const currentCoinMeta = computed(() => COIN_META[selectedCoin.value] ?? COIN_META.USDT)
@@ -558,14 +576,61 @@ async function loadCoinBalances() {
   } catch { /* silently fail */ }
 }
 
+async function fetchNetworks() {
+  if (!auth.accessToken) return
+  try {
+    const data = await makeWalletApi(auth.accessToken).getWithdrawalNetworks()
+    apiNetworks.value = data.networks
+    // sync default network for current coin
+    const nets = data.networks[selectedCoin.value]
+    if (nets?.length) selectedNetwork.value = nets[0].name
+  } catch { /* silently fall back to hardcoded */ }
+}
+
 onMounted(() => {
   loadCoinBalances()
   loadRecentAddresses()
+  fetchNetworks()
 })
+
+// ─── Polling for withdrawal status ───────────────────────────────
+const latestWithdrawalId     = ref<string | null>(null)
+const latestWithdrawalStatus = ref('Pending')
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+function startPolling(id: string) {
+  latestWithdrawalId.value     = id
+  latestWithdrawalStatus.value = 'Pending'
+  stopPolling()
+  pollTimer = setInterval(async () => {
+    if (!auth.accessToken) return stopPolling()
+    try {
+      const data = await makeWalletApi(auth.accessToken).getWithdrawals()
+      const w = data.withdrawals.find(w => w.id === id)
+      if (w) {
+        latestWithdrawalStatus.value = w.status_withdrawal
+        if (w.status_withdrawal === 'Completed' || w.status_withdrawal === 'Rejected') stopPolling()
+      }
+    } catch { /* ignore */ }
+  }, 5000)
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+}
+
+onUnmounted(() => stopPolling())
 
 // ─── Actions ──────────────────────────────────────────────────────
 function setMax() {
   amount.value = String(availableBalance.value)
+}
+
+async function pasteAddress() {
+  try {
+    const text = await navigator.clipboard.readText()
+    if (text) withdrawAddress.value = text.trim()
+  } catch { /* clipboard permission denied */ }
 }
 
 function selectAddress(addr: RecentAddress) {
@@ -583,7 +648,7 @@ async function confirmWithdraw() {
   submitting.value  = true
   submitError.value = ''
   try {
-    await makeWalletApi(auth.accessToken).submitWithdrawal({
+    const res = await makeWalletApi(auth.accessToken).submitWithdrawal({
       amount:  Number(amount.value),
       address: withdrawAddress.value.trim(),
       network: selectedNetwork.value,
@@ -593,6 +658,7 @@ async function confirmWithdraw() {
     await loadCoinBalances()
     showConfirm.value  = false
     showSuccess.value  = true
+    startPolling(res.withdrawal.id)
   } catch (e: any) {
     submitError.value = e?.message ?? 'Withdrawal failed. Please try again.'
   } finally {

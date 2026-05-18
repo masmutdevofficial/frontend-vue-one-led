@@ -269,6 +269,10 @@ export function makeWalletApi(token: string) {
       const q = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : ''
       return api.get<{ withdrawals: WithdrawalRecord[]; total_completed: number }>(`/wallet/withdrawals${q}`)
     },
+    getWithdrawalById: (id: string) =>
+      api.get<{ withdrawal: WithdrawalRecord } | WithdrawalRecord>(`/wallet/withdrawals/${id}`),
+    getWithdrawalNetworks: () =>
+      api.get<{ networks: Record<string, { name: string; fee_fixed: number; min_amount: number }[]> }>('/wallet/withdrawal-networks'),
     submitWithdrawal: (body: { amount: number; address: string; network: string; coin: string }) =>
       api.post<{ withdrawal: WithdrawalRecord }>('/wallet/withdrawals', body),
     getTransfers:   () =>
@@ -337,6 +341,7 @@ export function makeStakingApi(token: string) {
 export interface StakingProduct {
   id: number
   coin: string
+  image_url: string | null
   type: 'flexible' | 'locked'
   apr: number
   min_amount: string

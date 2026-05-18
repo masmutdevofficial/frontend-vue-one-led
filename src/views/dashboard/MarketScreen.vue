@@ -99,11 +99,11 @@
       <section class="mt-2 px-3">
         <div class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           <!-- TABLE HEADER -->
-          <div class="grid grid-cols-4 gap-x-2 border-b border-gray-100 px-4 py-3 text-[9px] font-bold text-gray-400">
-            <span>Name</span>
-            <span class="text-center">Last Price</span>
-            <span class="text-center">24h Chg%</span>
-            <span></span>
+          <div class="flex items-center border-b border-gray-100 px-4 py-2.5 text-[10px] font-bold text-gray-400">
+            <span class="flex-1">Name</span>
+            <span class="w-22 text-right">Last Price</span>
+            <span class="w-19 text-right pr-1">24h Chg%</span>
+            <span class="w-8"></span>
           </div>
 
           <!-- Empty state -->
@@ -116,35 +116,38 @@
             <div
               v-for="coin in displayedMarkets"
               :key="coin.name"
-              class="grid grid-cols-4 items-center gap-x-2 px-4 py-4 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              class="flex items-center px-4 py-3 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
               @click="router.push('/trade/' + coin.name.toLowerCase())"
             >
               <!-- Name + icon -->
-              <div class="flex items-center gap-2">
+              <div class="flex flex-1 min-w-0 items-center gap-2.5">
                 <div class="flex h-8 w-8 shrink-0 items-center justify-center">
                   <CoinIcon :icon="coin.icon" :symbol="coin.name" icon-class="text-[28px]" img-class="h-8 w-8 rounded-full object-contain" />
                 </div>
                 <div class="min-w-0">
                   <p class="text-[12px] font-extrabold leading-none">{{ coin.name }}</p>
-                  <p class="mt-1 text-[9px] text-gray-400 break-words">{{ coin.fullName }}</p>
+                  <p class="mt-1 text-[10px] text-gray-400 truncate">{{ coin.fullName }}</p>
                 </div>
               </div>
 
               <!-- Last Price -->
-              <div class="flex flex-col items-center">
-                <p class="text-[11px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
-                <p class="mt-1 text-[9px] text-gray-400">${{ formatPrice(coin.price) }}</p>
+              <div class="w-22 text-right">
+                <p class="text-[12px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
+                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(coin.price) }}</p>
               </div>
 
               <!-- 24h Change -->
-              <div class="flex items-center justify-center">
-                <p class="text-[10px] font-bold" :class="coin.change >= 0 ? 'text-emerald-500' : 'text-red-400'">
+              <div class="w-19 flex justify-end pr-1">
+                <span
+                  class="inline-block rounded-lg px-2 py-1 text-[11px] font-bold"
+                  :class="coin.change >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
+                >
                   {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
-                </p>
+                </span>
               </div>
 
               <!-- Star -->
-              <button class="flex justify-end" @click.stop="toggleFavorite(coin.name)">
+              <button class="flex w-8 shrink-0 justify-end" @click.stop="toggleFavorite(coin.name)">
                 <Icon
                   :icon="favorites.has(coin.name) ? 'mdi:star' : 'mdi:star-outline'"
                   class="text-[18px] transition-colors"
@@ -178,7 +181,7 @@ import { useMarketWs } from '@/services/marketWs'
 const router = useRouter()
 
 // ── Overview stats (live) ──────────────────────────────────────
-const volumePts = ref([0.35, 0.42, 0.38, 0.46, 0.50, 0.52, 0.55, 0.60])
+const volumePts = ref<number[]>(Array(8).fill(98.56))
 
 // Live 24h volume = sum of (volume * price) for all tracked pairs in billions
 const volumeValue = computed(() => {
@@ -350,12 +353,6 @@ const displayedMarkets = computed(() => {
 let timer: ReturnType<typeof setInterval>
 
 function tick() {
-  // Animate sparkline for volume (direction follows real computed change)
-  const volDir = volumeChange.value >= 0 ? 0.44 : 0.56
-  const volLast = volumePts.value[volumePts.value.length - 1]
-  const volNext = Math.max(0.05, Math.min(0.95, volLast + (Math.random() - volDir) * 0.1))
-  volumePts.value = [...volumePts.value.slice(1), volNext]
-
   // Animate per-coin sparklines — prices come from WS (watch below)
   marketsData.value = marketsData.value.map(coin => {
     const ptLast = coin.chartPoints[coin.chartPoints.length - 1]
@@ -381,6 +378,11 @@ watch(tickerMap, (map) => {
       change: Math.round(t.change * 100) / 100,
     }
   })
+})
+
+// ── Update volume sparkline from real 24h volume data ─────────
+watch(volumeValue, (val) => {
+  if (val > 0) volumePts.value = [...volumePts.value.slice(1), val]
 })
 
 const miniBars = [24, 36, 44, 58, 75, 94]

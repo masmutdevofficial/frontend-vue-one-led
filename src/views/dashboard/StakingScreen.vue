@@ -115,10 +115,11 @@
             <!-- Asset -->
             <div class="flex flex-1 items-center gap-3">
               <div
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
-                :class="item.iconClass"
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full overflow-hidden"
+                :class="item.image_url ? '' : item.iconClass"
               >
-                <CoinIcon :icon="item.icon" :symbol="item.asset" icon-class="text-[28px]" img-class="h-7 w-7 rounded-full" />
+                <img v-if="item.image_url" :src="item.image_url" :alt="item.asset" class="h-full w-full object-cover" />
+                <CoinIcon v-else :icon="item.icon" :symbol="item.asset" icon-class="text-[28px]" img-class="h-7 w-7 rounded-full" />
               </div>
               <div>
                 <h2 class="text-[16px] font-semibold leading-none text-[#0b1638]">{{ item.asset }}</h2>
@@ -466,6 +467,7 @@ interface StakingProduct {
   id: number
   asset: string
   subtitle: string
+  image_url: string | null
   icon: string
   iconClass: string
   apr: string
@@ -528,11 +530,11 @@ function coinClass(coin: string): string {
 
 // ── Defaults (shown when API unavailable) ────────────────────────────────────
 const defaultProducts: StakingProduct[] = [
-  { id: 0, asset: 'USDT', subtitle: 'Flexible Staking', icon: 'mdi:alpha-t-circle',          iconClass: coinIconClass('USDT'), apr: '4.00%', minAmount: '10 USDT',   type: 'Flexible' },
-  { id: 0, asset: 'ETH',  subtitle: 'Flexible Staking', icon: 'mdi:ethereum',                iconClass: coinIconClass('ETH'),  apr: '3.85%', minAmount: '0.01 ETH',  type: 'Flexible' },
-  { id: 0, asset: 'BTC',  subtitle: '30 Days',          icon: 'mdi:bitcoin',                 iconClass: coinIconClass('BTC'),  apr: '5.20%', minAmount: '0.001 BTC', type: 'Locked' },
-  { id: 0, asset: 'SOL',  subtitle: '30 Days',          icon: 'mdi:circle-multiple-outline', iconClass: coinIconClass('SOL'),  apr: '6.10%', minAmount: '0.1 SOL',   type: 'Locked' },
-  { id: 0, asset: 'BNB',  subtitle: '60 Days',          icon: 'mdi:alpha-b-circle',          iconClass: coinIconClass('BNB'),  apr: '5.80%', minAmount: '0.05 BNB',  type: 'Locked' },
+  { id: 0, asset: 'USDT', subtitle: 'Flexible Staking', image_url: null, icon: 'mdi:alpha-t-circle',          iconClass: coinIconClass('USDT'), apr: '4.00%', minAmount: '10 USDT',   type: 'Flexible' },
+  { id: 0, asset: 'ETH',  subtitle: 'Flexible Staking', image_url: null, icon: 'mdi:ethereum',                iconClass: coinIconClass('ETH'),  apr: '3.85%', minAmount: '0.01 ETH',  type: 'Flexible' },
+  { id: 0, asset: 'BTC',  subtitle: '30 Days',          image_url: null, icon: 'mdi:bitcoin',                 iconClass: coinIconClass('BTC'),  apr: '5.20%', minAmount: '0.001 BTC', type: 'Locked' },
+  { id: 0, asset: 'SOL',  subtitle: '30 Days',          image_url: null, icon: 'mdi:circle-multiple-outline', iconClass: coinIconClass('SOL'),  apr: '6.10%', minAmount: '0.1 SOL',   type: 'Locked' },
+  { id: 0, asset: 'BNB',  subtitle: '60 Days',          image_url: null, icon: 'mdi:alpha-b-circle',          iconClass: coinIconClass('BNB'),  apr: '5.80%', minAmount: '0.05 BNB',  type: 'Locked' },
 ]
 
 const stakingProducts = ref<StakingProduct[]>(defaultProducts)
@@ -561,6 +563,7 @@ onMounted(async () => {
         id:        p.id,
         asset:     p.coin,
         subtitle:  p.type === 'flexible' ? 'Flexible Staking' : `${p.duration_days ?? 30} Days`,
+        image_url: p.image_url ?? null,
         icon:      coinIconResolved(p.coin),
         iconClass: coinClass(p.coin),
         apr:       Number(p.apr).toFixed(2) + '%',

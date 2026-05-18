@@ -49,13 +49,13 @@
       </div>
 
       <div class="mt-5 divide-y divide-slate-100">
-        <div v-for="coin in coins" :key="coin.name" class="flex items-center gap-3 py-3">
-          <span class="grid size-9 place-items-center rounded-full" :class="coin.className">
-            <Icon :icon="coin.icon" class="size-5" />
+        <div v-for="coin in displayCoins" :key="coin.symbol" class="flex items-center gap-3 py-3">
+          <span class="grid size-9 place-items-center overflow-hidden rounded-full" :class="coin.iconClass">
+            <CoinIcon :icon="coin.icon" :symbol="coin.symbol" icon-class="size-5" img-class="size-9 rounded-full object-cover" />
           </span>
           <div class="flex-1">
             <p class="text-sm font-normal text-slate-950">{{ coin.name }}</p>
-            <p class="text-xs font-semibold text-slate-500">{{ coin.code }}</p>
+            <p class="text-xs font-semibold text-slate-500">{{ coin.symbol }}</p>
           </div>
           <div class="text-right">
             <p class="text-sm font-normal text-slate-950">{{ coin.amount }}</p>
@@ -140,24 +140,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import VueApexCharts from 'vue3-apexcharts'
+import CoinIcon from '@/components/CoinIcon.vue'
+import { useMarketStore, coinIconClass } from '@/stores/market'
+import { useMarketWs } from '@/services/marketWs'
 
 const router = useRouter()
+const marketStore = useMarketStore()
+const { tickerMap } = useMarketWs()
 const apexchart = VueApexCharts
 
-interface Coin {
-  icon: string
-  name: string
-  code: string
-  baseAmount: number
-  amount: string
-  changePct: number
-  change: string
-  positive: boolean
-  className: string
+// 5 default coins to display on the landing page
+const DEFAULT_SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'POL']
+
+// Demo holdings just for the landing balance display
+const DEMO_HOLDINGS: Record<string, number> = {
+  BTC: 0.05,
+  ETH: 1.5,
+  BNB: 5,
+  SOL: 20,
+  POL: 1000,
 }
 
 interface Feature {
@@ -166,54 +171,47 @@ interface Feature {
   desc: string
 }
 
-// --- Animated balance count-up ---
-const displayBalance = ref('$0.00')
-const balanceChange = ref<{ pct: string; positive: boolean }>({ pct: '0.00', positive: true })
-
-// Demo portfolio: how many units of each coin the user "holds"
-const HOLDINGS = [0.1, 3, 5000] // 0.1 BTC | 3 ETH | 5000 USDT
-
-// --- Live coin data (initial values shown before API responds) ---
-const coins = ref<Coin[]>([
-  { icon: 'mdi:bitcoin',       name: 'Bitcoin', code: 'BTC',  baseAmount: 10000, amount: '…', changePct: 0, change: '0.00%', positive: true, className: 'bg-orange-400 text-white' },
-  { icon: 'mdi:ethereum',      name: 'Ethereum', code: 'ETH', baseAmount: 9000,  amount: '…', changePct: 0, change: '0.00%', positive: true, className: 'bg-indigo-500 text-white' },
-  { icon: 'mdi:alpha-t-circle', name: 'Tether', code: 'USDT', baseAmount: 5000,  amount: '…', changePct: 0, change: '0.00%', positive: true, className: 'bg-teal-500 text-white' },
-])
-
+// ── Formatting ────────────────────────────────────────────────────
 function fmtUsd(n: number) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-/** Fetch real-time prices from CoinGecko (free, no API key, CORS-safe) */
-async function fetchLivePrices() {
-  try {
-    const res = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true',
-    )
-    if (!res.ok) return
-    const data = await res.json() as Record<string, { usd: number; usd_24h_change: number }>
+/** Resolve ticker for a symbol — for POL also try MATICUSDT as fallback */
+function getTicker(sym: string) {
+  const meta = marketStore.coinMap.get(sym)
+  const pair = meta?.binancePair ?? (sym + 'USDT')
+  return tickerMap.value.get(pair) ?? (sym === 'POL' ? tickerMap.value.get('MATICUSDT') : undefined)
+}
 
-    const map: Record<string, number> = { bitcoin: 0, ethereum: 1 }
-    for (const [id, info] of Object.entries(data)) {
-      const idx = map[id]
-      if (idx === undefined) continue
-      const coin      = coins.value[idx]
-      coin.baseAmount = info.usd * HOLDINGS[idx]
-      coin.changePct  = info.usd_24h_change ?? 0
-      coin.positive   = coin.changePct >= 0
-      coin.amount     = fmtUsd(coin.baseAmount)
-      coin.change     = (coin.positive ? '+' : '') + coin.changePct.toFixed(2) + '%'
+// ── Computed coin rows ────────────────────────────────────────────
+const displayCoins = computed(() =>
+  DEFAULT_SYMBOLS.map(sym => {
+    const meta    = marketStore.coinMap.get(sym)
+    const ticker  = getTicker(sym)
+    const price   = ticker?.price ?? 0
+    const change  = ticker?.change ?? 0
+    const holding = DEMO_HOLDINGS[sym] ?? 1
+    return {
+      symbol:    sym,
+      name:      meta?.name ?? sym,
+      icon:      meta?.icon ?? 'mdi:currency-usd',
+      iconClass: coinIconClass(sym),
+      amount:    price > 0 ? fmtUsd(price * holding) : '…',
+      change:    (change >= 0 ? '+' : '') + change.toFixed(2) + '%',
+      positive:  change >= 0,
     }
-    // USDT is always pegged to $1.00
-    const usdt      = coins.value[2]
-    usdt.baseAmount = HOLDINGS[2]
-    usdt.changePct  = 0.01
-    usdt.positive   = true
-    usdt.amount     = fmtUsd(usdt.baseAmount)
-    usdt.change     = '+0.01%'
-  } catch {
-    // API unreachable — simulation continues with current values
-  }
+  })
+)
+
+// ── Balance display ───────────────────────────────────────────────
+const displayBalance = ref('$0.00')
+const balanceChange  = ref<{ pct: string; positive: boolean }>({ pct: '0.00', positive: true })
+
+function calcTotal(): number {
+  return DEFAULT_SYMBOLS.reduce((sum, sym) => {
+    const price = getTicker(sym)?.price ?? 0
+    return sum + price * (DEMO_HOLDINGS[sym] ?? 1)
+  }, 0)
 }
 
 function startCountUp(target: number) {
@@ -229,28 +227,39 @@ function startCountUp(target: number) {
   requestAnimationFrame(tick)
 }
 
-onMounted(async () => {
-  // 1. Fetch real prices — then animate count-up to the real total
-  await fetchLivePrices()
-  const total = coins.value.reduce((sum, c) => sum + c.baseAmount, 0)
-  startCountUp(total)
+// Whenever WebSocket data arrives, update balance & 24h change
+watch(
+  () => tickerMap.value,
+  () => {
+    const total = calcTotal()
+    if (total > 0) displayBalance.value = fmtUsd(total)
 
-  // 2. Simulate micro price movements every 2 s
-  setInterval(() => {
-    coins.value.forEach((coin) => {
-      coin.baseAmount *= 1 + (Math.random() - 0.5) * 0.004
-      coin.changePct  += (Math.random() - 0.5) * 0.12
-      coin.positive    = coin.changePct >= 0
-      coin.amount      = fmtUsd(coin.baseAmount)
-      coin.change      = (coin.positive ? '+' : '') + Math.abs(coin.changePct).toFixed(2) + '%'
-    })
-    const newPct = parseFloat(balanceChange.value.pct) + (Math.random() - 0.5) * 0.1
-    balanceChange.value = { pct: Math.abs(newPct).toFixed(2), positive: newPct >= 0 }
-  }, 2000)
+    const changes = DEFAULT_SYMBOLS
+      .map(sym => getTicker(sym)?.change ?? null)
+      .filter((c): c is number => c !== null)
+    if (changes.length) {
+      const avg = changes.reduce((s, c) => s + c, 0) / changes.length
+      balanceChange.value = { pct: Math.abs(avg).toFixed(2), positive: avg >= 0 }
+    }
+  },
+  { deep: false },
+)
 
-  // 3. Re-fetch real prices every 30 s to stay accurate
-  setInterval(fetchLivePrices, 30_000)
-})
+// Count-up animation once first prices arrive
+let countedUp = false
+const stopSizeWatch = watch(
+  () => tickerMap.value.size,
+  size => {
+    if (size > 0 && !countedUp) {
+      countedUp = true
+      startCountUp(calcTotal())
+      stopSizeWatch()
+    }
+  },
+)
+
+// Fetch admin coin list (icons, names, binance pairs)
+marketStore.fetchCoins()
 
 const chartSeries = [{ name: 'Balance', data: [18, 30, 26, 42, 34, 38, 50, 41, 45, 58, 52, 68, 62, 76] }]
 
@@ -266,9 +275,9 @@ const chartOptions = {
 }
 
 const features: Feature[] = [
-  { icon: 'mdi:wallet', title: 'Send Instantly', desc: 'Move crypto in seconds, anywhere in the world.' },
-  { icon: 'mdi:shield-check', title: 'Secure Storage', desc: 'Your assets protected with bank-grade encryption.' },
-  { icon: 'mdi:chart-pie', title: 'Track & Grow', desc: 'Real-time insights to help you grow with confidence.' },
+  { icon: 'mdi:wallet',       title: 'Send Instantly',  desc: 'Move crypto in seconds, anywhere in the world.' },
+  { icon: 'mdi:shield-check', title: 'Secure Storage',  desc: 'Your assets protected with bank-grade encryption.' },
+  { icon: 'mdi:chart-pie',    title: 'Track & Grow',    desc: 'Real-time insights to help you grow with confidence.' },
 ]
 </script>
 

@@ -74,9 +74,6 @@
                   placeholder="Enter UID or Email"
                   class="w-full bg-transparent text-[11px] font-semibold text-[#17212f] outline-none placeholder:text-gray-400"
                 />
-                <button class="ml-2 active:scale-95">
-                  <Icon icon="mdi:qrcode-scan" class="text-[19px] text-[#10b8ad]" />
-                </button>
               </div>
             </div>
           </div>
@@ -141,7 +138,7 @@
       <section class="mt-4 px-4">
         <div class="flex items-center justify-between">
           <h2 class="text-[14px] font-semibold text-[#17212f]">Recent Recipients</h2>
-          <button class="flex items-center gap-1 text-[10px] font-semibold text-[#10b8ad]">
+          <button @click="showTransferHistory = true" class="flex items-center gap-1 text-[10px] font-semibold text-[#10b8ad]">
             View All
             <Icon icon="mdi:arrow-right" class="text-[13px]" />
           </button>
@@ -221,19 +218,6 @@
             <span class="text-[12px] font-semibold text-[#10b8ad]">0 USDT</span>
           </div>
         </div>
-      </section>
-
-      <!-- SEND -->
-      <section class="mt-4 px-4">
-        <p v-if="sendError" class="mb-2 text-center text-[11px] font-semibold text-red-500">{{ sendError }}</p>
-        <button
-          @click="sendTransfer"
-          :disabled="!canSend || sending"
-          class="h-12 w-full rounded-xl text-[13px] font-semibold text-white shadow-sm transition-colors active:scale-[0.99]"
-          :class="canSend && !sending ? 'bg-[#08a99f]' : 'cursor-not-allowed bg-gray-300'"
-        >
-          {{ sending ? 'Sending…' : 'Send Transfer' }}
-        </button>
       </section>
     </div>
 

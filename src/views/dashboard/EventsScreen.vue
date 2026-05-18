@@ -2,6 +2,17 @@
   <DashboardLayout>
     <div class="mx-auto min-h-screen bg-[#f6f8fb] pb-8">
 
+      <!-- PAGE HEADER -->
+      <div class="relative flex h-14 items-center justify-center border-b border-gray-100 bg-white px-4">
+        <button
+          @click="router.back()"
+          class="absolute left-3 flex h-9 w-9 items-center justify-center rounded-xl bg-[#f6f8fb] active:scale-95"
+        >
+          <Icon icon="mdi:arrow-left" class="text-[24px] text-[#243142]" />
+        </button>
+        <h1 class="text-[16px] font-semibold text-[#17212f]">Events</h1>
+      </div>
+
       <!-- HERO -->
       <section class="px-3 pt-3">
         <div class="relative overflow-hidden rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-sm">
