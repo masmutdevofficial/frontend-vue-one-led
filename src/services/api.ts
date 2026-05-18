@@ -88,10 +88,6 @@ export const authApi = {
   completeGoogleOAuth: (credential: string, referral: string) =>
     request<{ pending_otp: true; email: string }>('POST', '/auth/oauth/google/complete', { credential, referral }),
 
-  /** OAuth — Apple: send id_token + authorization code from Apple Sign-in */
-  oauthApple: (id_token: string, code: string) =>
-    request<{ access_token: string; refresh_token: string; expires_in: number; user: WalletUser }>('POST', '/auth/oauth/apple', { id_token, code }),
-
   /** WebAuthn — step 1: get authentication options (challenge) for an email */
   webauthnOptions: (email: string) =>
     request<Record<string, unknown> & { _token: string }>('POST', '/auth/webauthn/options', { email }),

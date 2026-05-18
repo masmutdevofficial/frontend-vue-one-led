@@ -188,10 +188,6 @@
           <img src="/images/google-logo.png" alt="google logo" class="size-5 object-contain" />
           <span>Continue with Google</span>
         </button>
-        <button type="button" class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50" @click="signInWithApple">
-          <img src="/images/apple-logo.png" alt="apple logo" class="size-5 object-contain" />
-          <span>Continue with Apple</span>
-        </button>
       </div>
 
       <p class="mt-5 text-center text-sm font-medium text-slate-500">
@@ -213,7 +209,7 @@ import { useOAuth } from '../../composables/useOAuth'
 const router = useRouter()
 const auth   = useAuthStore()
 const toast  = useToast()
-const { signInWithGoogle, signInWithApple } = useOAuth()
+const { signInWithGoogle } = useOAuth()
 
 const email        = ref('')
 const password     = ref('')

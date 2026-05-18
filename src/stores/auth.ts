@@ -110,7 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
     return authApi.completeGoogleOAuth(pendingGoogleToken.value, referral)
   }
 
-  /** Called after a successful Google or Apple OAuth response to set the session */
+  /** Called after a successful Google OAuth response to set the session */
   async function loginFromOAuth(data: {
     access_token:  string
     refresh_token: string

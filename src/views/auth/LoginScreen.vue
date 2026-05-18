@@ -119,10 +119,6 @@
           <img src="/images/google-logo.png" alt="google logo" class="size-5 object-contain" />
           <span>Continue with Google</span>
         </button>
-        <button type="button" class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50" @click="signInWithApple">
-          <img src="/images/apple-logo.png" alt="apple logo" class="size-5 object-contain" />
-          <span>Continue with Apple</span>
-        </button>
         <button
           v-if="passkeySupported"
           type="button"
@@ -152,6 +148,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
+import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
 import { useAuthStore, ApiError } from '../../stores/auth'
 import { authApi } from '../../services/api'
 import { useToast } from '../../composables/useToast'
@@ -160,7 +157,7 @@ import { useOAuth } from '../../composables/useOAuth'
 const router   = useRouter()
 const auth     = useAuthStore()
 const toast    = useToast()
-const { signInWithGoogle, signInWithApple } = useOAuth()
+const { signInWithGoogle } = useOAuth()
 
 const email        = ref('')
 const password     = ref('')
@@ -227,7 +224,7 @@ async function handlePasskeyLogin() {
     const { _token, ...optionsJSON } = await authApi.webauthnOptions(email.value.trim())
 
     // Step 2: trigger biometric prompt
-    const assertion = await startAuthentication({ optionsJSON: optionsJSON as PublicKeyCredentialRequestOptionsJSON })
+    const assertion = await startAuthentication({ optionsJSON: optionsJSON as unknown as PublicKeyCredentialRequestOptionsJSON })
 
     // Step 3: verify assertion and receive JWT
     const data = await authApi.webauthnVerify({ _token, ...assertion })
