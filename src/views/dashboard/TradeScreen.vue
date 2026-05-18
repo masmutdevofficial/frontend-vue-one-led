@@ -1050,6 +1050,8 @@ function initChart() {
       borderVisible: false,
       timeVisible: true,
       secondsVisible: false,
+      fixRightEdge: true,   // prevent scrolling into future empty space
+      rightOffset: 3,       // small padding on right so live candle isn't clipped
     },
     handleScroll: true,
     handleScale: true,
@@ -1134,7 +1136,11 @@ let lastCandle: CandlestickData | null = null
 let lastVolume: HistogramData | null = null
 
 function updateLiveCandle() {
+  // Guard: livePrice must be a valid positive number.
+  // A zero price creates a candle at y=0 which forces the Y-axis to span
+  // the full 0–76000 range, making all real candles look compressed.
   if (!candleSeries || !volumeSeries) return
+  if (!livePrice.value || livePrice.value <= 0) return
   const interval = (tfConfig[activeTimeframe.value] ?? tfConfig['1H']).interval
   const nowSec = Math.floor(Date.now() / 1000)
   const barTime = nowSec - (nowSec % (interval * 60))
