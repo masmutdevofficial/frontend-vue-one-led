@@ -1092,7 +1092,13 @@ async function loadChartData() {
       lastCandle     = { ...last }
       lastVolume     = { ...volumes[volumes.length - 1] }
     }
-    lwChart?.timeScale().fitContent()
+    // Show last ~60 bars with a small right-side padding — avoids tiny candles from fitContent()
+    const visibleBars = 60
+    const total = candles.length
+    lwChart?.timeScale().setVisibleLogicalRange({
+      from: Math.max(0, total - visibleBars),
+      to:   total + 2,
+    })
   } finally {
     chartLoading.value = false
   }
