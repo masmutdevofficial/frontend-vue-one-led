@@ -937,31 +937,10 @@ function buildFilledPath(pts: number[], W: number, H: number): string {
   return `${buildLinePath(pts, W, H)} L ${W},${H} L 0,${H} Z`
 }
 
-// ─── Live Tick ───────────────────────────────────────────────
+// ─── Live Tick (sparkline animation only — stats come from API) ─────────────
 let timer: ReturnType<typeof setInterval> | null = null
 
 function tick() {
-  liveStats.value = liveStats.value.map(s => {
-    const sign = Math.random() > 0.3 ? 1 : -1
-    if (s.label === 'Total Copied Value') {
-      const next = Math.max(3.0, s.raw + sign * s.delta * Math.random())
-      return { ...s, raw: next, value: `$${next.toFixed(2)}B` }
-    }
-    if (s.label === 'Avg. 30D ROI') {
-      const next = Math.max(15, s.raw + sign * s.delta * Math.random())
-      return { ...s, raw: next, value: `+${next.toFixed(2)}%` }
-    }
-    if (s.label === 'Active Traders') {
-      const next = Math.max(2000, s.raw + sign * s.delta * Math.random())
-      return { ...s, raw: next, value: Math.round(next).toLocaleString() }
-    }
-    if (s.label === 'Total Copiers') {
-      const next = Math.max(100000, s.raw + sign * s.delta * Math.random())
-      return { ...s, raw: next, value: Math.round(next).toLocaleString() }
-    }
-    return s
-  })
-
   bar1.value = 18 + Math.random() * 46
   bar2.value = 28 + Math.random() * 42
   bar3.value = 40 + Math.random() * 28
@@ -975,23 +954,18 @@ function tick() {
 }
 
 // ─── Risk helpers ────────────────────────────────────────────
+// DB stores ENUM: 'Low Risk' | 'Medium Risk' | 'High Risk'
 function riskLabel(raw: string): string {
-  const r = raw?.toLowerCase() ?? ''
-  if (r === 'low') return 'Low Risk'
-  if (r === 'high') return 'High Risk'
+  if (!raw) return 'Medium Risk'
+  if (raw.toLowerCase().includes('low'))  return 'Low Risk'
+  if (raw.toLowerCase().includes('high')) return 'High Risk'
   return 'Medium Risk'
 }
 function riskClass(raw: string): string {
-  const r = raw?.toLowerCase() ?? ''
-  if (r === 'low') return 'bg-[#e9fffc] text-[#10b8ad]'
-  if (r === 'high') return 'bg-red-50 text-red-400'
+  if (!raw) return 'bg-orange-50 text-orange-400'
+  if (raw.toLowerCase().includes('low'))  return 'bg-[#e9fffc] text-[#10b8ad]'
+  if (raw.toLowerCase().includes('high')) return 'bg-red-50 text-red-400'
   return 'bg-orange-50 text-orange-400'
-}
-function formatAum(v: number): string {
-  if (v >= 1e9) return (v / 1e9).toFixed(1) + 'B'
-  if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M'
-  if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K'
-  return String(v)
 }
 
 onMounted(async () => {
@@ -1000,46 +974,35 @@ onMounted(async () => {
   if (!auth.accessToken) return
   try {
     const api = makeContentApi(auth.accessToken)
-    const data = await api.getCopyTraders()
-    if (data.traders.length > 0) {
-      let totalAumRaw = 0
-      let totalCopiers = 0
-      let totalRoi = 0
+    const [tradersData, statsData] = await Promise.all([
+      api.getCopyTraders(),
+      api.getCopyStats(),
+    ])
 
-      tradersRaw.value = data.traders.map((t, i) => {
-        const rawAum = Number(t.aum) || 0
-        totalAumRaw  += rawAum
-        totalCopiers += Number(t.copiers) || 0
-        totalRoi     += Number(t.roi) || 0
-        return {
-          rank:      String(i + 1).padStart(2, '0'),
-          name:      t.name,
-          username:  t.username,
-          tag:       t.tag ?? '',
-          avatar:    t.avatar ?? `https://i.pravatar.cc/100?img=${20 + i}`,
-          roi:       Number(t.roi),
-          aum:       '$' + formatAum(rawAum),
-          winRate:   Number(t.win_rate),
-          copiers:   Number(t.copiers),
-          minCopy:   Number(t.min_copy),
-          risk:      riskLabel(t.risk),
-          riskClass: riskClass(t.risk),
-          chartPts:  randPts(10, 45, 18),
-        }
-      })
-
-      const n      = data.traders.length
-      const avgRoi = n > 0 ? totalRoi / n : 0
-      const aumB   = totalAumRaw / 1e9
-
-      liveStats.value = liveStats.value.map(s => {
-        if (s.label === 'Total Copied Value') return { ...s, raw: aumB,          value: `$${aumB.toFixed(2)}B` }
-        if (s.label === 'Avg. 30D ROI')       return { ...s, raw: avgRoi,        value: `+${avgRoi.toFixed(2)}%` }
-        if (s.label === 'Active Traders')     return { ...s, raw: n,             value: n.toLocaleString() }
-        if (s.label === 'Total Copiers')      return { ...s, raw: totalCopiers,  value: totalCopiers.toLocaleString() }
-        return s
-      })
+    if (tradersData.traders.length > 0) {
+      tradersRaw.value = tradersData.traders.map((t, i) => ({
+        rank:      String(i + 1).padStart(2, '0'),
+        name:      t.name,
+        username:  t.username,
+        tag:       t.tag ?? '',
+        avatar:    t.avatar ?? `https://i.pravatar.cc/100?img=${20 + i}`,
+        roi:       Number(t.roi),
+        aum:       t.aum,
+        winRate:   Number(t.win_rate),
+        copiers:   Number(t.copiers),
+        minCopy:   Number(t.min_copy),
+        risk:      riskLabel(t.risk),
+        riskClass: riskClass(t.risk),
+        chartPts:  randPts(10, 45, 18),
+      }))
     }
+
+    liveStats.value = liveStats.value.map(s => {
+      if (s.label === 'Avg. 30D ROI')   return { ...s, raw: statsData.avg_roi,       value: `+${Number(statsData.avg_roi).toFixed(2)}%` }
+      if (s.label === 'Active Traders') return { ...s, raw: statsData.total_traders,  value: Number(statsData.total_traders).toLocaleString() }
+      if (s.label === 'Total Copiers')  return { ...s, raw: statsData.total_copiers,  value: Number(statsData.total_copiers).toLocaleString() }
+      return s
+    })
   } catch { /* silently use defaults */ }
 })
 onUnmounted(() => { if (timer) clearInterval(timer) })

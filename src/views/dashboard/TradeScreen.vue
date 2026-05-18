@@ -352,9 +352,6 @@
               <button class="flex h-9 items-center gap-2 rounded-lg border border-gray-100 bg-[#f6f8fb] px-3 text-[11px] font-semibold text-gray-500 md:gap-3 md:px-4 md:text-[12px]">
                 0.01 <Icon icon="mdi:chevron-down" class="text-[15px] md:text-[16px]" />
               </button>
-              <button class="active:scale-95">
-                <Icon icon="mdi:chart-bar" class="text-[24px] text-[#10b8ad] md:text-[26px]" />
-              </button>
             </div>
           </template>
 
