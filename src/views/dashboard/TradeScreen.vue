@@ -888,20 +888,31 @@ onUnmounted(() => {
   destroyChart()
 })
 
-watch(baseCoin, (c) => {
-  livePrice.value     = c.price
-  liveChange.value    = c.change
-  liveHigh.value      = c.high24
-  liveLow.value       = c.low24
-  liveMarkPrice.value = c.markPrice
-  orderPrice.value    = c.price
-  const favs = JSON.parse(localStorage.getItem('market-favorites') ?? '[]') as string[]
-  isFavorite.value = favs.includes(c.symbol)
-  initOrderBook(c.price)
-  initRecentTrades(c.price)
-  lastCandleTime = 0; lastCandle = null; lastVolume = null
-  initChart() // recreate chart for new coin
-})
+// Watch the SYMBOL STRING (primitive), not the baseCoin object.
+// baseCoin returns a new object reference on every store update (e.g. when
+// fetchCoins() hydrates coinMap), which would fire the watcher even though
+// the trading pair hasn't changed — causing a spurious initChart() call that
+// briefly shows correct data then zooms out as live price diverges from the
+// hardcoded CATALOG_FALLBACK prices.
+watch(
+  () => baseCoin.value.symbol,
+  (newSym, oldSym) => {
+    if (newSym === oldSym) return // metadata-only update — skip reinit
+    const c = baseCoin.value
+    livePrice.value     = c.price
+    liveChange.value    = c.change
+    liveHigh.value      = c.high24
+    liveLow.value       = c.low24
+    liveMarkPrice.value = c.markPrice
+    orderPrice.value    = c.price
+    const favs = JSON.parse(localStorage.getItem('market-favorites') ?? '[]') as string[]
+    isFavorite.value = favs.includes(c.symbol)
+    initOrderBook(c.price)
+    initRecentTrades(c.price)
+    lastCandleTime = 0; lastCandle = null; lastVolume = null
+    initChart() // recreate chart for new coin
+  },
+)
 
 watch(activeTimeframe, () => {
   lastCandleTime = 0; lastCandle = null; lastVolume = null
@@ -999,7 +1010,11 @@ function _fallbackOHLC(): { candles: CandlestickData[]; volumes: HistogramData[]
   const currentBarTime = nowSec - (nowSec % intervalSec)
   const candles: CandlestickData[] = []
   const volumes: HistogramData[] = []
-  let price = baseCoin.value.price * (0.94 + Math.random() * 0.05)
+  // Use live price so fallback candles stay near the current market price.
+  // Using the hardcoded CATALOG_FALLBACK price would cause a big gap when
+  // updateLiveCandle() later sets the close to the real WS price.
+  const basePrice = livePrice.value || baseCoin.value.price
+  let price = basePrice * (0.94 + Math.random() * 0.05)
   for (let i = 99; i >= 0; i--) {
     const t = currentBarTime - i * intervalSec
     const o = price
@@ -1007,7 +1022,8 @@ function _fallbackOHLC(): { candles: CandlestickData[]; volumes: HistogramData[]
     const h = Math.max(o, c) * (1 + Math.random() * 0.005)
     const l = Math.min(o, c) * (1 - Math.random() * 0.005)
     candles.push({ time: t as any, open: o, high: h, low: l, close: c })
-    volumes.push({ time: t as any, value: baseCoin.value.price * (0.5 + Math.random() * 2.5), color: c >= o ? '#10b8ad66' : '#ef535066' })
+    // Use small normalised volume (1–10 units) to avoid polluting the price scale
+    volumes.push({ time: t as any, value: 1 + Math.random() * 9, color: c >= o ? '#10b8ad66' : '#ef535066' })
     price = c
   }
   return { candles, volumes }
