@@ -1083,22 +1083,21 @@ async function loadChartData() {
     const sym = coin.value.symbol.toUpperCase()
     const { candles, volumes } = await fetchBinanceKlines(sym, activeTimeframe.value)
     if (!candleSeries || !volumeSeries) return // chart destroyed while fetching
-    candleSeries.setData(candles)
-    volumeSeries.setData(volumes)
+    // Only keep the most recent 40 bars so the price scale fits the visible data correctly.
+    // lightweight-charts auto-scales Y to all setData() entries, not just visible range.
+    const recent        = candles.slice(-40)
+    const recentVolumes = volumes.slice(-40)
+    candleSeries.setData(recent)
+    volumeSeries.setData(recentVolumes)
     // Seed the live-candle tracker with the last real candle
-    if (candles.length > 0) {
-      const last = candles[candles.length - 1]
+    if (recent.length > 0) {
+      const last = recent[recent.length - 1]
       lastCandleTime = last.time as number
       lastCandle     = { ...last }
-      lastVolume     = { ...volumes[volumes.length - 1] }
+      lastVolume     = { ...recentVolumes[recentVolumes.length - 1] }
     }
-    // Show last ~60 bars with a small right-side padding — avoids tiny candles from fitContent()
-    const visibleBars = 60
-    const total = candles.length
-    lwChart?.timeScale().setVisibleLogicalRange({
-      from: Math.max(0, total - visibleBars),
-      to:   total + 2,
-    })
+    // fitContent now only covers 40 bars — both X and Y scale correctly
+    lwChart?.timeScale().fitContent()
   } finally {
     chartLoading.value = false
   }
