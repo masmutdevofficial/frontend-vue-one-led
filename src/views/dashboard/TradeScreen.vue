@@ -910,6 +910,7 @@ watch(
     initOrderBook(c.price)
     initRecentTrades(c.price)
     lastCandleTime = 0; lastCandle = null; lastVolume = null
+    wsReady = false   // reset — wait for WS price of the new pair before updating chart
     initChart() // recreate chart for new coin
   },
 )
@@ -923,6 +924,7 @@ watch(activeTimeframe, () => {
 watch(tickerMap, (map) => {
   const t = map.get(currentBinancePair.value)
   if (!t) return
+  wsReady = true  // real price received — allow updateLiveCandle()
   livePrice.value     = t.price
   liveChange.value    = Math.round(t.change * 100) / 100
   liveHigh.value      = liveHigh.value  > 0 ? Math.max(liveHigh.value,  t.high) : t.high
@@ -1134,13 +1136,15 @@ function destroyChart() {
 let lastCandleTime = 0
 let lastCandle: CandlestickData | null = null
 let lastVolume: HistogramData | null = null
+// True only after the WS delivers a real price for the current pair.
+// Prevents tick() from corrupting the last klines candle with the
+// hardcoded CATALOG_FALLBACK price (e.g. 64923 while BTC is at 76000),
+// which would create a wick spanning the entire 64923–76000 range.
+let wsReady = false
 
 function updateLiveCandle() {
-  // Guard: livePrice must be a valid positive number.
-  // A zero price creates a candle at y=0 which forces the Y-axis to span
-  // the full 0–76000 range, making all real candles look compressed.
   if (!candleSeries || !volumeSeries) return
-  if (!livePrice.value || livePrice.value <= 0) return
+  if (!wsReady) return  // wait for first real WS price before touching the chart
   const interval = (tfConfig[activeTimeframe.value] ?? tfConfig['1H']).interval
   const nowSec = Math.floor(Date.now() / 1000)
   const barTime = nowSec - (nowSec % (interval * 60))
