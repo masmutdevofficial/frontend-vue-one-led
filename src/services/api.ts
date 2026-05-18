@@ -429,10 +429,11 @@ export interface CopyTrader {
   verified: number
 }
 
-export interface CopyStats {
-  total_traders: number
-  total_copiers: number
-  avg_roi: number
+export interface CopyStatCard {
+  key: string
+  label: string
+  value: string
+  change: string
 }
 
 /** Authenticated user content API — call makeContentApi(token) */
@@ -460,7 +461,7 @@ export function makeContentApi(token: string) {
     getCopyTraders: (limit = 50) =>
       api.get<{ traders: CopyTrader[] }>(`/copy-trade/traders?limit=${limit}`),
     getCopyStats: () =>
-      api.get<CopyStats>('/copy-trade/stats'),
+      api.get<{ stats: CopyStatCard[] }>('/copy-trade/stats'),
     getDepositQrCodes: () =>
       api.get<{ qr_codes: Array<{ coin: string; network: string | null; wallet_address: string; qr_image_url: string | null }> }>('/deposit/qr-codes'),
   }

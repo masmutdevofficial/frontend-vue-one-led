@@ -997,12 +997,13 @@ onMounted(async () => {
       }))
     }
 
-    liveStats.value = liveStats.value.map(s => {
-      if (s.label === 'Avg. 30D ROI')   return { ...s, raw: statsData.avg_roi,       value: `+${Number(statsData.avg_roi).toFixed(2)}%` }
-      if (s.label === 'Active Traders') return { ...s, raw: statsData.total_traders,  value: Number(statsData.total_traders).toLocaleString() }
-      if (s.label === 'Total Copiers')  return { ...s, raw: statsData.total_copiers,  value: Number(statsData.total_copiers).toLocaleString() }
-      return s
-    })
+    liveStats.value = statsData.stats.map(s => ({
+      label: s.label,
+      value: s.value,
+      change: s.change,
+      raw: 0,
+      delta: 0,
+    }))
   } catch { /* silently use defaults */ }
 })
 onUnmounted(() => { if (timer) clearInterval(timer) })
