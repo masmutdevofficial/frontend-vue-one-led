@@ -1048,16 +1048,16 @@ function initChart() {
   } as Partial<CandlestickSeriesOptions>)
 
   candleSeries.priceScale().applyOptions({
-    scaleMargins: { top: 0.08, bottom: 0.22 },
+    scaleMargins: { top: 0.08, bottom: 0.25 },
   })
 
   volumeSeries = lwChart.addSeries(HistogramSeries as any, {
     priceFormat: { type: 'volume' },
-    priceScaleId: 'vol',
+    priceScaleId: '', // empty string = overlay mode (official docs recommendation)
   } as Partial<HistogramSeriesOptions>)
 
   volumeSeries.priceScale().applyOptions({
-    scaleMargins: { top: 0.82, bottom: 0 },
+    scaleMargins: { top: 0.75, bottom: 0 },
   })
 
   // Data is loaded asynchronously after chart is created
