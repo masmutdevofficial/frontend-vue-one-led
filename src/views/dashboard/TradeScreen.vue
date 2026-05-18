@@ -970,10 +970,11 @@ async function fetchBinanceKlines(
   const interval = tfToBinance[tf] ?? '1h'
   const limit    = tf === '1W' ? 52 : 100
   try {
+    // Use our backend proxy to avoid Binance CORS / geo-block on the browser
     const res = await fetch(
-      `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`,
+      `https://api.one-led.io/v1/public/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`,
     )
-    if (!res.ok) throw new Error('Binance API error')
+    if (!res.ok) throw new Error('Proxy error')
     const raw: [number, string, string, string, string, string][] = await res.json()
     const candles: CandlestickData[] = []
     const volumes: HistogramData[]   = []
