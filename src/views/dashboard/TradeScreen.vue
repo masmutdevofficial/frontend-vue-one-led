@@ -213,11 +213,20 @@
           <!-- Price -->
           <div class="mt-4 rounded-xl border border-gray-100 bg-[#f6f8fb] px-3 py-3">
             <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold text-gray-400">Price (USDT)</span>
+              <span class="text-[11px] font-bold text-gray-400">{{ activeOrderType === 'Market' ? 'Price (Market)' : 'Price (USDT)' }}</span>
               <div class="flex items-center gap-3">
-                <button class="text-[20px] font-semibold text-gray-400 active:scale-90" @click="adjustPrice(-1)">−</button>
-                <span class="min-w-20 text-center text-[13px] font-semibold text-[#17212f] md:min-w-22.5 md:text-[15px]">{{ formatPrice(orderPrice) }}</span>
-                <button class="text-[20px] font-semibold text-gray-500 active:scale-90" @click="adjustPrice(1)">+</button>
+                <button class="text-[20px] font-semibold text-gray-400 active:scale-90 disabled:opacity-30" :disabled="activeOrderType === 'Market'" @click="adjustPrice(-1)">−</button>
+                <input
+                  v-if="activeOrderType !== 'Market'"
+                  v-model.number="orderPrice"
+                  type="number"
+                  :step="baseCoin.priceStep"
+                  min="0"
+                  class="w-24 text-center text-[13px] font-semibold text-[#17212f] bg-transparent outline-none md:text-[15px]"
+                  @input="recalcSlider"
+                />
+                <span v-else class="min-w-20 text-center text-[13px] font-semibold text-[#10b8ad] md:min-w-22.5 md:text-[15px]">{{ formatPrice(orderPrice) }}</span>
+                <button class="text-[20px] font-semibold text-gray-500 active:scale-90 disabled:opacity-30" :disabled="activeOrderType === 'Market'" @click="adjustPrice(1)">+</button>
               </div>
             </div>
           </div>
@@ -226,10 +235,18 @@
           <div class="mt-3 rounded-xl border border-gray-100 bg-[#f6f8fb] px-3 py-3">
             <div class="flex items-center justify-between">
               <span class="text-[11px] font-bold text-gray-400">Amount ({{ coin.symbol }})</span>
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
                 <button class="text-[20px] font-semibold text-gray-400 active:scale-90" @click="adjustAmount(-1)">−</button>
-                <span class="min-w-15 text-center text-[13px] font-semibold text-[#17212f] md:min-w-17.5 md:text-[15px]">{{ orderAmount.toFixed(4) }}</span>
+                <input
+                  v-model.number="orderAmount"
+                  type="number"
+                  :step="baseCoin.amountStep"
+                  min="0"
+                  class="w-20 text-center text-[13px] font-semibold text-[#17212f] bg-transparent outline-none md:text-[15px]"
+                  @input="recalcSlider"
+                />
                 <button class="text-[20px] font-semibold text-gray-500 active:scale-90" @click="adjustAmount(1)">+</button>
+                <button @click="setMaxAmount" class="rounded-md bg-[#eafffd] px-2 py-0.5 text-[10px] font-bold text-[#10b8ad]">Max</button>
               </div>
             </div>
           </div>
@@ -824,6 +841,15 @@ function applySliderPct(pct: number) {
   }
 }
 
+function setMaxAmount() {
+  if (activeSide.value === 'Buy') {
+    orderAmount.value = parseFloat((availableBalance.value / Math.max(0.0001, orderPrice.value)).toFixed(8))
+  } else {
+    orderAmount.value = parseFloat(availableCoin.value.toFixed(8))
+  }
+  recalcSlider()
+}
+
 // ── Live tick ─────────────────────────────────────────────────
 let timer: ReturnType<typeof setInterval>
 
@@ -1266,15 +1292,15 @@ async function placeOrder() {
     }
     if (activeOrderType.value !== 'Market') body.price = orderPrice.value
     await tradeApi.value.placeOrder(body)
-    await fetchOpenOrders()
     await fetchCoinBalances()
-    // Refresh user balance from auth store
-    if (auth.accessToken) {
-      const { makeUserApi } = await import('@/services/api')
-      try {
-        const userProfile = await makeUserApi(auth.accessToken).getProfile()
-        if (auth.user) auth.user.balance = userProfile.balance
-      } catch { /* ignore */ }
+    if (activeOrderType.value === 'Market') {
+      // Market orders fill immediately → jump to Positions tab
+      await fetchPositions()
+      activeBottomTab.value = 'positions'
+    } else {
+      // Limit / Stop-Limit → show in Open Orders
+      await fetchOpenOrders()
+      activeBottomTab.value = 'open-orders'
     }
   } catch (err: any) {
     placeOrderError.value = err?.message ?? 'Failed to place order.'
