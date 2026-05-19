@@ -372,17 +372,17 @@
             </div>
             <div class="space-y-2">
               <button
-                v-for="network in networks"
-                :key="network"
-                @click="selectedNetwork = network; showNetworkPicker = false"
+                v-for="net in networksWithMeta"
+                :key="net.name"
+                @click="selectedNetwork = net.name; showNetworkPicker = false"
                 class="flex w-full items-center justify-between rounded-xl border px-4 py-3 transition active:bg-gray-50"
-                :class="selectedNetwork === network ? 'border-[#10b8ad] bg-[#eafffd]' : 'border-gray-100 bg-white'"
+                :class="selectedNetwork === net.name ? 'border-[#10b8ad] bg-[#eafffd]' : 'border-gray-100 bg-white'"
               >
                 <div>
-                  <p class="text-left text-[13px] font-semibold text-[#17212f]">{{ network }}</p>
-                  <p class="mt-0.5 text-left text-[10px] font-semibold text-gray-400">{{ selectedCoin }} · {{ network }}</p>
+                  <p class="text-left text-[13px] font-semibold text-[#17212f]">{{ net.name }}</p>
+                  <p class="mt-0.5 text-left text-[10px] font-semibold text-gray-400">{{ selectedCoin }} · {{ net.name }} · Fee {{ net.fee_fixed }} · Min {{ net.min_amount }}</p>
                 </div>
-                <Icon v-if="selectedNetwork === network" icon="mdi:check-circle" class="text-[20px] text-[#10b8ad]" />
+                <Icon v-if="selectedNetwork === net.name" icon="mdi:check-circle" class="text-[20px] text-[#10b8ad]" />
               </button>
             </div>
           </div>
@@ -504,7 +504,20 @@ const COIN_META: Record<string, CoinMeta> = {
   XRP:  { icon: 'mdi:alpha-x-circle',      bg: 'bg-slate-100 text-slate-500',   label: 'XRP' },
 }
 
-const allCoins = Object.keys(COIN_META)
+// Coins available = those returned by admin-configured withdrawal networks,
+// filtered to only coins we have meta for. Falls back to all COIN_META keys if API not loaded yet.
+const allCoins = computed(() => {
+  const fromApi = Object.keys(apiNetworks.value).filter(c => COIN_META[c])
+  return fromApi.length ? fromApi : Object.keys(COIN_META)
+})
+
+// When API networks load, ensure selectedCoin is still valid
+watch(apiNetworks, (nets) => {
+  const available = Object.keys(nets).filter(c => COIN_META[c])
+  if (available.length && !available.includes(selectedCoin.value)) {
+    selectedCoin.value = available[0]
+  }
+}, { deep: true })
 
 interface RecentAddress {
   name: string
@@ -540,12 +553,15 @@ watch(selectedCoin, (coin) => {
   selectedNetwork.value = nets?.[0]?.name ?? (COIN_NETWORKS_FALLBACK[coin]?.[0] ?? 'TRC20')
 })
 
-// Network names list for picker
-const networks = computed(() => {
+// Network objects list for picker (with fee & min_amount)
+const networksWithMeta = computed(() => {
   const nets = apiNetworks.value[selectedCoin.value]
-  if (nets?.length) return nets.map(n => n.name)
-  return COIN_NETWORKS_FALLBACK[selectedCoin.value] ?? ['TRC20']
+  if (nets?.length) return nets
+  return (COIN_NETWORKS_FALLBACK[selectedCoin.value] ?? ['TRC20']).map(n => ({ name: n, fee_fixed: 1, min_amount: 1 }))
 })
+
+// Network names list for picker
+const networks = computed(() => networksWithMeta.value.map(n => n.name))
 
 // Fee for the currently selected network
 const currentNetworkFee = computed(() => {
