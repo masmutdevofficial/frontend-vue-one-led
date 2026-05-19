@@ -119,68 +119,6 @@
     </Transition>
   </Teleport>
 
-  <!-- Bank Account Verification Modal -->
-  <Teleport to="body">
-    <Transition name="sheet">
-      <div v-if="showBankVerification" class="fixed inset-0 z-50 flex flex-col">
-        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showBankVerification = false"></div>
-        <div class="relative mt-auto max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-white px-6 pt-5 pb-10 shadow-2xl lg:mx-auto lg:mb-auto lg:mt-auto lg:max-w-lg lg:rounded-3xl">
-          <div class="mb-5 flex items-center justify-between">
-            <h3 class="text-xl font-semibold text-slate-950">Bank Account Verification</h3>
-            <button type="button" class="grid size-9 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition" @click="showBankVerification = false">
-              <Icon icon="mdi:close" class="size-5" />
-            </button>
-          </div>
-
-          <p v-if="bankError" class="mb-3 rounded-xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-500">{{ bankError }}</p>
-
-          <form @submit.prevent="submitBankEdit" class="space-y-4">
-            <div>
-              <label class="mb-1.5 block text-sm font-semibold text-slate-700">Bank</label>
-              <input
-                v-model="bankForm.bank"
-                type="text"
-                autocomplete="off"
-                placeholder="Enter your bank name"
-                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100"
-              />
-            </div>
-
-            <div>
-              <label class="mb-1.5 block text-sm font-semibold text-slate-700">Bank Account</label>
-              <input
-                v-model="bankForm.bankAccount"
-                type="text"
-                autocomplete="off"
-                placeholder="Enter your bank account number"
-                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100"
-              />
-            </div>
-
-            <div>
-              <label class="mb-1.5 block text-sm font-semibold text-slate-700">Country / Region</label>
-              <input
-                v-model="bankForm.countryRegion"
-                type="text"
-                autocomplete="off"
-                placeholder="Enter your country or region"
-                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100"
-              />
-            </div>
-
-            <button
-              type="submit"
-              :disabled="savingBank"
-              class="mt-2 w-full rounded-2xl bg-teal-500 py-3.5 text-sm font-semibold text-white transition active:scale-95 hover:bg-teal-600 disabled:opacity-60"
-            >
-              {{ savingBank ? 'Saving…' : 'Save Changes' }}
-            </button>
-          </form>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
-
   <!-- Help Center Modal -->
   <Teleport to="body">
     <Transition name="sheet">
@@ -435,15 +373,12 @@ const securityColor = computed(() => ({
 }[securityLevel.value]))
 
 // ── Edit form ────────────────────────────────────────────────────────────────
-const showAbout            = ref(false)
-const showHelp             = ref(false)
-const showEditProfile      = ref(false)
-const showBankVerification = ref(false)
-const openQA               = ref<number | null>(null)
-const saving               = ref(false)
-const saveError            = ref('')
-const savingBank           = ref(false)
-const bankError            = ref('')
+const showAbout       = ref(false)
+const showHelp        = ref(false)
+const showEditProfile = ref(false)
+const openQA          = ref<number | null>(null)
+const saving          = ref(false)
+const saveError       = ref('')
 
 const isGoogleUser = computed(() =>
   !!(auth.user?.profile?.includes('googleusercontent.com'))
@@ -451,12 +386,6 @@ const isGoogleUser = computed(() =>
 
 const editForm = ref({
   name: '',
-})
-
-const bankForm = ref({
-  bank:          '',
-  bankAccount:   '',
-  countryRegion: '',
 })
 
 function openEdit() {
@@ -484,35 +413,6 @@ async function submitEdit() {
   }
 }
 
-function openBankVerification() {
-  bankForm.value = {
-    bank:          auth.profile?.bank         ?? '',
-    bankAccount:   auth.profile?.bank_account ?? '',
-    countryRegion: auth.profile?.country      ?? '',
-  }
-  bankError.value = ''
-  showBankVerification.value = true
-}
-
-async function submitBankEdit() {
-  if (!auth.accessToken) return
-  savingBank.value = true
-  bankError.value  = ''
-  try {
-    await makeUserApi(auth.accessToken).updateProfile({
-      bank:         bankForm.value.bank          || undefined,
-      bank_account: bankForm.value.bankAccount   || undefined,
-      country:      bankForm.value.countryRegion || undefined,
-    })
-    await auth.refreshProfile()
-    showBankVerification.value = false
-  } catch (e: any) {
-    bankError.value = e?.message ?? 'Failed to save. Please try again.'
-  } finally {
-    savingBank.value = false
-  }
-}
-
 async function handleLogout() {
   await auth.logout()
   router.push('/login')
@@ -532,7 +432,6 @@ const menuItems: MenuItem[] = [
   { icon: 'mdi:lock-outline',                 title: 'Security',      desc: 'Password, 2FA, Biometric',               action: () => router.push('/security') },
   { icon: 'mdi:chart-line',                   title: 'Tracking Funds', desc: 'Monitor your fund activity',            action: () => router.push('/tracking-funds') },
   { icon: 'mdi:bell-outline',                 title: 'Notifications', desc: 'Manage your alerts and preferences',     action: () => router.push('/notifications') },
-  { icon: 'mdi:bank-check',            title: 'Bank Account Verification', desc: 'Bank details for P2P trading',      action: () => openBankVerification() },
   { icon: 'mdi:card-account-details-outline', title: 'Verification',              desc: 'Identity and account verification', action: () => router.push('/verification') },
   { icon: 'mdi:help-circle-outline',          title: 'Help Center',               desc: 'Get help and support',              action: () => router.push('/help-center') },
   { icon: 'mdi:information-outline',          title: 'About',         desc: 'App info and legal',                    action: () => { showAbout.value = true } },
