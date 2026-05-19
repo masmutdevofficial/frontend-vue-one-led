@@ -78,7 +78,7 @@
         >
           <Icon icon="mdi:chevron-left" class="text-[25px] text-[#202833]" />
         </button>
-        <h1 class="text-[12px] sm:text-[16px] font-semibold text-[#17212f]">Add Funds</h1>
+        <h1 class="text-[16px] font-semibold text-[#17212f]">Add Funds</h1>
         <div class="absolute right-4 flex items-center gap-3">
           <button class="active:scale-95" @click="showSupport = true">
             <Icon icon="mdi:headphones" class="text-[22px] text-[#202833]" />

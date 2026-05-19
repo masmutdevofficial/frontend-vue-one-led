@@ -97,8 +97,8 @@
                   USDT <Icon icon="mdi:chevron-down" />
                 </button>
               </div>
-              <p class="mt-2 text-[12px] text-gray-400">{{ balanceVisible ? '≈ $' + fmtBalance(balanceTotal) : '≈ $••••••••' }}</p>
-              <button class="mt-3 flex items-center gap-1 text-[12px] text-gray-400">
+              <p class="mt-2 text-[10px] sm:text-[16px] text-gray-400">{{ balanceVisible ? '≈ $' + fmtBalance(balanceTotal) : '≈ $••••••••' }}</p>
+              <button class="mt-3 flex items-center gap-1 text-[10px] sm:text-[16px] text-gray-400">
                 Unrealized PnL
                 <span
                   class="font-semibold transition-colors duration-300"
@@ -130,7 +130,7 @@
                   style="transition: d 0.4s ease"
                 />
               </svg>
-              <button class="mt-3 rounded-xl bg-[#e9fffc] px-7 py-3 text-[12px] font-bold text-[#18b8b0] hover:bg-[#bdf5ed] hover:text-[#03645f]" @click="router.push('/add-funds')">
+              <button class="mt-3 rounded-xl bg-[#e9fffc] px-7 py-3 text-[10px] sm:text-[16px] font-bold text-[#18b8b0] hover:bg-[#bdf5ed] hover:text-[#03645f]" @click="router.push('/add-funds')">
                 Add Funds
               </button>
             </div>
