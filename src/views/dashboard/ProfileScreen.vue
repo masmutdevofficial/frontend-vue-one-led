@@ -532,7 +532,7 @@ const menuItems: MenuItem[] = [
   { icon: 'mdi:lock-outline',                 title: 'Security',      desc: 'Password, 2FA, Biometric',               action: () => router.push('/security') },
   { icon: 'mdi:chart-line',                   title: 'Tracking Funds', desc: 'Monitor your fund activity',            action: () => router.push('/tracking-funds') },
   { icon: 'mdi:bell-outline',                 title: 'Notifications', desc: 'Manage your alerts and preferences',     action: () => router.push('/notifications') },
-  { icon: 'mdi:bank-check-outline',            title: 'Bank Account Verification', desc: 'Bank details for P2P trading',      action: () => openBankVerification() },
+  { icon: 'mdi:bank-check',            title: 'Bank Account Verification', desc: 'Bank details for P2P trading',      action: () => openBankVerification() },
   { icon: 'mdi:card-account-details-outline', title: 'Verification',              desc: 'Identity and account verification', action: () => router.push('/verification') },
   { icon: 'mdi:help-circle-outline',          title: 'Help Center',               desc: 'Get help and support',              action: () => router.push('/help-center') },
   { icon: 'mdi:information-outline',          title: 'About',         desc: 'App info and legal',                    action: () => { showAbout.value = true } },
