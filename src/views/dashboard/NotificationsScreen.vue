@@ -19,8 +19,9 @@ const typeStyle: Record<string, NotifStyle> = {
   withdrawal: { icon: 'mdi:arrow-down-circle-outline',  iconClass: 'bg-red-50 text-red-400' },
   transfer:   { icon: 'mdi:swap-horizontal',            iconClass: 'bg-blue-50 text-sky-500' },
 }
+const DEFAULT_STYLE: NotifStyle = { icon: 'mdi:bell-outline', iconClass: 'bg-gray-50 text-gray-400' }
 function getStyle(type: string): NotifStyle {
-  return typeStyle[type] ?? typeStyle.system
+  return typeStyle[type] ?? DEFAULT_STYLE
 }
 
 function relativeTime(dateStr: string): string {
@@ -69,18 +70,16 @@ onMounted(async () => {
   try {
     const api = makeNotificationsApi(auth.accessToken)
     const data = await api.list()
-    if (data.notifications.length > 0 || data.total === 0) {
-      const txNotifs = data.notifications.filter(n => ALLOWED_TYPES.has(n.type))
-      notifications.value = txNotifs.map(n => ({
-        id:        n.id,
-        title:     n.title,
-        message:   n.message,
-        time:      relativeTime(n.created_at),
-        icon:      getStyle(n.type).icon,
-        iconClass: getStyle(n.type).iconClass,
-        unread:    n.is_read === 0,
-      }))
-    }
+    const txNotifs = data.notifications.filter(n => ALLOWED_TYPES.has(n.type))
+    notifications.value = txNotifs.map(n => ({
+      id:        n.id,
+      title:     n.title,
+      message:   n.message,
+      time:      relativeTime(n.created_at),
+      icon:      getStyle(n.type).icon,
+      iconClass: getStyle(n.type).iconClass,
+      unread:    n.is_read === 0,
+    }))
     unreadCount.value = txNotifs.filter(n => n.is_read === 0).length
   } catch { /* silently use defaults */ } finally {
     loading.value = false

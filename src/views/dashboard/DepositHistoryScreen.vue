@@ -64,27 +64,27 @@
 
         <!-- FILTER TABS -->
         <section class="mt-4 px-4">
-          <div class="flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-sm">
-            <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-sm">
+            <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-none">
               <button
                 v-for="status in statuses"
                 :key="status"
-                @click="activeStatus = status; loadDeposits()"
-                class="relative h-10 rounded-xl px-4 text-xs font-semibold transition"
+                @click="activeStatus = status"
+                class="relative h-9 shrink-0 rounded-xl px-3 text-xs font-semibold transition"
                 :class="activeStatus === status ? 'bg-[#f6f8fb] text-[#08a99f] shadow-sm' : 'text-[#5b6d9a]'"
               >
                 {{ status }}
                 <span
                   v-if="activeStatus === status"
-                  class="absolute bottom-0 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-[#08a99f]"
+                  class="absolute bottom-0 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-[#08a99f]"
                 ></span>
               </button>
             </div>
 
-            <button class="flex items-center gap-2 text-sm font-semibold text-[#17212f]">
-              <Icon icon="mdi:sort-variant" class="text-xl" />
+            <button class="shrink-0 flex items-center gap-1 text-xs font-semibold text-[#17212f] whitespace-nowrap">
+              <Icon icon="mdi:sort-variant" class="text-base" />
               All Time
-              <Icon icon="mdi:chevron-down" class="text-[18px]" />
+              <Icon icon="mdi:chevron-down" class="text-[15px]" />
             </button>
           </div>
         </section>
@@ -132,7 +132,7 @@
 
               <div class="text-right">
                 <p class="text-[17px] font-semibold text-[#0b1638]">
-                  {{ Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 }) }} {{ coinName(item) }}
+                  {{ Number(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8, useGrouping: false }) }} {{ coinName(item) }}
                 </p>
 
                 <p class="mt-3 text-xs font-medium text-[#7a86a4]">{{ formatDate(item.created_at) }}</p>
@@ -206,18 +206,23 @@ onMounted(loadDeposits)
 function coinName(d: DepositRecord): string {
   if (!d.bank) return 'USDT'
   const b = d.bank.trim().toUpperCase()
+  if (b.startsWith('P2P')) return 'USDT'
+  if (b === 'ADMIN TOP-UP') return 'USDT'
   const known = ['USDT','BTC','ETH','BNB','SOL','XRP','ADA','LTC','TRX','MATIC','AVAX']
   for (const c of known) if (b.includes(c)) return c
   return b.length <= 10 ? b : 'USDT'
 }
 function networkName(d: DepositRecord): string {
   if (!d.bank) return 'On-chain'
-  const b = d.bank.trim().toUpperCase()
-  if (b.includes('TRC20') || b.includes('TRON'))  return 'TRC20'
-  if (b.includes('ERC20') || b.includes('ETHER')) return 'ERC20'
-  if (b.includes('BEP20') || b.includes('BSC'))   return 'BEP20'
-  if (b.includes('BITCOIN'))                       return 'Bitcoin'
-  if (b.includes('SOLANA'))                        return 'Solana'
+  const b = d.bank.trim()
+  const bu = b.toUpperCase()
+  if (b.startsWith('P2P'))          return 'P2P'
+  if (bu === 'ADMIN TOP-UP')         return 'Admin'
+  if (bu.includes('TRC20') || bu.includes('TRON'))  return 'TRC20'
+  if (bu.includes('ERC20') || bu.includes('ETHER')) return 'ERC20'
+  if (bu.includes('BEP20') || bu.includes('BSC'))   return 'BEP20'
+  if (bu.includes('BITCOIN'))                       return 'Bitcoin'
+  if (bu.includes('SOLANA'))                        return 'Solana'
   return 'On-chain'
 }
 function coinIcon(d: DepositRecord): string {

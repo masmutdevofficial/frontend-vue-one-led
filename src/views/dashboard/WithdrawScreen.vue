@@ -126,16 +126,32 @@
                 <p class="text-[10px] font-semibold text-[#17212f]">{{ maxBalanceDisplay }} {{ selectedCoin }}</p>
               </div>
               <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1">
+                <div class="relative flex items-center gap-1">
                   <p class="text-[10px] font-bold text-gray-400">Fee</p>
-                  <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" title="Network fee deducted from your withdrawal. Paid to the blockchain network for processing your transaction." />
+                  <button type="button" @click.stop="showFeeTip = !showFeeTip; showReceiveTip = false" class="active:scale-90">
+                    <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" />
+                  </button>
+                  <Transition enter-from-class="opacity-0 scale-95" enter-active-class="transition duration-150" leave-to-class="opacity-0 scale-95" leave-active-class="transition duration-100">
+                    <div v-if="showFeeTip" class="absolute bottom-full left-0 z-20 mb-1.5 w-52 rounded-xl bg-[#17212f] px-3 py-2 text-[10px] font-semibold leading-relaxed text-white shadow-lg">
+                      Network fee deducted from your withdrawal. Paid to the blockchain network for processing your transaction.
+                      <div class="absolute -bottom-1 left-3 h-2 w-2 rotate-45 bg-[#17212f]"></div>
+                    </div>
+                  </Transition>
                 </div>
                 <p class="text-[10px] font-semibold text-[#17212f]">{{ currentNetworkFee.toFixed(4) }} {{ selectedCoin }}</p>
               </div>
               <div class="flex items-center justify-between border-t border-dashed border-gray-200 pt-3">
-                <div class="flex items-center gap-1">
+                <div class="relative flex items-center gap-1">
                   <p class="text-[10px] font-bold text-gray-400">You Will Receive</p>
-                  <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" title="Withdrawal amount minus the network fee. This is the actual amount that will arrive in the destination wallet." />
+                  <button type="button" @click.stop="showReceiveTip = !showReceiveTip; showFeeTip = false" class="active:scale-90">
+                    <Icon icon="mdi:information-outline" class="text-[12px] text-gray-400" />
+                  </button>
+                  <Transition enter-from-class="opacity-0 scale-95" enter-active-class="transition duration-150" leave-to-class="opacity-0 scale-95" leave-active-class="transition duration-100">
+                    <div v-if="showReceiveTip" class="absolute bottom-full left-0 z-20 mb-1.5 w-52 rounded-xl bg-[#17212f] px-3 py-2 text-[10px] font-semibold leading-relaxed text-white shadow-lg">
+                      Withdrawal amount minus the network fee. This is the actual amount that will arrive in the destination wallet.
+                      <div class="absolute -bottom-1 left-3 h-2 w-2 rotate-45 bg-[#17212f]"></div>
+                    </div>
+                  </Transition>
                 </div>
                 <div class="text-right">
                   <p class="text-[12px] font-semibold text-[#10b8ad]">{{ receiveAmount }} {{ selectedCoin }}</p>
@@ -515,6 +531,8 @@ const selectedNetwork = ref('TRC20')
 const coinBalances = ref<Record<string, number>>({})
 const submitting   = ref(false)
 const submitError  = ref('')
+const showFeeTip     = ref(false)
+const showReceiveTip = ref(false)
 
 // Keep network in sync when coin changes
 watch(selectedCoin, (coin) => {

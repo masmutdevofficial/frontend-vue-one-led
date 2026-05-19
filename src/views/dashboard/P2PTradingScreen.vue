@@ -300,14 +300,14 @@
                     <p class="text-[9px] font-bold text-gray-400">I want to {{ activeTab === 'Buy' ? 'spend' : 'sell' }}</p>
                     <div class="mt-1.5 flex items-center gap-2">
                       <input v-model="quickAmount" type="number" placeholder="0.00" class="min-w-0 flex-1 bg-transparent text-[18px] font-bold text-[#17212f] outline-none placeholder:text-gray-300" />
-                      <span class="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-[#344054] shadow-sm">USD</span>
-                    </div>
+                    <span class="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-[#344054] shadow-sm">{{ bestMerchant && isFiatLocalCurrency(bestMerchant.currency) ? activeAsset : 'USD' }}</span>
                   </div>
-                  <div class="rounded-xl bg-[#f6f8fb] p-3">
-                    <p class="text-[9px] font-bold text-gray-400">I will receive</p>
-                    <div class="mt-1.5 flex items-center gap-2">
-                      <span class="min-w-0 flex-1 text-[18px] font-bold text-[#0ba99d]">≈ {{ quickReceive }}</span>
-                      <span class="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-[#344054] shadow-sm">{{ activeAsset }}</span>
+                </div>
+                <div class="rounded-xl bg-[#f6f8fb] p-3">
+                  <p class="text-[9px] font-bold text-gray-400">{{ bestMerchant && isFiatLocalCurrency(bestMerchant.currency) ? 'I will pay' : 'I will receive' }}</p>
+                  <div class="mt-1.5 flex items-center gap-2">
+                    <span class="min-w-0 flex-1 text-[18px] font-bold text-[#0ba99d]">≈ {{ quickReceive }}</span>
+                    <span class="rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-[#344054] shadow-sm">{{ bestMerchant && isFiatLocalCurrency(bestMerchant.currency) ? bestMerchant.currency : activeAsset }}</span>
                     </div>
                   </div>
                 </div>
@@ -477,13 +477,13 @@
               </div>
               <div class="mt-2 flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-3 focus-within:border-[#0ba99d]">
                 <input v-model="tradeAmount" type="number" placeholder="0.00" class="min-w-0 flex-1 bg-transparent text-[16px] font-bold text-[#17212f] outline-none placeholder:text-gray-300" />
-                <span class="text-[12px] font-bold text-gray-400">{{ selectedMerchant.currency }}</span>
+                <span class="shrink-0 text-[12px] font-bold text-gray-400">{{ isFiatLocalCurrency(selectedMerchant.currency) ? activeAsset : selectedMerchant.currency }}</span>
               </div>
             </div>
             <!-- Total -->
             <div class="mt-3 flex items-center justify-between rounded-xl bg-[#f6f8fb] px-4 py-3">
-              <p class="text-[11px] font-bold text-gray-400">I will {{ selectedMerchant.type === 'buy' ? 'receive' : 'pay' }}</p>
-              <p class="text-[16px] font-bold text-[#0ba99d]">≈ {{ tradeReceive }} <span class="text-[11px] text-gray-400">{{ activeAsset }}</span></p>
+              <p class="text-[11px] font-bold text-gray-400">I will {{ selectedMerchant.type === 'buy' ? (isFiatLocalCurrency(selectedMerchant.currency) ? 'pay' : 'receive') : (isFiatLocalCurrency(selectedMerchant.currency) ? 'receive' : 'pay') }}</p>
+              <p class="text-[16px] font-bold text-[#0ba99d]">≈ {{ tradeReceive }} <span class="text-[11px] text-gray-400">{{ isFiatLocalCurrency(selectedMerchant.currency) ? selectedMerchant.currency : activeAsset }}</span></p>
             </div>
             <!-- Bank info (shown when buying) -->
             <div v-if="selectedMerchant.type === 'buy' && (selectedMerchant.bank_name || selectedMerchant.bank_account)" class="mt-3 rounded-xl border border-dashed border-[#0ba99d]/40 bg-[#f0fffd] px-4 py-3 space-y-1">
@@ -519,7 +519,7 @@
               <Icon icon="mdi:check-circle-outline" class="text-[52px] text-[#10b8ad]" />
             </div>
             <h3 class="mt-4 text-[16px] font-bold text-[#17212f]">Order Placed!</h3>
-            <p class="mt-2 text-[12px] font-semibold text-gray-400">{{ activeTab }} {{ tradeAmount }} {{ selectedMerchant?.currency }} · {{ activeAsset }}</p>
+            <p class="mt-2 text-[12px] font-semibold text-gray-400">{{ activeTab }} {{ tradeAmount }} {{ selectedMerchant && isFiatLocalCurrency(selectedMerchant.currency) ? activeAsset : selectedMerchant?.currency }} · {{ selectedMerchant && isFiatLocalCurrency(selectedMerchant.currency) ? selectedMerchant.currency : activeAsset }}</p>
             <p class="mt-1 text-[10px] font-semibold text-gray-400">Waiting for merchant confirmation</p>
             <div class="mt-4 w-full rounded-xl bg-[#f6f8fb] px-4 py-3 text-left space-y-2">
               <div class="flex justify-between">
@@ -527,8 +527,8 @@
                 <span class="text-[10px] font-bold text-[#17212f]">{{ selectedMerchant?.name }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-[10px] font-bold text-gray-400">You receive</span>
-                <span class="text-[10px] font-bold text-[#0ba99d]">{{ tradeReceive }} {{ activeAsset }}</span>
+                <span class="text-[10px] font-bold text-gray-400">{{ selectedMerchant && isFiatLocalCurrency(selectedMerchant.currency) ? 'You pay' : 'You receive' }}</span>
+                <span class="text-[10px] font-bold text-[#0ba99d]">{{ tradeReceive }} {{ selectedMerchant && isFiatLocalCurrency(selectedMerchant.currency) ? selectedMerchant.currency : activeAsset }}</span>
               </div>
             </div>
             <button @click="showSuccess = false; tradeAmount = ''; selectedMerchant = null" class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-bold text-white active:scale-95">Done</button>
@@ -750,15 +750,37 @@ const bestMerchant = computed(() => filteredMerchants.value[0] ?? null)
 const quickReceive = computed(() => {
   const n = parseFloat(quickAmount.value)
   if (!n || !bestMerchant.value) return '0.00'
-  const price = bestMerchant.value.priceRaw
-  return price ? (n / price).toFixed(6) : '0.00'
+  const price    = bestMerchant.value.priceRaw
+  const currency = bestMerchant.value.currency
+  if (!price) return '0.00'
+  if (isFiatLocalCurrency(currency)) {
+    const fiatAmount = n * price
+    return INTEGER_CURRENCIES.has(currency)
+      ? fiatAmount.toLocaleString('id-ID', { maximumFractionDigits: 0 })
+      : fiatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+  return (n / price).toFixed(6)
 })
+
+function isFiatLocalCurrency(currency: string): boolean {
+  return currency !== 'USD' && currency !== 'USDT'
+}
 
 const tradeReceive = computed(() => {
   const n = parseFloat(tradeAmount.value)
   if (!n || !selectedMerchant.value) return '0.00'
-  const price = selectedMerchant.value.priceRaw
-  return price ? (n / price).toFixed(6) : '0.00'
+  const price    = selectedMerchant.value.priceRaw
+  const currency = selectedMerchant.value.currency
+  if (!price) return '0.00'
+  if (isFiatLocalCurrency(currency)) {
+    // input is asset (USDT/BTC), output is local fiat (IDR, etc.)
+    const fiatAmount = n * price
+    return INTEGER_CURRENCIES.has(currency)
+      ? fiatAmount.toLocaleString('id-ID', { maximumFractionDigits: 0 })
+      : fiatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+  // input is USD, output is asset
+  return (n / price).toFixed(6)
 })
 
 // ─── Actions ──────────────────────────────────────────────

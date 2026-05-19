@@ -65,24 +65,48 @@
             <!-- STATS -->
             <div class="mt-5 grid grid-cols-3 divide-x divide-gray-100">
               <div>
-                <div class="flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
+                <div class="relative flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
                   Est. Daily Reward
-                  <Icon icon="mdi:information-outline" class="text-[13px]" />
+                  <button type="button" @click.stop="showDailyRewardTip = !showDailyRewardTip; showAvgAprTip = false; showActivePosTip = false" class="active:scale-90">
+                    <Icon icon="mdi:information-outline" class="text-[13px]" />
+                  </button>
+                  <Transition enter-from-class="opacity-0 scale-95" enter-active-class="transition duration-150" leave-to-class="opacity-0 scale-95" leave-active-class="transition duration-100">
+                    <div v-if="showDailyRewardTip" class="absolute bottom-full left-0 z-20 mb-1.5 w-48 rounded-xl bg-[#17212f] px-3 py-2 text-[10px] font-semibold leading-relaxed text-white shadow-lg">
+                      Estimated daily earnings based on your total staked amount and APR of each position.
+                      <div class="absolute -bottom-1 left-3 h-2 w-2 rotate-45 bg-[#17212f]"></div>
+                    </div>
+                  </Transition>
                 </div>
                 <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">{{ formatAmount(summary.daily_reward) }} USDT</p>
                 <p class="mt-1 text-[11px] font-medium text-[#7a86a4]">≈ ${{ formatAmount(summary.daily_reward) }}</p>
               </div>
               <div class="px-4">
-                <div class="flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
+                <div class="relative flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
                   Avg APR
-                  <Icon icon="mdi:information-outline" class="text-[13px]" />
+                  <button type="button" @click.stop="showAvgAprTip = !showAvgAprTip; showDailyRewardTip = false; showActivePosTip = false" class="active:scale-90">
+                    <Icon icon="mdi:information-outline" class="text-[13px]" />
+                  </button>
+                  <Transition enter-from-class="opacity-0 scale-95" enter-active-class="transition duration-150" leave-to-class="opacity-0 scale-95" leave-active-class="transition duration-100">
+                    <div v-if="showAvgAprTip" class="absolute bottom-full left-0 z-20 mb-1.5 w-48 rounded-xl bg-[#17212f] px-3 py-2 text-[10px] font-semibold leading-relaxed text-white shadow-lg">
+                      Weighted average Annual Percentage Rate across all your active staking positions.
+                      <div class="absolute -bottom-1 left-3 h-2 w-2 rotate-45 bg-[#17212f]"></div>
+                    </div>
+                  </Transition>
                 </div>
                 <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">{{ summary.avg_apr }}%</p>
               </div>
               <div class="pl-4">
-                <div class="flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
+                <div class="relative flex items-center gap-1 text-[11px] font-medium text-[#7a86a4]">
                   Active Positions
-                  <Icon icon="mdi:information-outline" class="text-[13px]" />
+                  <button type="button" @click.stop="showActivePosTip = !showActivePosTip; showDailyRewardTip = false; showAvgAprTip = false" class="active:scale-90">
+                    <Icon icon="mdi:information-outline" class="text-[13px]" />
+                  </button>
+                  <Transition enter-from-class="opacity-0 scale-95" enter-active-class="transition duration-150" leave-to-class="opacity-0 scale-95" leave-active-class="transition duration-100">
+                    <div v-if="showActivePosTip" class="absolute bottom-full right-0 z-20 mb-1.5 w-48 rounded-xl bg-[#17212f] px-3 py-2 text-[10px] font-semibold leading-relaxed text-white shadow-lg">
+                      Number of staking positions currently active and earning rewards.
+                      <div class="absolute -bottom-1 right-3 h-2 w-2 rotate-45 bg-[#17212f]"></div>
+                    </div>
+                  </Transition>
                 </div>
                 <p class="mt-2 text-[16px] font-semibold text-[#20c7b7]">{{ summary.active_positions }}</p>
               </div>
@@ -260,9 +284,9 @@
                   v-model="stakeAmount"
                   type="number"
                   placeholder="0.00"
-                  class="flex-1 bg-transparent text-[13px] font-semibold text-[#17212f] outline-none placeholder:text-gray-400"
+                  class="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#17212f] outline-none placeholder:text-gray-400"
                 />
-                <span class="text-[11px] font-semibold text-gray-400">{{ selectedProduct.asset }}</span>
+                <span class="shrink-0 pl-2 text-[11px] font-semibold text-gray-400">{{ selectedProduct.asset }}</span>
               </div>
             </div>
             <button
@@ -482,6 +506,11 @@ const selectedProduct = ref<StakingProduct | null>(null)
 const showHowItWorks = ref(false)
 const stakeAmount = ref('')
 const stakeLoading = ref(false)
+
+// Tooltip visibility
+const showDailyRewardTip = ref(false)
+const showAvgAprTip      = ref(false)
+const showActivePosTip   = ref(false)
 
 const showTnC = ref(false)
 const tncScrolledToBottom = ref(false)
