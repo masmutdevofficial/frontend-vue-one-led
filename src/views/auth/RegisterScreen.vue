@@ -184,7 +184,7 @@
       </div>
 
       <div class="mt-4 grid gap-3">
-        <button type="button" class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50" @click="signInWithGoogle">
+        <button type="button" class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50" @click="enterFullscreen(); signInWithGoogle()">
           <img src="/images/google-logo.png" alt="google logo" class="size-5 object-contain" />
           <span>Continue with Google</span>
         </button>
@@ -205,6 +205,7 @@ import { Icon } from '@iconify/vue'
 import { useAuthStore, ApiError } from '../../stores/auth'
 import { useToast } from '../../composables/useToast'
 import { useOAuth } from '../../composables/useOAuth'
+import { enterFullscreen } from '../../composables/useFullscreen'
 
 const router = useRouter()
 const auth   = useAuthStore()
@@ -220,6 +221,7 @@ const showPassword = ref(false)
 const loading      = ref(false)
 
 async function handleRegister() {
+  enterFullscreen()
   if (!email.value || !password.value || !referral.value) {
     toast.warning('Email, password, and referral code are required.')
     return

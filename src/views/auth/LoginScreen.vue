@@ -115,7 +115,7 @@
       </div>
 
       <div class="mt-4 grid gap-3">
-        <button type="button" class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50" @click="signInWithGoogle">
+        <button type="button" class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50" @click="enterFullscreen(); signInWithGoogle()">
           <img src="/images/google-logo.png" alt="google logo" class="size-5 object-contain" />
           <span>Continue with Google</span>
         </button>
@@ -148,6 +148,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
+import { enterFullscreen } from '@/composables/useFullscreen'
 import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/browser'
 import { useAuthStore, ApiError } from '../../stores/auth'
 import { authApi } from '../../services/api'
@@ -173,6 +174,7 @@ const twoFaCode   = ref('')
 const twoFaError  = ref('')
 
 async function handleLogin() {
+  enterFullscreen()
   if (!email.value || !password.value) {
     toast.warning('Please enter your email and password.')
     return
@@ -210,6 +212,7 @@ async function handle2Fa() {
 }
 
 async function handlePasskeyLogin() {
+  enterFullscreen()
   if (!passkeySupported.value) {
     toast.error('Passkeys are not supported on this device.')
     return

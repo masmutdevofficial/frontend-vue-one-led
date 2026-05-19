@@ -19,11 +19,11 @@
             The secure and effortless way to send, store, and grow your crypto with total peace of mind.
           </p>
           <div class="mt-5 grid gap-3 sm:max-w-[240px]">
-            <button type="button" class="flex items-center rounded-xl bg-slate-950 px-4 py-3 text-xs font-normal text-white shadow-lg shadow-slate-950/15 sm:px-5 sm:py-4 sm:text-sm" @click="router.push('/login')">
+            <button type="button" class="flex items-center rounded-xl bg-slate-950 px-4 py-3 text-xs font-normal text-white shadow-lg shadow-slate-950/15 sm:px-5 sm:py-4 sm:text-sm" @click="enterFullscreen(); router.push('/login')">
               <span class="flex-1">Get Started</span>
               <Icon icon="mdi:arrow-right" class="size-5" />
             </button>
-            <button type="button" class="rounded-xl border-[2px] border-slate-950 bg-white px-4 py-3 text-xs font-normal text-slate-950 sm:px-5 sm:py-4 sm:text-sm" @click="router.push('/register')">
+            <button type="button" class="rounded-xl border-[2px] border-slate-950 bg-white px-4 py-3 text-xs font-normal text-slate-950 sm:px-5 sm:py-4 sm:text-sm" @click="enterFullscreen(); router.push('/register')">
               Sign Up Free
             </button>
           </div>
@@ -143,6 +143,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { enterFullscreen } from '@/composables/useFullscreen'
 import VueApexCharts from 'vue3-apexcharts'
 import CoinIcon from '@/components/CoinIcon.vue'
 import { useMarketStore, coinIconClass } from '@/stores/market'
