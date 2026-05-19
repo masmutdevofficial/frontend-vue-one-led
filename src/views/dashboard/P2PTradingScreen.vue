@@ -234,7 +234,7 @@
               <article
                 v-for="merchant in filteredMerchants"
                 :key="merchant.name"
-                class="rounded-3xl bg-white px-5 py-5 shadow-[0_4px_20px_rgba(0,0,0,0.07)] transition hover:shadow-[0_8px_30px_rgba(0,0,0,0.10)] md:px-8 md:py-7"
+                class="relative rounded-3xl bg-white px-5 py-5 shadow-[0_4px_20px_rgba(0,0,0,0.07)] transition hover:shadow-[0_8px_30px_rgba(0,0,0,0.10)] md:px-8 md:py-7"
               >
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-[260px_1fr_auto] md:items-start md:gap-8">
 
@@ -294,10 +294,23 @@
                   <!-- Button -->
                   <div class="flex md:self-start">
                     <button
-                      @click="openTrade(merchant)"
+                      @click="hasBankAccount ? openTrade(merchant) : router.push('/verification')"
                       class="h-11 w-full rounded-2xl text-[14px] font-semibold transition active:scale-[0.98] md:h-auto md:w-auto md:px-10 md:py-4 md:text-[17px]"
                       :class="merchant.type === 'buy' ? 'bg-[#0ba99d] text-white hover:bg-[#099990]' : 'bg-[#ffe8eb] text-[#f05b6b] hover:bg-[#ffd5d9]'"
                     >{{ merchant.action }}</button>
+                  </div>
+
+                  <!-- Blur overlay when no bank account -->
+                  <div
+                    v-if="!hasBankAccount"
+                    class="absolute inset-0 rounded-3xl backdrop-blur-[3px] bg-white/60 flex items-center justify-center cursor-pointer"
+                    @click="router.push('/verification')"
+                  >
+                    <div class="flex flex-col items-center gap-2 px-4 text-center">
+                      <Icon icon="mdi:bank-lock-outline" class="text-[32px] text-amber-500" />
+                      <p class="text-[12px] font-bold text-slate-700">Bank account required</p>
+                      <p class="text-[11px] font-semibold text-slate-400">Tap to verify your bank account</p>
+                    </div>
                   </div>
 
                 </div>
@@ -778,6 +791,8 @@ onUnmounted(() => clearInterval(p2pPollingTimer))
 watch([activeTab, activeAsset], () => fetchMerchants())
 
 // ─── Computed ─────────────────────────────────────────────
+const hasBankAccount = computed(() => !!authStore.profile?.bank_account)
+
 const filteredMerchants = computed(() => {
   const list = merchants.value.filter(m => {
     if (activePayments.value.length > 0) {

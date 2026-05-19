@@ -67,7 +67,7 @@ function openModal(key: ModalKey) {
   submitError.value  = ''
   identityForm.value = { full_name: '', id_number: '', file: null, preview: '' }
   selfieForm.value   = { file: null, preview: '' }
-  bankForm.value     = { bank: auth.profile?.bank ?? '', bank_account: auth.profile?.bank_account ?? '' }
+  bankForm.value     = { bank: auth.profile?.bank ?? '', bank_account: auth.profile?.bank_account ?? '', country: auth.profile?.country ?? '' }
 }
 
 function closeModal() {
@@ -151,7 +151,7 @@ async function submitSelfie() {
 }
 
 // ── Bank form ───────────────────────────────────────────────────────────────
-const bankForm = ref({ bank: '', bank_account: '' })
+const bankForm = ref({ bank: '', bank_account: '', country: '' })
 
 async function submitBank() {
   if (!auth.accessToken) return
@@ -161,6 +161,7 @@ async function submitBank() {
     await makeUserApi(auth.accessToken).updateProfile({
       bank:         bankForm.value.bank         || undefined,
       bank_account: bankForm.value.bank_account || undefined,
+      country:      bankForm.value.country      || undefined,
     })
     await auth.refreshProfile()
     lastDone.value    = 'bank'
@@ -283,6 +284,11 @@ async function submitBank() {
               <div>
                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">Account Number</label>
                 <input v-model="bankForm.bank_account" type="text" inputmode="numeric" placeholder="Enter your bank account number"
+                  class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100" />
+              </div>
+              <div>
+                <label class="mb-1.5 block text-sm font-semibold text-slate-700">Country / Region</label>
+                <input v-model="bankForm.country" type="text" placeholder="e.g. Indonesia, Malaysia"
                   class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100" />
               </div>
               <button type="submit" :disabled="submitting"
