@@ -218,7 +218,7 @@
                 :key="merchant.name"
                 class="rounded-3xl bg-white px-5 py-5 shadow-[0_4px_20px_rgba(0,0,0,0.07)] transition hover:shadow-[0_8px_30px_rgba(0,0,0,0.10)] md:px-8 md:py-7"
               >
-                <div class="grid grid-cols-1 gap-5 md:grid-cols-[260px_1fr_auto] md:items-center md:gap-8">
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-[260px_1fr_auto] md:items-start md:gap-8">
 
                   <!-- Seller -->
                   <div class="flex items-center gap-4 md:gap-6">
@@ -251,17 +251,17 @@
                   <div>
                     <p class="mb-1 text-[11px] font-medium text-gray-400">Price</p>
                     <div class="flex items-end gap-2">
-                      <span class="text-[26px] font-semibold leading-none tracking-wide text-[#17212f] md:text-[32px]">{{ merchant.price }}</span>
+                      <span class="text-[16px] font-semibold leading-none tracking-wide text-[#17212f] md:text-[32px]">{{ merchant.price }}</span>
                       <span class="pb-0.5 text-[13px] font-medium text-gray-500 md:text-[16px]">{{ merchant.currency }}</span>
                     </div>
                     <div class="mt-5 space-y-3 md:mt-6">
                       <div class="grid grid-cols-[100px_1fr] text-[12px] md:grid-cols-[130px_1fr] md:text-[14px]">
                         <span class="font-medium text-gray-400">Limit</span>
-                        <span class="font-semibold text-[#344054]">{{ merchant.limit }}</span>
+                        <span class="font-semibold text-[#344054]">{{ merchant.limit }} USDT</span>
                       </div>
                       <div class="grid grid-cols-[100px_1fr] text-[12px] md:grid-cols-[130px_1fr] md:text-[14px]">
                         <span class="font-medium text-gray-400">Available</span>
-                        <span class="font-semibold text-[#344054]">{{ merchant.available }}</span>
+                        <span class="font-semibold text-[#344054]">{{ merchant.available }} USDT</span>
                       </div>
                       <div class="grid grid-cols-[100px_1fr] items-center text-[12px] md:grid-cols-[130px_1fr] md:text-[14px]">
                         <span class="font-medium text-gray-400">Payment</span>
