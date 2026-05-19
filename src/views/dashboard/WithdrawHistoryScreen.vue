@@ -61,22 +61,27 @@
 
         <!-- FILTER TABS -->
         <section class="mt-4 px-4">
-          <div class="flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-sm">
-            <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 rounded-2xl border border-gray-100 bg-white px-3 py-3 shadow-sm">
+            <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-none">
               <button
                 v-for="status in statuses"
                 :key="status"
                 @click="activeStatus = status"
-                class="h-10 rounded-xl px-4 text-xs font-semibold transition"
+                class="relative h-9 shrink-0 rounded-xl px-3 text-xs font-semibold transition"
                 :class="activeStatus === status ? 'bg-[#f6f8fb] text-[#08a99f] shadow-sm' : 'text-[#5b6d9a]'"
               >
                 {{ status }}
+                <span
+                  v-if="activeStatus === status"
+                  class="absolute bottom-0 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-[#08a99f]"
+                ></span>
               </button>
             </div>
 
-            <button class="flex items-center gap-1 text-sm font-semibold text-[#17212f]">
+            <button class="shrink-0 flex items-center gap-1 text-xs font-semibold text-[#17212f] whitespace-nowrap">
+              <Icon icon="mdi:sort-variant" class="text-base" />
               All Time
-              <Icon icon="mdi:chevron-down" class="text-[18px]" />
+              <Icon icon="mdi:chevron-down" class="text-[15px]" />
             </button>
           </div>
         </section>
