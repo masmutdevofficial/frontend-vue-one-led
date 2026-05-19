@@ -211,75 +211,77 @@
               <button @click="clearFilters" class="mt-4 rounded-xl bg-[#eafffd] px-4 py-2 text-[11px] font-bold text-[#0ba99d] active:scale-95">Clear Filters</button>
             </div>
 
-            <!-- 1-col mobile / 2-col tablet / 1-col inside lg panel -->
-            <div v-else-if="!isLoading" class="grid gap-3 md:grid-cols-2 lg:grid-cols-1">
+            <!-- 1-col mobile / 1-col inside lg panel -->
+            <div v-else-if="!isLoading" class="flex flex-col gap-3">
               <article
                 v-for="merchant in filteredMerchants"
                 :key="merchant.name"
-                class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md md:p-5"
+                class="rounded-3xl bg-white px-5 py-5 shadow-[0_4px_20px_rgba(0,0,0,0.07)] transition hover:shadow-[0_8px_30px_rgba(0,0,0,0.10)] md:px-8 md:py-7"
               >
-                <!-- Header row -->
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex items-center gap-3">
-                    <div class="relative shrink-0">
-                      <img :src="merchant.avatar" :alt="merchant.name" class="h-11 w-11 rounded-full object-cover md:h-12 md:w-12" @error="($event.target as HTMLImageElement).src = '/images/user-default.png'" />
-                      <span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white" :class="merchant.onlineType === 'online' ? 'bg-[#0ba99d]' : 'bg-orange-400'"></span>
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-[260px_1fr_auto] md:items-center md:gap-8">
+
+                  <!-- Seller -->
+                  <div class="flex items-center gap-4 md:gap-6">
+                    <div class="relative h-16 w-16 shrink-0 md:h-20 md:w-20">
+                      <img :src="merchant.avatar" :alt="merchant.name" class="h-16 w-16 rounded-full object-cover md:h-20 md:w-20" @error="($event.target as HTMLImageElement).src = '/images/user-default.png'" />
+                      <span class="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white md:h-4 md:w-4" :class="merchant.onlineType === 'online' ? 'bg-emerald-500' : 'bg-orange-400'"></span>
                     </div>
-                    <div class="min-w-0">
-                      <div class="flex items-center gap-1.5">
-                        <p class="text-[13px] font-semibold text-[#17212f]">{{ merchant.name }}</p>
-                        <Icon icon="mdi:check-decagram" class="shrink-0 text-[14px] text-[#0ba99d]" />
-                      </div>
-                      <div class="mt-1 flex items-center gap-2 text-[10px] font-semibold">
-                        <span class="flex items-center gap-0.5 text-gray-400">
-                          <Icon icon="mdi:thumb-up-outline" class="text-[11px]" />
-                          {{ merchant.completion }}
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <h3 class="text-[15px] font-semibold tracking-wide text-[#17212f] md:text-[17px]">{{ merchant.name }}</h3>
+                        <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#0ba99d]">
+                          <Icon icon="mdi:check" class="text-[10px] text-white" />
                         </span>
-                        <span class="text-gray-300">&middot;</span>
-                        <span class="text-gray-400">{{ merchant.orders }} orders</span>
-                        <span class="text-gray-300">&middot;</span>
-                        <span :class="merchant.onlineType === 'online' ? 'text-[#0ba99d]' : 'text-orange-400'">{{ merchant.online }}</span>
+                      </div>
+                      <div class="mt-3 flex items-center gap-3 text-[12px] text-gray-500 md:mt-4 md:text-[14px]">
+                        <span>{{ merchant.completion }}</span>
+                        <span class="flex items-center gap-1.5">
+                          <Icon icon="mdi:thumb-up-outline" class="text-[13px] md:text-[15px]" />
+                          {{ merchant.orders }}
+                        </span>
+                      </div>
+                      <div class="mt-3 flex items-center gap-2 text-[12px] text-gray-500 md:mt-4 md:text-[14px]">
+                        <span class="h-2.5 w-2.5 rounded-full md:h-3 md:w-3" :class="merchant.onlineType === 'online' ? 'bg-emerald-500' : 'bg-orange-400'"></span>
+                        <span>{{ merchant.online }}</span>
                       </div>
                     </div>
                   </div>
-                  <button
-                    @click="openTrade(merchant)"
-                    class="h-9 w-20 shrink-0 rounded-xl text-[12px] font-bold active:scale-95 transition-transform md:h-10 md:w-24"
-                    :class="merchant.type === 'buy' ? 'bg-[#08a99f] text-white' : 'bg-[#ffe8eb] text-[#f05b6b]'"
-                  >{{ merchant.action }}</button>
-                </div>
 
-                <div class="my-3 h-px bg-gray-100"></div>
-
-                <!-- Price + details -->
-                <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
+                  <!-- Offer detail -->
                   <div>
-                    <p class="text-[9px] font-bold uppercase tracking-wide text-gray-400">Price</p>
-                    <div class="mt-1 flex items-baseline gap-1">
-                      <span class="text-[20px] font-bold leading-none text-[#17212f] md:text-[22px]">{{ merchant.price }}</span>
-                      <span class="text-[10px] font-semibold text-gray-400">{{ merchant.currency }}</span>
+                    <p class="mb-1 text-[11px] font-medium text-gray-400">Price</p>
+                    <div class="flex items-end gap-2">
+                      <span class="text-[26px] font-semibold leading-none tracking-wide text-[#17212f] md:text-[32px]">{{ merchant.price }}</span>
+                      <span class="pb-0.5 text-[13px] font-medium text-gray-500 md:text-[16px]">{{ merchant.currency }}</span>
+                    </div>
+                    <div class="mt-5 space-y-3 md:mt-6">
+                      <div class="grid grid-cols-[100px_1fr] text-[12px] md:grid-cols-[130px_1fr] md:text-[14px]">
+                        <span class="font-medium text-gray-400">Limit</span>
+                        <span class="font-semibold text-[#344054]">{{ merchant.limit }}</span>
+                      </div>
+                      <div class="grid grid-cols-[100px_1fr] text-[12px] md:grid-cols-[130px_1fr] md:text-[14px]">
+                        <span class="font-medium text-gray-400">Available</span>
+                        <span class="font-semibold text-[#344054]">{{ merchant.available }}</span>
+                      </div>
+                      <div class="grid grid-cols-[100px_1fr] items-center text-[12px] md:grid-cols-[130px_1fr] md:text-[14px]">
+                        <span class="font-medium text-gray-400">Payment</span>
+                        <div class="flex items-center gap-3">
+                          <Icon v-for="(payment, idx) in merchant.payments" :key="idx" :icon="payment.icon" class="text-[18px] md:text-[22px]" :class="payment.color" />
+                          <span v-if="merchant.more" class="text-[12px] font-semibold text-gray-400 md:text-[14px]">{{ merchant.more }}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <p class="text-[9px] font-bold uppercase tracking-wide text-gray-400">Available</p>
-                    <p class="mt-1 text-[11px] font-semibold text-[#344054]">{{ merchant.available }}</p>
-                  </div>
-                  <div class="col-span-2 md:col-span-1">
-                    <p class="text-[9px] font-bold uppercase tracking-wide text-gray-400">Limit</p>
-                    <p class="mt-1 text-[11px] font-semibold text-[#344054]">{{ merchant.limit }}</p>
-                  </div>
-                </div>
 
-                <!-- Payment + region -->
-                <div class="mt-3 flex items-center gap-2">
-                  <p class="text-[9px] font-bold text-gray-400">Payment</p>
-                  <div class="flex items-center gap-1.5">
-                    <Icon v-for="(payment, idx) in merchant.payments" :key="idx" :icon="payment.icon" class="text-[14px]" :class="payment.color" />
-                    <span class="rounded-md bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold text-gray-500">{{ merchant.more }}</span>
+                  <!-- Button -->
+                  <div class="flex md:self-start">
+                    <button
+                      @click="openTrade(merchant)"
+                      class="h-11 w-full rounded-2xl text-[14px] font-semibold transition active:scale-[0.98] md:h-auto md:w-auto md:px-10 md:py-4 md:text-[17px]"
+                      :class="merchant.type === 'buy' ? 'bg-[#0ba99d] text-white hover:bg-[#099990]' : 'bg-[#ffe8eb] text-[#f05b6b] hover:bg-[#ffd5d9]'"
+                    >{{ merchant.action }}</button>
                   </div>
-                  <span class="ml-auto flex items-center gap-0.5 rounded-lg bg-gray-50 px-2 py-0.5 text-[9px] font-bold text-gray-400">
-                    <Icon icon="mdi:map-marker-outline" class="text-[10px]" />{{ merchant.region }}
-                  </span>
+
                 </div>
               </article>
             </div>
