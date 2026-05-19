@@ -295,7 +295,6 @@ export const p2pApi = {
   },
   getStats: () => request<{ stats: { key: string; label: string; value_text: string; change_text: string }[] }>('GET', '/p2p/stats'),
 }
-
 // ── Staking API types ─────────────────────────────────────────────────────────
 
 export interface StakingPosition {

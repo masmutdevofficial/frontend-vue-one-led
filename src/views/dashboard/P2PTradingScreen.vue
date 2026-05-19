@@ -410,6 +410,33 @@
       <Transition enter-from-class="opacity-0" enter-active-class="transition-opacity duration-200" leave-to-class="opacity-0" leave-active-class="transition-opacity duration-200">
         <div v-if="showTradeModal" @click="showTradeModal = false" class="fixed inset-0 z-40 bg-black/40"></div>
       </Transition>
+
+      <!-- ══════════════ ROOM PASSWORD MODAL ══════════════ -->
+      <Transition enter-from-class="opacity-0" enter-active-class="transition-opacity duration-200" leave-to-class="opacity-0" leave-active-class="transition-opacity duration-200">
+        <div v-if="showPasswordModal" @click="showPasswordModal = false" class="fixed inset-0 z-40 bg-black/40"></div>
+      </Transition>
+      <Transition enter-from-class="translate-y-full" enter-active-class="transition-transform duration-300" leave-to-class="translate-y-full" leave-active-class="transition-transform duration-300">
+        <div v-if="showPasswordModal" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
+          <div class="flex justify-center pt-3"><div class="h-1 w-10 rounded-full bg-gray-200"></div></div>
+          <div class="px-4 pb-8 pt-4">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <p class="text-[14px] font-bold text-[#17212f]">Enter Room Password</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">This merchant requires a password to proceed</p>
+              </div>
+              <button @click="showPasswordModal = false"><Icon icon="mdi:close" class="text-[22px] text-gray-400" /></button>
+            </div>
+            <div class="flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-3 focus-within:border-[#0ba99d]">
+              <Icon icon="mdi:lock-outline" class="text-[18px] text-gray-400 shrink-0" />
+              <input v-model="passwordInput" type="password" placeholder="Room password" class="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#17212f] outline-none placeholder:text-gray-300" />
+            </div>
+            <p v-if="passwordError" class="mt-2 text-[11px] font-semibold text-rose-500">{{ passwordError }}</p>
+            <button @click="submitPassword" class="mt-4 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-bold text-white active:scale-95">
+              Enter Room
+            </button>
+          </div>
+        </div>
+      </Transition>
       <Transition enter-from-class="translate-y-full" enter-active-class="transition-transform duration-300" leave-to-class="translate-y-full" leave-active-class="transition-transform duration-300">
         <div v-if="showTradeModal && selectedMerchant" class="fixed inset-x-0 bottom-[75px] left-1/2 z-50 w-full  -translate-x-1/2 rounded-t-2xl bg-white shadow-2xl">
           <div class="flex justify-center pt-3"><div class="h-1 w-10 rounded-full bg-gray-200"></div></div>
@@ -458,16 +485,24 @@
               <p class="text-[11px] font-bold text-gray-400">I will {{ selectedMerchant.type === 'buy' ? 'receive' : 'pay' }}</p>
               <p class="text-[16px] font-bold text-[#0ba99d]">≈ {{ tradeReceive }} <span class="text-[11px] text-gray-400">{{ activeAsset }}</span></p>
             </div>
+            <!-- Bank info (shown when buying) -->
+            <div v-if="selectedMerchant.type === 'buy' && (selectedMerchant.bank_name || selectedMerchant.bank_account)" class="mt-3 rounded-xl border border-dashed border-[#0ba99d]/40 bg-[#f0fffd] px-4 py-3 space-y-1">
+              <p class="text-[10px] font-bold text-[#0ba99d] uppercase tracking-wider">Payment destination</p>
+              <p v-if="selectedMerchant.bank_name" class="text-[12px] font-bold text-[#17212f]">{{ selectedMerchant.bank_name }}</p>
+              <p v-if="selectedMerchant.bank_account" class="text-[12px] font-semibold text-gray-500">{{ selectedMerchant.bank_account }}</p>
+              <p v-if="selectedMerchant.display_name" class="text-[11px] font-semibold text-gray-400">a/n {{ selectedMerchant.display_name }}</p>
+            </div>
             <!-- Buttons -->
             <div class="mt-5 flex gap-3">
               <button @click="showTradeModal = false" class="h-12 flex-1 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-500 active:scale-95">Cancel</button>
               <button
                 @click="confirmTrade"
-                :disabled="!tradeAmount || Number(tradeAmount) <= 0"
+                :disabled="!tradeAmount || Number(tradeAmount) <= 0 || tradeLoading"
                 class="h-12 flex-1 rounded-xl text-[12px] font-semibold text-white active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 :class="selectedMerchant.type === 'buy' ? 'bg-[#08a99f]' : 'bg-[#f05b6b]'"
-              >Confirm {{ selectedMerchant.action }}</button>
+              >{{ tradeLoading ? 'Placing Order…' : `Confirm ${selectedMerchant.action}` }}</button>
             </div>
+            <p v-if="tradeError" class="mt-3 text-center text-[11px] font-semibold text-rose-500">{{ tradeError }}</p>
           </div>
         </div>
       </Transition>
@@ -512,10 +547,12 @@ import { Icon } from '@iconify/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CoinIcon from '@/components/CoinIcon.vue'
 import { useMarketStore, coinIconClass } from '@/stores/market'
-import { p2pApi } from '@/services/api'
+import { p2pApi, makeApi } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const marketStore = useMarketStore()
+const authStore = useAuthStore()
 
 // ─── Interfaces ────────────────────────────────────────────
 interface Asset { name: string; icon: string; color: string; bg: string }
@@ -523,10 +560,13 @@ interface Stat  { title: string; value: string; change: string }
 interface PaymentOption { label: string; icon: string; color: string }
 interface Payment { icon: string; color: string; label: string }
 interface Merchant {
+  id: number | string
   name: string; avatar: string; completion: string; orders: string
   online: string; onlineType: string; price: string; priceRaw: number; currency: string
   limit: string; available: string; action: string; type: string
   asset: string; region: string; payments: Payment[]; more: string
+  bank_name: string; bank_account: string; display_name: string
+  has_room_password: boolean
 }
 
 // ─── State ────────────────────────────────────────────────
@@ -549,6 +589,14 @@ const showTradeModal   = ref(false)
 const selectedMerchant = ref<Merchant | null>(null)
 const tradeAmount      = ref('')
 const showSuccess      = ref(false)
+const tradeLoading     = ref(false)
+const tradeError       = ref('')
+
+// Room password modal
+const showPasswordModal   = ref(false)
+const passwordInput       = ref('')
+const passwordTarget      = ref<Merchant | null>(null)
+const passwordError       = ref('')
 
 // Quick trade sidebar
 const quickAmount = ref('')
@@ -619,7 +667,12 @@ function mapApiMerchant(m: any): Merchant {
   const shown   = payments.slice(0, 3)
   const extra   = payments.length > 3 ? `+${payments.length - 3}` : ''
   return {
-    name:       m.name       || `Merchant ${m.id}`,
+    id:                m.id,
+    name:              m.name       || `Merchant ${m.id}`,
+    display_name:      m.display_name || m.name || `Merchant ${m.id}`,
+    bank_name:         m.bank_name   || '',
+    bank_account:      m.bank_account || '',
+    has_room_password: !!m.has_room_password,
     avatar:     m.avatar     || '/images/user-default.png',
     completion: `${Number(m.completion_rate ?? 0).toFixed(2)}%`,
     orders:     Number(m.total_trades ?? 0).toLocaleString(),
@@ -738,21 +791,74 @@ function clearFilters() {
 }
 
 function openTrade(merchant: Merchant) {
+  if (merchant.has_room_password) {
+    passwordTarget.value = merchant
+    passwordInput.value  = ''
+    passwordError.value  = ''
+    showPasswordModal.value = true
+    return
+  }
   selectedMerchant.value = merchant
   tradeAmount.value      = ''
+  tradeError.value       = ''
+  showTradeModal.value   = true
+}
+
+function submitPassword() {
+  if (!passwordInput.value.trim()) { passwordError.value = 'Enter the room password.'; return }
+  // Password will be validated server-side on order submission
+  selectedMerchant.value = passwordTarget.value
+  tradeAmount.value      = ''
+  tradeError.value       = ''
+  showPasswordModal.value = false
   showTradeModal.value   = true
 }
 
 function openQuickTrade() {
   if (!bestMerchant.value || !quickAmount.value) return
+  if (bestMerchant.value.has_room_password) {
+    passwordTarget.value = bestMerchant.value
+    passwordInput.value  = ''
+    passwordError.value  = ''
+    showPasswordModal.value = true
+    return
+  }
   selectedMerchant.value = bestMerchant.value
   tradeAmount.value      = quickAmount.value
+  tradeError.value       = ''
   showTradeModal.value   = true
 }
 
-function confirmTrade() {
+async function confirmTrade() {
   if (!tradeAmount.value || Number(tradeAmount.value) <= 0) return
-  showTradeModal.value = false
-  showSuccess.value    = true
+  if (!authStore.accessToken) {
+    tradeError.value = 'You must be logged in to trade.'; return
+  }
+  tradeLoading.value = true
+  tradeError.value   = ''
+  try {
+    const api = makeApi(authStore.accessToken)
+    await api.post('/p2p/order', {
+      type:          activeTab.value.toLowerCase(),
+      asset:         activeAsset.value,
+      amount:        parseFloat(tradeAmount.value),
+      merchant_id:   selectedMerchant.value?.id,
+      merchant_name: selectedMerchant.value?.display_name || selectedMerchant.value?.name,
+      ...(selectedMerchant.value?.has_room_password ? { room_password: passwordInput.value } : {}),
+    })
+    showTradeModal.value = false
+    showSuccess.value    = true
+  } catch (err: any) {
+    const msg = err?.body?.error?.message ?? err?.message ?? 'Order failed. Please try again.'
+    if (msg.toLowerCase().includes('password')) {
+      showTradeModal.value = false
+      passwordError.value  = 'Wrong room password — please try again.'
+      showPasswordModal.value = true
+    } else {
+      tradeError.value = msg
+    }
+  } finally {
+    tradeLoading.value = false
+  }
 }
 </script>
