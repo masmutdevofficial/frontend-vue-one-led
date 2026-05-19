@@ -153,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
@@ -183,7 +183,10 @@ async function loadWithdrawals() {
   finally { loading.value = false }
 }
 
-onMounted(loadWithdrawals)
+let pollingTimer: ReturnType<typeof setInterval>
+
+onMounted(() => { loadWithdrawals(); pollingTimer = setInterval(loadWithdrawals, 10_000) })
+onUnmounted(() => clearInterval(pollingTimer))
 
 // ─── Coin/network meta ─────────────────────────────────────────────
 interface CoinMeta { icon: string; iconClass: string }
