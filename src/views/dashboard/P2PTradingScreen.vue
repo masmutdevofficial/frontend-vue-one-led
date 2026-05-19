@@ -222,7 +222,7 @@
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex items-center gap-3">
                     <div class="relative shrink-0">
-                      <img :src="merchant.avatar" :alt="merchant.name" class="h-11 w-11 rounded-full object-cover md:h-12 md:w-12" />
+                      <img :src="merchant.avatar" :alt="merchant.name" class="h-11 w-11 rounded-full object-cover md:h-12 md:w-12" @error="($event.target as HTMLImageElement).src = '/images/user-default.png'" />
                       <span class="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white" :class="merchant.onlineType === 'online' ? 'bg-[#0ba99d]' : 'bg-orange-400'"></span>
                     </div>
                     <div class="min-w-0">
@@ -416,7 +416,7 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2.5">
                 <div class="relative">
-                  <img :src="selectedMerchant.avatar" :alt="selectedMerchant.name" class="h-10 w-10 rounded-full object-cover" />
+                  <img :src="selectedMerchant.avatar" :alt="selectedMerchant.name" class="h-10 w-10 rounded-full object-cover" @error="($event.target as HTMLImageElement).src = '/images/user-default.png'" />
                   <span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white" :class="selectedMerchant.onlineType === 'online' ? 'bg-[#0ba99d]' : 'bg-orange-400'"></span>
                 </div>
                 <div>
@@ -571,12 +571,20 @@ const assets = computed<Asset[]>(() =>
   }))
 )
 
-const stats: Stat[] = [
-  { title: 'Total Trades',      value: '12,542',   change: '+18.45% (7D)' },
-  { title: 'Completion Rate',   value: '98.65%',   change: '+0.72% (7D)'  },
-  { title: 'Avg. Release Time', value: '2.45 min', change: '-0.18 min (7D)' },
-  { title: 'Active Merchants',  value: '12,843',   change: '+6.21% (7D)'  },
-]
+const stats = ref<Stat[]>([])
+
+async function fetchStats() {
+  try {
+    const data = await p2pApi.getStats()
+    stats.value = (data.stats ?? []).map(s => ({
+      title:  s.label,
+      value:  s.value_text,
+      change: s.change_text,
+    }))
+  } catch {
+    stats.value = []
+  }
+}
 
 const paymentOptions: PaymentOption[] = [
   { label: 'Bank Transfer', icon: 'mdi:bank',                color: 'text-[#3778ff]'  },
@@ -610,7 +618,7 @@ function mapApiMerchant(m: any): Merchant {
   const extra   = payments.length > 3 ? `+${payments.length - 3}` : ''
   return {
     name:       m.name       || `Merchant ${m.id}`,
-    avatar:     m.avatar     || `https://i.pravatar.cc/120?u=${m.id}`,
+    avatar:     m.avatar     || '/images/user-default.png',
     completion: `${Number(m.completion_rate ?? 0).toFixed(2)}%`,
     orders:     Number(m.total_trades ?? 0).toLocaleString(),
     online:     m.online_type === 'online' ? 'Online' : 'In Trade',
@@ -642,7 +650,7 @@ async function fetchMerchants() {
   }
 }
 
-onMounted(() => { marketStore.fetchCoins(); fetchMerchants() })
+onMounted(() => { marketStore.fetchCoins(); fetchMerchants(); fetchStats() })
 watch([activeTab, activeAsset], () => fetchMerchants())
 
 // ─── Computed ─────────────────────────────────────────────

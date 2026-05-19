@@ -293,6 +293,7 @@ export const p2pApi = {
     const query = params.toString()
     return request<{ merchants: any[] }>('GET', `/p2p/merchants${query ? '?' + query : ''}`)
   },
+  getStats: () => request<{ stats: { key: string; label: string; value_text: string; change_text: string }[] }>('GET', '/p2p/stats'),
 }
 
 // ── Staking API types ─────────────────────────────────────────────────────────
