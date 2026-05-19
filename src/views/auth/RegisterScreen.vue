@@ -184,7 +184,7 @@
       </div>
 
       <div class="mt-4 grid gap-3">
-        <button type="button" class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50" @click="enterFullscreen(); signInWithGoogle()">
+        <button type="button" class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-medium tracking-wide text-slate-950 shadow-sm transition hover:bg-slate-50" @click="enterFullscreen().then(() => signInWithGoogle())">
           <img src="/images/google-logo.png" alt="google logo" class="size-5 object-contain" />
           <span>Continue with Google</span>
         </button>
