@@ -616,12 +616,10 @@ import CoinIcon from '@/components/CoinIcon.vue'
 import { useMarketStore, coinIconClass } from '@/stores/market'
 import { p2pApi, makeApi, makeP2PApi, type P2PAccountInfo } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
-import { useMarketWs, onP2PMerchantUpdate, offP2PMerchantUpdate } from '@/services/marketWs'
 
 const router = useRouter()
 const marketStore = useMarketStore()
 const authStore = useAuthStore()
-useMarketWs() // keep WS connection alive so p2p_merchant_updated messages are received
 
 // ─── Interfaces ────────────────────────────────────────────
 interface Asset { name: string; icon: string; color: string; bg: string }
@@ -772,6 +770,17 @@ async function fetchMerchants() {
   try {
     const data = await p2pApi.getMerchants(activeTab.value.toLowerCase(), activeAsset.value)
     merchants.value = (data.merchants ?? []).map(mapApiMerchant)
+    // If account details are currently displayed, patch them from the refreshed merchant list
+    if (accountInfo.value && selectedMerchant.value) {
+      const updated = merchants.value.find(m => String(m.id) === String(selectedMerchant.value!.id))
+      if (updated) {
+        accountInfo.value = {
+          display_name: updated.display_name || accountInfo.value.display_name,
+          bank_name:    updated.bank_name    || accountInfo.value.bank_name,
+          bank_account: updated.bank_account || accountInfo.value.bank_account,
+        }
+      }
+    }
   } catch {
     // silently fall back to empty list — no auth error expected (public endpoint)
     merchants.value = []
@@ -782,33 +791,15 @@ async function fetchMerchants() {
 
 let p2pPollingTimer: ReturnType<typeof setInterval>
 
-function handleMerchantUpdate(update: { id: number; display_name?: string; bank_name?: string; bank_account?: string }) {
-  const idx = merchants.value.findIndex(m => m.id === update.id)
-  if (idx === -1) return
-  const m = merchants.value[idx]
-  merchants.value = [
-    ...merchants.value.slice(0, idx),
-    {
-      ...m,
-      ...(update.display_name !== undefined ? { name: update.display_name, display_name: update.display_name } : {}),
-      ...(update.bank_name    !== undefined ? { bank_name:    update.bank_name    } : {}),
-      ...(update.bank_account !== undefined ? { bank_account: update.bank_account } : {}),
-    },
-    ...merchants.value.slice(idx + 1),
-  ]
-}
-
 onMounted(() => {
   marketStore.fetchCoins()
   fetchMerchants()
   fetchStats()
   p2pPollingTimer = setInterval(fetchMerchants, 10_000)
   if (authStore.isAuthenticated && !authStore.profile) authStore.refreshProfile()
-  onP2PMerchantUpdate(handleMerchantUpdate)
 })
 onUnmounted(() => {
   clearInterval(p2pPollingTimer)
-  offP2PMerchantUpdate(handleMerchantUpdate)
 })
 watch([activeTab, activeAsset], () => fetchMerchants())
 
