@@ -1194,7 +1194,8 @@ const placeOrderLoading = ref(false)
 async function fetchCoinBalances() {
   if (!tradeApi.value) return
   try {
-    const { balances } = await tradeApi.value.getBalances()
+    const { total, balances } = await tradeApi.value.getBalances()
+    if (auth.user) auth.user.balance = total
     const map: Record<string, number> = {}
     for (const b of balances) map[b.coin.toUpperCase()] = Number(b.amount)
     coinBalanceMap.value = map

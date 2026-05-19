@@ -218,7 +218,7 @@ export function makeTradeApi(token: string) {
       request<{ success: boolean }>('PATCH', `/trade/orders/${encodeURIComponent(id)}/cancel`, undefined, token),
     cancelAll:    () => api.post<{ cancelled: number }>('/trade/orders/cancel-all', {}),
     getPositions: () => api.get<{ positions: FuturesPosition[] }>('/trade/positions'),
-    getBalances:  () => api.get<{ balances: { coin: string; amount: string }[] }>('/trade/balances'),
+    getBalances:  () => api.get<UserBalance>('/balance'),
   }
 }
 
@@ -279,8 +279,7 @@ export function makeWalletApi(token: string) {
       api.get<{ transfers: TransferRecord[] }>('/wallet/transfers'),
     sendTransfer:   (body: { recipient: string; amount: number; coin?: string; note?: string }) =>
       api.post<{ transfer: { id: string; amount: number; coin: string; recipient_name: string } }>('/wallet/transfers', body),
-    getCoinBalances: () =>
-      api.get<{ balances: { coin: string; amount: string }[] }>('/trade/balances'),
+    getCoinBalances: () => api.get<UserBalance>('/balance'),
   }
 }
 
