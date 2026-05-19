@@ -503,6 +503,38 @@
       </div>
     </Transition>
 
+    <!-- ═══════════ FUTURES NOTICE MODAL ═══════════ -->
+    <Transition name="fade">
+      <div v-if="showNotice" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div class="w-full max-w-sm rounded-2xl bg-white px-6 py-6 shadow-xl">
+          <div class="mb-4 flex items-center gap-3">
+            <span class="text-2xl leading-none text-yellow-400">⚠</span>
+            <h2 class="text-[18px] font-semibold tracking-wide text-gray-900">Notice</h2>
+          </div>
+          <div class="space-y-4 text-[14px] leading-relaxed tracking-wide text-gray-500">
+            <p>
+              Your account is still new.<br />
+              The Futures Trading feature will be available once your account has been active for a longer period.
+            </p>
+            <p>
+              This is to ensure security and provide you with the best trading experience.<br />
+              Thank you for your understanding.
+            </p>
+          </div>
+          <div class="mt-6 flex justify-end">
+            <button
+              type="button"
+              @click="showNotice = false"
+              class="rounded-xl border border-gray-200 px-6 py-2.5 text-[14px] font-medium text-gray-700 shadow-sm active:scale-95"
+            >OK</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Overlay blocking interaction after notice dismissed -->
+    <div v-if="!showNotice" class="fixed inset-0 z-40 cursor-not-allowed bg-transparent"></div>
+
   </DashboardLayout>
 
 
@@ -560,6 +592,7 @@ const leverage          = ref(20)
 const marginMode        = ref('Isolated')
 const showLeverageSheet = ref(false)
 const showMarginSheet   = ref(false)
+const showNotice        = ref(true)
 
 // ── Balance from auth store ───────────────────────────────────
 const availableBalance = computed(() => Number(auth.user?.balance ?? 0))

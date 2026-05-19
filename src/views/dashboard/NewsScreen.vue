@@ -112,7 +112,7 @@
       >
         <div
           v-if="activeNews"
-          class="fixed inset-x-0 bottom-[75px] z-50 mx-auto max-w-107.5 overflow-hidden rounded-t-3xl bg-white shadow-2xl"
+          class="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-107.5 overflow-hidden rounded-t-3xl bg-white shadow-2xl"
         >
           <img :src="activeNews.image" :alt="activeNews.title" class="h-48 w-full object-cover" />
           <div class="px-5 pt-4 pb-10">
