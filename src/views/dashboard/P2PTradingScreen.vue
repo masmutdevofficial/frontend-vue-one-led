@@ -180,6 +180,24 @@
           <img src="/images/p2p-banner.webp" alt="P2P" class="absolute right-4 top-1/2 h-20 w-20 -translate-y-1/2 object-contain md:right-6 md:h-24 md:w-24" />
         </div>
 
+        <!-- Bank Account Notice -->
+        <div
+          v-if="authStore.isAuthenticated && authStore.profile && !authStore.profile.bank_account"
+          class="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4"
+        >
+          <Icon icon="mdi:alert-circle-outline" class="mt-0.5 size-5 shrink-0 text-amber-500" />
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold text-slate-800">Bank account not verified</p>
+            <p class="mt-0.5 text-xs text-slate-500">Please verify your bank account to participate in P2P trading.</p>
+          </div>
+          <button
+            @click="router.push('/verification')"
+            class="shrink-0 rounded-xl bg-amber-500 px-4 py-1.5 text-xs font-bold text-white transition active:scale-95"
+          >
+            Verify Now
+          </button>
+        </div>
+
         <!-- TWO-PANEL layout on desktop: list (left) + sidebar (right) -->
         <div class="mt-4 lg:mt-5 lg:grid lg:grid-cols-[1fr_280px] lg:gap-5 xl:grid-cols-[1fr_300px]">
 
@@ -754,6 +772,7 @@ onMounted(() => {
   fetchMerchants()
   fetchStats()
   p2pPollingTimer = setInterval(fetchMerchants, 10_000)
+  if (authStore.isAuthenticated && !authStore.profile) authStore.refreshProfile()
 })
 onUnmounted(() => clearInterval(p2pPollingTimer))
 watch([activeTab, activeAsset], () => fetchMerchants())
