@@ -295,6 +295,21 @@ export const p2pApi = {
   },
   getStats: () => request<{ stats: { key: string; label: string; value_text: string; change_text: string }[] }>('GET', '/p2p/stats'),
 }
+
+export interface P2PAccountInfo {
+  display_name: string
+  bank_name:    string
+  bank_account: string
+}
+
+/** Authenticated P2P helpers */
+export function makeP2PApi(token: string) {
+  const api = makeApi(token)
+  return {
+    requestAccount: (merchant_id: number | string, order_id?: string) =>
+      api.post<P2PAccountInfo>('/p2p/request-account', { merchant_id, ...(order_id ? { order_id } : {}) }),
+  }
+}
 // ── Staking API types ─────────────────────────────────────────────────────────
 
 export interface StakingPosition {

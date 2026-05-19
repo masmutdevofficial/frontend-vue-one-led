@@ -531,7 +531,43 @@
                 <span class="text-[10px] font-bold text-[#0ba99d]">{{ tradeReceive }} {{ selectedMerchant && isFiatLocalCurrency(selectedMerchant.currency) ? selectedMerchant.currency : activeAsset }}</span>
               </div>
             </div>
-            <button @click="showSuccess = false; tradeAmount = ''; selectedMerchant = null" class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-bold text-white active:scale-95">Done</button>
+
+            <!-- Bank info revealed after request -->
+            <Transition enter-from-class="opacity-0 -translate-y-2" enter-active-class="transition-all duration-300">
+              <div v-if="accountRequested && accountInfo" class="mt-3 w-full rounded-xl border border-dashed border-[#0ba99d]/50 bg-[#f0fffd] px-4 py-3 text-left space-y-2">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-[#0ba99d]">Merchant Account Details</p>
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold text-gray-400">Name</span>
+                  <span class="text-[11px] font-bold text-[#17212f]">{{ accountInfo.display_name || '–' }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold text-gray-400">Bank</span>
+                  <span class="text-[11px] font-bold text-[#17212f]">{{ accountInfo.bank_name || '–' }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold text-gray-400">Account No.</span>
+                  <span class="text-[11px] font-bold text-[#17212f]">{{ accountInfo.bank_account || '–' }}</span>
+                </div>
+              </div>
+            </Transition>
+
+            <!-- CTA: Request Account Bank → then Done -->
+            <button
+              v-if="!accountRequested"
+              @click="requestAccount"
+              :disabled="accountLoading"
+              class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-bold text-white active:scale-95 disabled:opacity-60"
+            >
+              <span v-if="accountLoading" class="flex items-center justify-center gap-2">
+                <Icon icon="mdi:loading" class="animate-spin text-[18px]" /> Requesting…
+              </span>
+              <span v-else>Request Account Bank</span>
+            </button>
+            <button
+              v-else
+              @click="showSuccess = false; tradeAmount = ''; selectedMerchant = null; accountRequested = false; accountInfo = null; lastOrderId = ''"
+              class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-bold text-white active:scale-95"
+            >Done</button>
           </div>
         </div>
       </Transition>
@@ -547,7 +583,7 @@ import { Icon } from '@iconify/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CoinIcon from '@/components/CoinIcon.vue'
 import { useMarketStore, coinIconClass } from '@/stores/market'
-import { p2pApi, makeApi } from '@/services/api'
+import { p2pApi, makeApi, makeP2PApi, type P2PAccountInfo } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -600,6 +636,12 @@ const passwordError       = ref('')
 
 // Quick trade sidebar
 const quickAmount = ref('')
+
+// Account bank request (success sheet flow)
+const lastOrderId       = ref('')
+const accountRequested  = ref(false)
+const accountLoading    = ref(false)
+const accountInfo       = ref<P2PAccountInfo | null>(null)
 
 // Merchants loaded from API
 const merchants = ref<Merchant[]>([])
@@ -860,7 +902,7 @@ async function confirmTrade() {
   tradeError.value   = ''
   try {
     const api = makeApi(authStore.accessToken)
-    await api.post('/p2p/order', {
+    const res = await api.post('/p2p/order', {
       type:          activeTab.value.toLowerCase(),
       asset:         activeAsset.value,
       amount:        parseFloat(tradeAmount.value),
@@ -868,6 +910,10 @@ async function confirmTrade() {
       merchant_name: selectedMerchant.value?.display_name || selectedMerchant.value?.name,
       ...(selectedMerchant.value?.has_room_password ? { room_password: passwordInput.value } : {}),
     })
+    lastOrderId.value      = (res as any).id ?? ''
+    accountRequested.value = false
+    accountLoading.value   = false
+    accountInfo.value      = null
     showTradeModal.value = false
     showSuccess.value    = true
   } catch (err: any) {
@@ -881,6 +927,22 @@ async function confirmTrade() {
     }
   } finally {
     tradeLoading.value = false
+  }
+}
+
+async function requestAccount() {
+  if (!authStore.accessToken || !selectedMerchant.value) return
+  accountLoading.value = true
+  try {
+    const p2p = makeP2PApi(authStore.accessToken)
+    const info = await p2p.requestAccount(selectedMerchant.value.id, lastOrderId.value || undefined)
+    accountInfo.value      = info
+    accountRequested.value = true
+  } catch {
+    accountRequested.value = true   // still flip so we can at least show the done button
+    accountInfo.value      = null
+  } finally {
+    accountLoading.value = false
   }
 }
 </script>
