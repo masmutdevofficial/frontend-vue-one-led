@@ -154,16 +154,13 @@ const marketStore = useMarketStore()
 const { tickerMap } = useMarketWs()
 const apexchart = VueApexCharts
 
-// 5 default coins to display on the landing page
-const DEFAULT_SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'POL']
+// 2 default coins to display on the landing page
+const DEFAULT_SYMBOLS = ['BTC', 'ETH']
 
-// Demo holdings just for the landing balance display
+// Demo holdings for the total balance display only
 const DEMO_HOLDINGS: Record<string, number> = {
   BTC: 0.05,
   ETH: 1.5,
-  BNB: 5,
-  SOL: 20,
-  POL: 1000,
 }
 
 interface Feature {
@@ -185,19 +182,24 @@ function getTicker(sym: string) {
 }
 
 // ── Computed coin rows ────────────────────────────────────────────
+function formatCoinPrice(price: number): string {
+  if (price >= 1000) return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  if (price >= 1) return '$' + price.toFixed(2)
+  return '$' + price.toFixed(6)
+}
+
 const displayCoins = computed(() =>
   DEFAULT_SYMBOLS.map(sym => {
     const meta    = marketStore.coinMap.get(sym)
     const ticker  = getTicker(sym)
     const price   = ticker?.price ?? 0
     const change  = ticker?.change ?? 0
-    const holding = DEMO_HOLDINGS[sym] ?? 1
     return {
       symbol:    sym,
       name:      meta?.name ?? sym,
       icon:      meta?.icon ?? 'mdi:currency-usd',
       iconClass: coinIconClass(sym),
-      amount:    price > 0 ? fmtUsd(price * holding) : '…',
+      amount:    price > 0 ? formatCoinPrice(price) : '…',
       change:    (change >= 0 ? '+' : '') + change.toFixed(2) + '%',
       positive:  change >= 0,
     }
