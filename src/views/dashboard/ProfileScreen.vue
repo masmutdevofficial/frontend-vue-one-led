@@ -82,13 +82,16 @@
 
             <div>
               <label class="mb-1.5 block text-sm font-semibold text-slate-700">Email</label>
-              <input
-                v-model="editForm.email"
-                type="email"
-                autocomplete="off"
-                placeholder="Enter your email address"
-                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-100"
-              />
+              <div class="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500 select-none">
+                {{ auth.profile?.email ?? auth.user?.email ?? '—' }}
+              </div>
+              <p v-if="isGoogleUser" class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                <Icon icon="flat-color-icons:google" class="size-3.5" />
+                Linked to Google — email cannot be changed
+              </p>
+              <p v-else class="mt-1.5 text-xs font-medium text-slate-400">
+                Email cannot be changed
+              </p>
             </div>
 
             <button
@@ -442,9 +445,12 @@ const saveError            = ref('')
 const savingBank           = ref(false)
 const bankError            = ref('')
 
+const isGoogleUser = computed(() =>
+  !!(auth.user?.profile?.includes('googleusercontent.com'))
+)
+
 const editForm = ref({
-  name:  '',
-  email: '',
+  name: '',
 })
 
 const bankForm = ref({
@@ -455,8 +461,7 @@ const bankForm = ref({
 
 function openEdit() {
   editForm.value = {
-    name:  auth.profile?.username ?? auth.user?.username ?? '',
-    email: auth.profile?.email   ?? auth.user?.email    ?? '',
+    name: auth.profile?.username ?? auth.user?.username ?? '',
   }
   saveError.value = ''
   showEditProfile.value = true
@@ -468,8 +473,7 @@ async function submitEdit() {
   saveError.value = ''
   try {
     await makeUserApi(auth.accessToken).updateProfile({
-      username: editForm.value.name  || undefined,
-      email:    editForm.value.email || undefined,
+      username: editForm.value.name || undefined,
     })
     await auth.refreshProfile()
     showEditProfile.value = false
