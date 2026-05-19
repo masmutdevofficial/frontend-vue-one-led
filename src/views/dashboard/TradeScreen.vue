@@ -266,7 +266,7 @@
             <span class="text-[11px] font-bold text-gray-400">Available</span>
             <div class="flex items-center gap-2">
               <span class="text-[12px] font-semibold text-gray-500 md:text-[13px]">{{ availableDisplay }}</span>
-              <button class="flex h-6 w-6 items-center justify-center rounded-full border border-[#10b8ad] text-[#10b8ad]">
+              <button class="flex h-6 w-6 items-center justify-center rounded-full border border-[#10b8ad] text-[#10b8ad]" @click="$router.push('/add-funds')">
                 <Icon icon="mdi:plus" class="text-[16px]" />
               </button>
             </div>
