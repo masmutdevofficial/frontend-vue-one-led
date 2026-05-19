@@ -38,7 +38,7 @@
               <div class="absolute right-0 top-0 h-full w-[52%] bg-linear-to-l from-violet-100/80 via-violet-50/70 to-transparent"></div>
               <div class="relative z-10 flex h-full items-center justify-between px-5">
                 <div class="max-w-47.5">
-                  <p class="text-[10px] font-semibold text-gray-600">Follow Elite Traders</p>
+                  <p class="text-[12px] font-semibold text-gray-600">Follow Elite Traders</p>
                   <h1 class="mt-1 text-[24px] font-extrabold leading-[1.05] text-[#1f2937]">
                     Copy Trade &amp;<br /><span class="text-violet-500">Earn</span> Daily
                   </h1>
@@ -60,7 +60,7 @@
               <div class="absolute right-0 top-0 h-full w-[52%] bg-linear-to-l from-amber-100/80 via-amber-50/70 to-transparent"></div>
               <div class="relative z-10 flex h-full items-center justify-between px-5">
                 <div class="max-w-47.5">
-                  <p class="text-[10px] font-semibold text-gray-600">Join &amp; Win Rewards</p>
+                  <p class="text-[12px] font-semibold text-gray-600">Join &amp; Win Rewards</p>
                   <h1 class="mt-1 text-[24px] font-extrabold leading-[1.05] text-[#1f2937]">
                     Events &amp;<br /><span class="text-amber-500">Rewards</span> Await
                   </h1>
@@ -251,34 +251,37 @@
             </button>
           </div>
           <!-- Header -->
-          <div class="mt-3 grid grid-cols-4 gap-x-2 text-[8px] font-bold text-gray-400">
-            <span>Name</span><span class="text-center">Last Price</span><span class="text-center">24h Chg%</span><span></span>
+          <div class="mt-3 flex items-center text-[8px] font-bold text-gray-400">
+            <span class="flex-1">Name</span>
+            <span class="w-20 text-center shrink-0">Last Price</span>
+            <span class="w-28 text-center shrink-0">24h Chg%</span>
+            <span class="w-5 shrink-0"></span>
           </div>
           <!-- Rows -->
           <div class="mt-2 space-y-3">
             <div
               v-for="coin in displayedMarkets"
               :key="coin.symbol"
-              class="grid grid-cols-4 items-center gap-x-2 cursor-pointer rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              class="flex items-center cursor-pointer rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
               @click="router.push('/trade/' + coin.symbol.toLowerCase())"
             >
               <!-- Name + icon -->
-              <div class="flex items-center gap-2">
+              <div class="flex flex-1 min-w-0 items-center gap-2">
                 <div class="flex h-7 w-7 shrink-0 items-center justify-center">
                   <CoinIcon :icon="coin.icon" :symbol="coin.symbol" icon-class="text-[26px]" img-class="h-7 w-7 rounded-full object-contain" />
                 </div>
                 <div class="min-w-0">
                   <p class="text-[10px] font-extrabold leading-none">{{ coin.symbol }}</p>
-                  <p class="mt-1 text-[8px] text-gray-400 wrap-break-word">{{ coin.fullName }}</p>
+                  <p class="mt-1 text-[8px] text-gray-400 truncate">{{ coin.fullName }}</p>
                 </div>
               </div>
               <!-- Last Price -->
-              <div class="flex flex-col items-center">
+              <div class="w-20 shrink-0 flex flex-col items-center">
                 <p class="text-[10px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
                 <p class="mt-1 text-[8px] text-gray-400">${{ formatPrice(coin.price) }}</p>
               </div>
               <!-- 24h Change + mini spline chart -->
-              <div class="flex items-center justify-center gap-1">
+              <div class="w-28 shrink-0 flex items-center justify-center gap-1">
                 <p class="text-[10px] font-bold" :class="coin.change >= 0 ? 'text-emerald-500' : 'text-red-400'">
                   {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
                 </p>
@@ -302,7 +305,7 @@
                 </svg>
               </div>
               <!-- Star -->
-              <button class="justify-self-center" @click.stop="toggleFavorite(coin.symbol)">
+              <button class="shrink-0 ml-1 w-5 flex items-center justify-center" @click.stop="toggleFavorite(coin.symbol)">
                 <Icon
                   :icon="favorites.has(coin.symbol) ? 'mdi:star' : 'mdi:star-outline'"
                   class="text-[16px] transition-colors"
