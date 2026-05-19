@@ -36,6 +36,26 @@ interface RawTick {
   q: string  // quote volume (unused here)
 }
 
+// ── P2P merchant update callbacks ─────────────────────────────────────────────
+
+export interface P2PMerchantUpdate {
+  id:           number
+  display_name: string | undefined
+  bank_name:    string | undefined
+  bank_account: string | undefined
+}
+
+type P2PMerchantUpdateCb = (update: P2PMerchantUpdate) => void
+const _p2pCbs = new Set<P2PMerchantUpdateCb>()
+
+export function onP2PMerchantUpdate(cb: P2PMerchantUpdateCb): void {
+  _p2pCbs.add(cb)
+}
+
+export function offP2PMerchantUpdate(cb: P2PMerchantUpdateCb): void {
+  _p2pCbs.delete(cb)
+}
+
 // ── Singleton state ───────────────────────────────────────────────────────────
 
 const WS_URL: string = 'wss://api.one-led.io/ws'
@@ -94,6 +114,8 @@ function connect(): void {
         msg.tickers.forEach((t: RawTick) => applyTick(t))
       } else if (msg.type === 'ticker') {
         applyTick(msg as RawTick)
+      } else if (msg.type === 'p2p_merchant_updated' && msg.merchant) {
+        for (const cb of _p2pCbs) cb(msg.merchant as P2PMerchantUpdate)
       }
     } catch {
       // ignore malformed frames
