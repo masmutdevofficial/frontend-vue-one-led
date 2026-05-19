@@ -577,7 +577,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
@@ -747,7 +747,15 @@ async function fetchMerchants() {
   }
 }
 
-onMounted(() => { marketStore.fetchCoins(); fetchMerchants(); fetchStats() })
+let p2pPollingTimer: ReturnType<typeof setInterval>
+
+onMounted(() => {
+  marketStore.fetchCoins()
+  fetchMerchants()
+  fetchStats()
+  p2pPollingTimer = setInterval(fetchMerchants, 10_000)
+})
+onUnmounted(() => clearInterval(p2pPollingTimer))
 watch([activeTab, activeAsset], () => fetchMerchants())
 
 // ─── Computed ─────────────────────────────────────────────

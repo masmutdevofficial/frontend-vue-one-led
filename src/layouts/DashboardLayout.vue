@@ -404,10 +404,14 @@ function onClickOutsideNotif(e: MouseEvent) {
 onMounted(() => {
   fetchNotifUnreadCount()
   document.addEventListener('click', onClickOutsideNotif, true)
+  pollingTimer = setInterval(fetchNotifUnreadCount, 10_000)
 })
 onBeforeUnmount(() => {
   document.removeEventListener('click', onClickOutsideNotif, true)
+  clearInterval(pollingTimer)
 })
+
+let pollingTimer: ReturnType<typeof setInterval>
 
 // ── Search overlay ────────────────────────────────────────────
 const searchOpen      = ref(false)
