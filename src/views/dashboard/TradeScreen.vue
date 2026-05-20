@@ -440,7 +440,7 @@
             </div>
             <!-- Mobile: card view -->
             <div v-else class="divide-y divide-gray-100 md:hidden">
-              <div v-for="order in openOrdersList" :key="order.id" class="px-4 py-4">
+              <div v-for="order in openOrdersWithDistance" :key="order.id" class="px-4 py-4">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2.5">
                     <div class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500">
@@ -456,7 +456,7 @@
                   </div>
                   <button class="rounded-xl border border-red-100 bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-400 active:scale-95" @click="cancelOrder(order.id)">Cancel</button>
                 </div>
-                <div class="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[#f6f8fb] px-3 py-2.5">
+                <div class="mt-3 grid grid-cols-4 gap-2 rounded-xl bg-[#f6f8fb] px-3 py-2.5">
                   <div>
                     <p class="text-[9px] font-bold text-gray-400">Price</p>
                     <p class="mt-0.5 text-[11px] font-semibold text-[#17212f]">{{ order.price ? formatPrice(Number(order.price)) : 'Market' }}</p>
@@ -469,19 +469,25 @@
                     <p class="text-[9px] font-bold text-gray-400">Filled</p>
                     <p class="mt-0.5 text-[11px] font-semibold text-[#17212f]">{{ Number(order.amount) > 0 ? ((Number(order.filled) / Number(order.amount)) * 100).toFixed(0) + '%' : '0%' }}</p>
                   </div>
+                  <div>
+                    <p class="text-[9px] font-bold text-gray-400">Distance</p>
+                    <p class="mt-0.5 text-[11px] font-semibold" :class="order.distancePct > 0 ? 'text-red-400' : order.distancePct < 0 ? 'text-[#10b8ad]' : 'text-gray-500'">
+                      {{ order.distancePct >= 0 ? '+' : '' }}{{ order.distancePct.toFixed(2) }}%
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
             <!-- Desktop: table view -->
             <div v-if="openOrdersList.length > 0" class="hidden md:block">
-              <div class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.7fr] gap-2 border-b border-gray-100 px-4 py-3 text-[11px] font-bold text-gray-400">
-                <span>Pair / Type</span><span>Side</span><span>Price</span><span>Amount</span><span>Filled</span><span>Total</span><span class="text-right">Action</span>
+              <div class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.8fr_0.5fr] gap-2 border-b border-gray-100 px-4 py-3 text-[11px] font-bold text-gray-400">
+                <span>Pair / Type</span><span>Side</span><span>Price</span><span>Amount</span><span>Filled</span><span>Total</span><span>Distance</span><span class="text-right">Action</span>
               </div>
               <div>
                 <div
-                  v-for="order in openOrdersList"
+                  v-for="order in openOrdersWithDistance"
                   :key="order.id"
-                  class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.7fr] items-center gap-2 border-b border-gray-100 px-4 py-4 last:border-b-0"
+                  class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.8fr_0.5fr] items-center gap-2 border-b border-gray-100 px-4 py-4 last:border-b-0"
                 >
                   <div class="flex items-center gap-3">
                     <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500">
@@ -500,6 +506,9 @@
                     <p class="mt-1 text-[11px] font-semibold text-gray-400">{{ Number(order.filled).toFixed(4) }}</p>
                   </div>
                   <span class="text-[13px] font-semibold text-[#17212f]">{{ order.total ? formatPrice(Number(order.total)) : '—' }}</span>
+                  <span class="text-[13px] font-semibold" :class="order.distancePct > 0 ? 'text-red-400' : order.distancePct < 0 ? 'text-[#10b8ad]' : 'text-gray-500'">
+                    {{ order.distancePct >= 0 ? '+' : '' }}{{ order.distancePct.toFixed(2) }}%
+                  </span>
                   <button class="text-right text-[13px] font-semibold text-red-400 active:scale-95" @click="cancelOrder(order.id)">Cancel</button>
                 </div>
               </div>
@@ -965,6 +974,61 @@ function tick() {
     pct:      Math.max(5, Math.min(100, e.pct + (Math.random() - 0.5) * 14)),
   }))
   pushRecentTrade(p)
+  checkPendingLimitFills()
+}
+
+/**
+ * Tick-level check: for each pending limit order, if the live market price
+ * has crossed the order price (Buy: market ≤ limit price, Sell: market ≥ limit price),
+ * auto-fill it and move to Positions.
+ */
+function checkPendingLimitFills() {
+  if (pendingLimitIds.value.size === 0) return
+  const marketPrice = livePrice.value
+  if (marketPrice <= 0) return
+
+  const filledIds: string[] = []
+  for (const order of openOrdersList.value) {
+    if (!pendingLimitIds.value.has(order.id)) continue
+    const orderPrice = Number(order.price)
+    if (orderPrice <= 0) continue
+    // Buy limit: order fills when market price drops to or below the limit price
+    if (order.side === 'Buy' && marketPrice <= orderPrice) {
+      filledIds.push(order.id)
+    }
+    // Sell limit: order fills when market price rises to or above the limit price
+    if (order.side === 'Sell' && marketPrice >= orderPrice) {
+      filledIds.push(order.id)
+    }
+  }
+
+  if (filledIds.length === 0) return
+
+  // Remove filled IDs from pending set
+  const newPending = new Set(pendingLimitIds.value)
+  for (const id of filledIds) newPending.delete(id)
+  pendingLimitIds.value = newPending
+
+  // Move filled orders from open to history; update balances & positions
+  const filledOrders = openOrdersList.value.filter(o => filledIds.includes(o.id))
+  openOrdersList.value = openOrdersList.value.filter(o => !filledIds.includes(o.id))
+  for (const o of filledOrders) {
+    historyList.value = [{ ...o, status: 'filled' as any }, ...historyList.value]
+  }
+  fetchCoinBalances()
+  fetchPositions()
+
+  // Show modal for the first filled order
+  const first = filledOrders[0]
+  if (first) {
+    filledOrderNotif.value = {
+      symbol: first.symbol,
+      side:   first.side,
+      amount: Number(first.amount),
+      price:  first.price ? Number(first.price) : null,
+    }
+    activeBottomTab.value = 'positions'
+  }
 }
 
 onMounted(() => {
@@ -995,9 +1059,10 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(timer)
   destroyChart()
-  // Clean up any pending fill-watch intervals
+  // Clean up any pending fill-watch intervals / market fill timers
   for (const t of orderFillTimers.values()) clearInterval(t)
   orderFillTimers.clear()
+  pendingLimitIds.value = new Set()
 })
 
 // Watch the SYMBOL STRING (primitive), not the baseCoin object.
@@ -1352,6 +1417,24 @@ const placeOrderLoading = ref(false)
 const filledOrderNotif = ref<{ symbol: string; side: 'Buy' | 'Sell'; amount: number; price: number | null } | null>(null)
 const orderFillTimers  = new Map<string, number>()
 
+// ── Pending limit orders (client-side price matching) ─────────
+// Orders placed via Limit tab stay here until livePrice crosses the limit price.
+// Market orders skip this and fill immediately via a short timer.
+const pendingLimitIds = ref<Set<string>>(new Set())
+
+/** Enriched open orders with a `distancePct` field showing % from market price. */
+const openOrdersWithDistance = computed(() =>
+  openOrdersList.value.map(o => {
+    const orderPrice = Number(o.price)
+    const marketPrice = livePrice.value
+    let distancePct = 0
+    if (orderPrice > 0 && marketPrice > 0) {
+      distancePct = ((marketPrice - orderPrice) / orderPrice) * 100
+    }
+    return { ...o, distancePct }
+  })
+)
+
 // Spot holdings: non-USDT coins with a positive balance (shown in Positions tab)
 const spotHoldings = computed(() =>
   Object.entries(coinBalanceMap.value)
@@ -1447,6 +1530,10 @@ async function cancelOrder(id: string) {
     // Stop watching BEFORE cancelling to prevent false fill modal
     const t = orderFillTimers.get(id)
     if (t !== undefined) { clearInterval(t); orderFillTimers.delete(id) }
+    // Remove from pending limit set
+    const newPending = new Set(pendingLimitIds.value)
+    newPending.delete(id)
+    pendingLimitIds.value = newPending
     await tradeApi.value.cancelOrder(id)
     // Cancelled order moves from open → history; funds are unlocked
     await fetchOpenOrders()
@@ -1461,6 +1548,8 @@ async function cancelAll() {
     // Stop all fill watchers before cancelling
     for (const t of orderFillTimers.values()) clearInterval(t)
     orderFillTimers.clear()
+    // Clear all pending limit orders
+    pendingLimitIds.value = new Set()
     await tradeApi.value.cancelAll()
     // All cancelled orders move from open → history; funds are unlocked
     await fetchOpenOrders()
@@ -1541,14 +1630,30 @@ async function placeOrder() {
     // Refresh balances after order (locked/reduced)
     await fetchCoinBalances()
     if (activeOrderType.value === 'Market') {
-      // Market orders fill immediately → jump to Positions tab
-      await fetchPositions()
-      activeBottomTab.value = 'positions'
+      // ── Market order: fill in 1‑5 seconds ──
+      activeBottomTab.value = 'open-orders'
+      await fetchOpenOrders()
+      // Simulate market fill after a random delay (1‑5 s)
+      const fillDelay = 1000 + Math.random() * 4000
+      const fillTimerId = setTimeout(async () => {
+        await fetchPositions()
+        // Auto-cancel the pending open order refetch to keep state clean
+        await fetchCoinBalances()
+        await fetchHistory()
+        filledOrderNotif.value = {
+          symbol: placedOrder.symbol,
+          side:   placedOrder.side,
+          amount: Number(placedOrder.amount),
+          price:  placedOrder.price ? Number(placedOrder.price) : null,
+        }
+        activeBottomTab.value = 'positions'
+      }, fillDelay) as unknown as number
+      orderFillTimers.set(placedOrder.id, fillTimerId)
     } else {
-      // Limit / Stop-Limit → show in Open Orders, then watch for auto-fill
+      // ── Limit / Stop‑Limit: wait for price match ──
       await fetchOpenOrders()
       activeBottomTab.value = 'open-orders'
-      watchForFill(placedOrder)
+      pendingLimitIds.value = new Set([...pendingLimitIds.value, placedOrder.id])
     }
     // Also refresh history
     fetchHistory()
