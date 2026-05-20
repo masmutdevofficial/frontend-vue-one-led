@@ -134,10 +134,10 @@
           <article
             v-for="item in filteredProducts"
             :key="item.asset + item.subtitle"
-            class="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-sm"
+            class="flex justify-center items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-sm"
           >
             <!-- Asset -->
-            <div class="flex flex-1 items-center gap-3">
+            <div class="flex items-center gap-3">
               <div
                 class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full overflow-hidden"
                 :class="item.image_url ? '' : item.iconClass"
