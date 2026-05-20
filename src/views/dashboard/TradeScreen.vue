@@ -526,7 +526,9 @@
                     </div>
                   </div>
                   <div class="text-right">
-                    <p class="text-[13px] font-semibold text-[#17212f]">{{ h.liveValue > 0 ? formatPrice(h.liveValue) : '—' }} USDT</p>
+                    <p class="text-[13px] font-semibold text-[#17212f]">
+                      {{ tickerMap.get(h.coin + 'USDT')?.price ? formatPrice((tickerMap.get(h.coin + 'USDT')!.price) * h.amount) + ' USDT' : '—' }}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1354,11 +1356,7 @@ const orderFillTimers  = new Map<string, number>()
 const spotHoldings = computed(() =>
   Object.entries(coinBalanceMap.value)
     .filter(([coin, amount]) => coin !== 'USDT' && amount > 0)
-    .map(([coin, amount]) => ({
-      coin,
-      amount,
-      liveValue: (tickerMap.value.get(coin + 'USDT')?.price ?? 0) * amount,
-    }))
+    .map(([coin, amount]) => ({ coin, amount }))
 )
 
 async function fetchCoinBalances() {
