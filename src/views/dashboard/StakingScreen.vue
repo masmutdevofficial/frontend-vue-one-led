@@ -263,14 +263,16 @@
                 <Icon icon="mdi:close" class="text-[22px] text-gray-400" />
               </button>
             </div>
-            <div class="mt-4 rounded-xl bg-[#f6f8fb] p-4 space-y-2">
-              <div class="flex justify-between">
-                <p class="text-[11px] font-bold text-gray-400">APR</p>
-                <p class="text-[11px] font-semibold text-[#20c7b7]">{{ selectedProduct.apr }}</p>
-              </div>
-              <div class="flex justify-between">
-                <p class="text-[11px] font-bold text-gray-400">Min. Amount</p>
-                <p class="text-[11px] font-semibold text-[#17212f]">{{ selectedProduct.minAmount }}</p>
+            <div class="mt-4 rounded-xl bg-[#f6f8fb] p-4">
+              <div class="flex gap-4">
+                <div class="flex-1">
+                  <p class="text-[11px] font-bold text-gray-400">APR</p>
+                  <p class="mt-1 text-[13px] font-semibold text-[#20c7b7]">{{ selectedProduct.apr }}</p>
+                </div>
+                <div class="flex-1">
+                  <p class="text-[11px] font-bold text-gray-400">Min. Amount</p>
+                  <p class="mt-1 text-[13px] font-semibold text-[#17212f]">{{ selectedProduct.minAmount }}</p>
+                </div>
               </div>
               <div class="flex justify-between">
                 <p class="text-[11px] font-bold text-gray-400">Type</p>
