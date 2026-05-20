@@ -1647,11 +1647,14 @@ async function placeOrder() {
     await fetchCoinBalances()
     if (activeOrderType.value === 'Market') {
       // ── Market order: fill in 1‑5 seconds ──
+      // Prepend to open orders so existing orders are NOT replaced
+      openOrdersList.value = [placedOrder, ...openOrdersList.value]
       activeBottomTab.value = 'open-orders'
-      await fetchOpenOrders()
       // Simulate market fill after a random delay (1‑5 s)
       const fillDelay = 1000 + Math.random() * 4000
       const fillTimerId = setTimeout(async () => {
+        // Remove from open orders list locally
+        openOrdersList.value = openOrdersList.value.filter(o => o.id !== placedOrder.id)
         await fetchPositions()
         // Auto-cancel the pending open order refetch to keep state clean
         await fetchCoinBalances()
@@ -1676,7 +1679,8 @@ async function placeOrder() {
       orderFillTimers.set(placedOrder.id, fillTimerId)
     } else {
       // ── Limit / Stop‑Limit: wait for price match ──
-      await fetchOpenOrders()
+      // Prepend so existing open orders are NOT replaced
+      openOrdersList.value = [placedOrder, ...openOrdersList.value]
       activeBottomTab.value = 'open-orders'
       pendingLimitIds.value = new Set([...pendingLimitIds.value, placedOrder.id])
     }
