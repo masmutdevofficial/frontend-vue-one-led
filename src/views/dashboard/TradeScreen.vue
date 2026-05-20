@@ -508,10 +508,32 @@
 
           <!-- ── POSITIONS TAB ── -->
           <template v-else-if="activeBottomTab === 'positions'">
-            <div v-if="openPositionsList.length === 0" class="py-10 text-center text-[13px] font-semibold text-gray-400">
-              No open positions
+
+            <!-- Spot Holdings (from filled buy orders) -->
+            <div v-if="spotHoldings.length > 0" class="border-b border-gray-100">
+              <div class="px-4 py-2">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Spot Holdings</p>
+              </div>
+              <div class="divide-y divide-gray-100">
+                <div v-for="h in spotHoldings" :key="h.coin" class="flex items-center justify-between px-4 py-3">
+                  <div class="flex items-center gap-2.5">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                      <CoinIcon :icon="marketStore.coinMap.get(h.coin)?.icon ?? 'mdi:currency-usd'" :symbol="h.coin" icon-class="text-[18px]" img-class="h-6 w-6 rounded-full" />
+                    </div>
+                    <div>
+                      <p class="text-[13px] font-semibold text-[#17212f]">{{ h.coin }}/USDT</p>
+                      <p class="mt-0.5 text-[10px] font-semibold text-gray-400">{{ h.amount.toFixed(6) }} {{ h.coin }}</p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-[13px] font-semibold text-[#17212f]">{{ h.liveValue > 0 ? formatPrice(h.liveValue) : '—' }} USDT</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div v-else class="divide-y divide-gray-100">
+
+            <!-- Futures positions -->
+            <div v-if="openPositionsList.length > 0" class="divide-y divide-gray-100">
               <div v-for="pos in openPositionsList" :key="pos.id" class="px-4 py-4">
                 <div class="flex items-center justify-between">
                   <div>
@@ -529,6 +551,12 @@
                 </div>
               </div>
             </div>
+
+            <!-- Empty state -->
+            <div v-if="openPositionsList.length === 0 && spotHoldings.length === 0" class="py-10 text-center text-[13px] font-semibold text-gray-400">
+              No open positions
+            </div>
+
           </template>
 
           <!-- ── HISTORY TAB ── -->
@@ -593,6 +621,57 @@
       </section>
     </div>
   </DashboardLayout>
+
+  <!-- ── Order Filled Modal ─────────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div
+        v-if="filledOrderNotif"
+        class="fixed inset-0 z-300 flex items-end justify-center px-4 pb-10 md:items-center md:pb-0"
+        @click.self="filledOrderNotif = null"
+      >
+        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+          <!-- Header -->
+          <div class="mb-5 flex items-center gap-3">
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green-100">
+              <Icon icon="mdi:check-bold" class="text-[22px] text-green-500" />
+            </div>
+            <div>
+              <p class="text-[15px] font-bold text-[#17212f]">Order Filled!</p>
+              <p class="text-[12px] font-semibold text-gray-400">Your order has been executed successfully</p>
+            </div>
+          </div>
+          <!-- Details -->
+          <div class="space-y-3 rounded-xl bg-[#f6f8fb] px-4 py-4">
+            <div class="flex items-center justify-between">
+              <span class="text-[12px] font-semibold text-gray-400">Pair</span>
+              <span class="text-[13px] font-bold text-[#17212f]">{{ filledOrderNotif.symbol.replace('USDT', '/USDT') }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[12px] font-semibold text-gray-400">Side</span>
+              <span class="text-[13px] font-bold" :class="filledOrderNotif.side === 'Buy' ? 'text-[#10b8ad]' : 'text-red-400'">{{ filledOrderNotif.side }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[12px] font-semibold text-gray-400">Amount</span>
+              <span class="text-[13px] font-bold text-[#17212f]">{{ filledOrderNotif.amount.toFixed(6) }} {{ filledOrderNotif.symbol.replace('USDT', '') }}</span>
+            </div>
+            <div v-if="filledOrderNotif.price" class="flex items-center justify-between">
+              <span class="text-[12px] font-semibold text-gray-400">Price</span>
+              <span class="text-[13px] font-bold text-[#17212f]">{{ formatPrice(filledOrderNotif.price) }} USDT</span>
+            </div>
+          </div>
+          <!-- Action -->
+          <button
+            class="mt-5 w-full rounded-xl bg-[#10b8ad] py-3.5 text-[14px] font-bold text-white active:scale-[0.99]"
+            @click="filledOrderNotif = null"
+          >
+            View Positions
+          </button>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
 </template>
 
 <script setup lang="ts">
@@ -914,6 +993,9 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(timer)
   destroyChart()
+  // Clean up any pending fill-watch intervals
+  for (const t of orderFillTimers.values()) clearInterval(t)
+  orderFillTimers.clear()
 })
 
 // Watch the SYMBOL STRING (primitive), not the baseCoin object.
@@ -1249,7 +1331,7 @@ function updateLiveCandle() {
 
 const orderTabs = computed(() => [
   `Open Orders (${openOrdersList.value.length})`,
-  `Positions (${openPositionsList.value.length})`,
+  `Positions (${openPositionsList.value.length + spotHoldings.value.length})`,
   'History',
 ])
 
@@ -1263,6 +1345,21 @@ const openPositionsList = ref<FuturesPosition[]>([])
 const isLoadingOrders   = ref(false)
 const placeOrderError   = ref('')
 const placeOrderLoading = ref(false)
+
+// ── Order fill notification modal ─────────────────────────────
+const filledOrderNotif = ref<{ symbol: string; side: 'Buy' | 'Sell'; amount: number; price: number | null } | null>(null)
+const orderFillTimers  = new Map<string, number>()
+
+// Spot holdings: non-USDT coins with a positive balance (shown in Positions tab)
+const spotHoldings = computed(() =>
+  Object.entries(coinBalanceMap.value)
+    .filter(([coin, amount]) => coin !== 'USDT' && amount > 0)
+    .map(([coin, amount]) => ({
+      coin,
+      amount,
+      liveValue: (tickerMap.value.get(coin + 'USDT')?.price ?? 0) * amount,
+    }))
+)
 
 async function fetchCoinBalances() {
   if (!tradeApi.value) return
@@ -1308,9 +1405,50 @@ async function fetchPositions() {
   }
 }
 
+// Watch an order until it fills (or is cancelled). For each watched order a
+// separate setInterval runs independently, enabling parallel fill detection.
+function watchForFill(order: SpotOrder) {
+  if (orderFillTimers.has(order.id)) return
+  const intervalId = setInterval(async () => {
+    if (!tradeApi.value) return
+    try {
+      // Poll open orders for this symbol only (lightweight query)
+      const { orders: open } = await tradeApi.value.getOrders('open', order.symbol)
+      if (open.some(o => o.id === order.id)) return  // still pending
+
+      // Order is no longer open — stop polling
+      clearInterval(intervalId)
+      orderFillTimers.delete(order.id)
+
+      // Refresh all relevant data
+      await fetchOpenOrders()
+      const { orders: hist } = await tradeApi.value.getOrders('history')
+      historyList.value = hist
+      await fetchCoinBalances()
+      await fetchPositions()
+
+      // Only show modal if the order was actually filled (not cancelled)
+      const filled = hist.find(o => o.id === order.id && o.status === 'filled')
+      if (filled) {
+        filledOrderNotif.value = {
+          symbol: order.symbol,
+          side:   order.side,
+          amount: Number(order.amount),
+          price:  order.price ? Number(order.price) : null,
+        }
+        activeBottomTab.value = 'positions'
+      }
+    } catch { /* ignore */ }
+  }, 1000) as unknown as number
+  orderFillTimers.set(order.id, intervalId)
+}
+
 async function cancelOrder(id: string) {
   if (!tradeApi.value) return
   try {
+    // Stop watching BEFORE cancelling to prevent false fill modal
+    const t = orderFillTimers.get(id)
+    if (t !== undefined) { clearInterval(t); orderFillTimers.delete(id) }
     await tradeApi.value.cancelOrder(id)
     // Cancelled order moves from open → history; funds are unlocked
     await fetchOpenOrders()
@@ -1322,6 +1460,9 @@ async function cancelOrder(id: string) {
 async function cancelAll() {
   if (!tradeApi.value) return
   try {
+    // Stop all fill watchers before cancelling
+    for (const t of orderFillTimers.values()) clearInterval(t)
+    orderFillTimers.clear()
     await tradeApi.value.cancelAll()
     // All cancelled orders move from open → history; funds are unlocked
     await fetchOpenOrders()
@@ -1398,7 +1539,7 @@ async function placeOrder() {
       amount: amount,
     }
     if (activeOrderType.value !== 'Market') body.price = price
-    await tradeApi.value.placeOrder(body)
+    const { order: placedOrder } = await tradeApi.value.placeOrder(body)
     // Refresh balances after order (locked/reduced)
     await fetchCoinBalances()
     if (activeOrderType.value === 'Market') {
@@ -1406,9 +1547,10 @@ async function placeOrder() {
       await fetchPositions()
       activeBottomTab.value = 'positions'
     } else {
-      // Limit / Stop-Limit → show in Open Orders
+      // Limit / Stop-Limit → show in Open Orders, then watch for auto-fill
       await fetchOpenOrders()
       activeBottomTab.value = 'open-orders'
+      watchForFill(placedOrder)
     }
     // Also refresh history
     fetchHistory()
@@ -1448,3 +1590,14 @@ function selectCoin(symbol: string) {
   router.push('/trade/' + symbol.toLowerCase())
 }
 </script>
+
+<style scoped>
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+</style>
