@@ -895,10 +895,15 @@ onMounted(() => {
   liveLow.value       = c.low24
   liveMarkPrice.value = c.markPrice
   orderPrice.value    = c.price
+  // Immediately apply any WS data already in the singleton tickerMap
+  // (snapshot arrives before component mounts — watch(tickerMap) won't fire for it)
+  if (applyTickerToHeader(currentBinancePair.value)) {
+    _orderPriceSynced = true
+  }
   const favs = JSON.parse(localStorage.getItem('market-favorites') ?? '[]') as string[]
   isFavorite.value = favs.includes(c.symbol)
-  initOrderBook(c.price)
-  initRecentTrades(c.price)
+  initOrderBook(livePrice.value)
+  initRecentTrades(livePrice.value)
   initChart()
   timer = setInterval(tick, 600)
   // Fetch trade data
@@ -928,12 +933,19 @@ watch(
     liveLow.value       = c.low24
     liveMarkPrice.value = c.markPrice
     orderPrice.value    = c.price
+    wsReady = false   // reset — wait for WS price of the new pair before updating chart
+    // Immediately override with live WS data if already available in singleton
+    if (applyTickerToHeader(newSym.toUpperCase() + 'USDT')) {
+      wsReady = true
+      _orderPriceSynced = true
+    } else {
+      _orderPriceSynced = false
+    }
     const favs = JSON.parse(localStorage.getItem('market-favorites') ?? '[]') as string[]
     isFavorite.value = favs.includes(c.symbol)
-    initOrderBook(c.price)
-    initRecentTrades(c.price)
+    initOrderBook(livePrice.value)
+    initRecentTrades(livePrice.value)
     lastCandleTime = 0; lastCandle = null; lastVolume = null
-    wsReady = false   // reset — wait for WS price of the new pair before updating chart
     initChart() // recreate chart for new coin
   },
 )
@@ -944,10 +956,28 @@ watch(activeTimeframe, () => {
 })
 
 // ── WS live price for current pair ───────────────────────────────
+/**
+ * Apply a ticker snapshot to all live price refs.
+ * Called immediately on mount/coin-switch (reads existing tickerMap)
+ * AND on every subsequent WS update (watch below).
+ */
+function applyTickerToHeader(pair: string) {
+  const t = tickerMap.value.get(pair)
+  if (!t) return false
+  wsReady = true
+  livePrice.value     = t.price
+  liveChange.value    = Math.round(t.change * 100) / 100
+  liveHigh.value      = liveHigh.value  > 0 ? Math.max(liveHigh.value,  t.high) : t.high
+  liveLow.value       = liveLow.value   > 0 ? Math.min(liveLow.value,   t.low)  : t.low
+  liveMarkPrice.value = t.price
+  if (activeOrderType.value === 'Market') orderPrice.value = t.price
+  return true
+}
+
 watch(tickerMap, (map) => {
   const t = map.get(currentBinancePair.value)
   if (!t) return
-  wsReady = true  // real price received — allow updateLiveCandle()
+  wsReady = true
   livePrice.value     = t.price
   liveChange.value    = Math.round(t.change * 100) / 100
   liveHigh.value      = liveHigh.value  > 0 ? Math.max(liveHigh.value,  t.high) : t.high
