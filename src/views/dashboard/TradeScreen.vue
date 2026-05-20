@@ -1068,9 +1068,6 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(timer)
   destroyChart()
-  // Clean up any pending fill-watch intervals / market fill timers
-  for (const t of orderFillTimers.values()) clearInterval(t)
-  orderFillTimers.clear()
   pendingLimitIds.value = new Set()
 })
 
@@ -1424,7 +1421,6 @@ const placeOrderLoading = ref(false)
 
 // ── Order fill notification modal ─────────────────────────────
 const filledOrderNotif = ref<{ symbol: string; side: 'Buy' | 'Sell'; amount: number; price: number | null } | null>(null)
-const orderFillTimers  = new Map<string, number>()
 
 // ── Pending limit orders (client-side price matching) ─────────
 // Orders placed via Limit tab stay here until livePrice crosses the limit price.
@@ -1474,7 +1470,14 @@ async function fetchOpenOrders() {
   isLoadingOrders.value = true
   try {
     const { orders } = await tradeApi.value.getOrders('open')
-    openOrdersList.value = orders
+    const serverIds = new Set(orders.map(o => o.id))
+    // Preserve any locally-tracked pending limit orders that the server
+    // may have already processed / no longer returns as 'open'.
+    // This prevents them from disappearing when switching tabs.
+    const pendingExtras = openOrdersList.value.filter(
+      o => !serverIds.has(o.id) && pendingLimitIds.value.has(o.id)
+    )
+    openOrdersList.value = [...pendingExtras, ...orders]
   } catch { /* ignore */ } finally {
     isLoadingOrders.value = false
   }
@@ -1502,57 +1505,34 @@ async function fetchPositions() {
   }
 }
 
-// Watch an order until it fills (or is cancelled). For each watched order a
-// separate setInterval runs independently, enabling parallel fill detection.
-function watchForFill(order: SpotOrder) {
-  if (orderFillTimers.has(order.id)) return
-  const intervalId = setInterval(async () => {
-    if (!tradeApi.value) return
-    try {
-      // Poll open orders for this symbol only (lightweight query)
-      const { orders: open } = await tradeApi.value.getOrders('open', order.symbol)
-      if (open.some(o => o.id === order.id)) return  // still pending
-
-      // Order is no longer open — stop polling
-      clearInterval(intervalId)
-      orderFillTimers.delete(order.id)
-
-      // Refresh all relevant data
-      await fetchOpenOrders()
-      const { orders: hist } = await tradeApi.value.getOrders('history')
-      historyList.value = hist
-      await fetchCoinBalances()
-      await fetchPositions()
-
-      // Only show modal if the order was actually filled (not cancelled)
-      const filled = hist.find(o => o.id === order.id && o.status === 'filled')
-      if (filled) {
-        filledOrderNotif.value = {
-          symbol: order.symbol,
-          side:   order.side,
-          amount: Number(order.amount),
-          price:  order.price ? Number(order.price) : null,
-        }
-        activeBottomTab.value = 'positions'
-      }
-    } catch { /* ignore */ }
-  }, 1000) as unknown as number
-  orderFillTimers.set(order.id, intervalId)
-}
-
 async function cancelOrder(id: string) {
   if (!tradeApi.value) return
   try {
-    // Stop watching BEFORE cancelling to prevent false fill modal
-    const t = orderFillTimers.get(id)
-    if (t !== undefined) { clearInterval(t); orderFillTimers.delete(id) }
+    // Find the order in local list before removing it
+    const order = openOrdersList.value.find(o => o.id === id)
     // Remove from pending limit set
     const newPending = new Set(pendingLimitIds.value)
     newPending.delete(id)
     pendingLimitIds.value = newPending
     await tradeApi.value.cancelOrder(id)
-    // Cancelled order moves from open → history; funds are unlocked
-    await fetchOpenOrders()
+    // Remove from local open orders immediately
+    openOrdersList.value = openOrdersList.value.filter(o => o.id !== id)
+    // Manually restore locked funds so balance updates instantly
+    if (order) {
+      if (order.side === 'Buy' && auth.user) {
+        // For Buy, the total USDT cost was locked — restore to available balance
+        const lockedAmount = Number(order.price ?? 0) * Number(order.amount)
+        auth.user.balance = String(Number(auth.user.balance) + lockedAmount)
+      } else if (order.side === 'Sell') {
+        // For Sell, the coin amount was locked — restore to coin balance
+        const coinSym = order.symbol.replace('USDT', '')
+        coinBalanceMap.value = {
+          ...coinBalanceMap.value,
+          [coinSym]: (coinBalanceMap.value[coinSym] ?? 0) + Number(order.amount),
+        }
+      }
+    }
+    // Sync with server for accuracy
     await fetchCoinBalances()
     await fetchHistory()
   } catch { /* ignore */ }
@@ -1561,14 +1541,24 @@ async function cancelOrder(id: string) {
 async function cancelAll() {
   if (!tradeApi.value) return
   try {
-    // Stop all fill watchers before cancelling
-    for (const t of orderFillTimers.values()) clearInterval(t)
-    orderFillTimers.clear()
     // Clear all pending limit orders
     pendingLimitIds.value = new Set()
+    // Manually restore all locked funds before server call
+    for (const order of openOrdersList.value) {
+      if (order.side === 'Buy' && auth.user) {
+        const lockedAmount = Number(order.price ?? 0) * Number(order.amount)
+        auth.user.balance = String(Number(auth.user.balance) + lockedAmount)
+      } else if (order.side === 'Sell') {
+        const coinSym = order.symbol.replace('USDT', '')
+        coinBalanceMap.value = {
+          ...coinBalanceMap.value,
+          [coinSym]: (coinBalanceMap.value[coinSym] ?? 0) + Number(order.amount),
+        }
+      }
+    }
+    openOrdersList.value = []
     await tradeApi.value.cancelAll()
-    // All cancelled orders move from open → history; funds are unlocked
-    await fetchOpenOrders()
+    // Sync with server for accuracy
     await fetchCoinBalances()
     await fetchHistory()
   } catch { /* ignore */ }
@@ -1646,37 +1636,25 @@ async function placeOrder() {
     // Refresh balances after order (locked/reduced)
     await fetchCoinBalances()
     if (activeOrderType.value === 'Market') {
-      // ── Market order: fill in 1‑5 seconds ──
-      // Prepend to open orders so existing orders are NOT replaced
-      openOrdersList.value = [placedOrder, ...openOrdersList.value]
-      activeBottomTab.value = 'open-orders'
-      // Simulate market fill after a random delay (1‑5 s)
-      const fillDelay = 1000 + Math.random() * 4000
-      const fillTimerId = setTimeout(async () => {
-        // Remove from open orders list locally
-        openOrdersList.value = openOrdersList.value.filter(o => o.id !== placedOrder.id)
-        await fetchPositions()
-        // Auto-cancel the pending open order refetch to keep state clean
-        await fetchCoinBalances()
-        await fetchHistory()
-        // Track USDT value for spot holdings display
-        if (placedOrder.side === 'Buy') {
-          const coinSym = placedOrder.symbol.replace('USDT', '')
-          const usdtValue = Number(placedOrder.amount) * livePrice.value
-          filledValueMap.value = {
-            ...filledValueMap.value,
-            [coinSym]: (filledValueMap.value[coinSym] ?? 0) + usdtValue,
-          }
+      // ── Market order: filled instantly by server → go straight to Positions ──
+      await fetchCoinBalances()
+      await fetchPositions()
+      // Track USDT value for spot holdings display
+      if (placedOrder.side === 'Buy') {
+        const coinSym = placedOrder.symbol.replace('USDT', '')
+        const usdtValue = Number(placedOrder.amount) * (Number(placedOrder.price) || livePrice.value)
+        filledValueMap.value = {
+          ...filledValueMap.value,
+          [coinSym]: (filledValueMap.value[coinSym] ?? 0) + usdtValue,
         }
-        filledOrderNotif.value = {
-          symbol: placedOrder.symbol,
-          side:   placedOrder.side,
-          amount: Number(placedOrder.amount),
-          price:  placedOrder.price ? Number(placedOrder.price) : null,
-        }
-        activeBottomTab.value = 'positions'
-      }, fillDelay) as unknown as number
-      orderFillTimers.set(placedOrder.id, fillTimerId)
+      }
+      filledOrderNotif.value = {
+        symbol: placedOrder.symbol,
+        side:   placedOrder.side,
+        amount: Number(placedOrder.amount),
+        price:  Number(placedOrder.price) || null,
+      }
+      activeBottomTab.value = 'positions'
     } else {
       // ── Limit / Stop‑Limit: wait for price match ──
       // Prepend so existing open orders are NOT replaced
