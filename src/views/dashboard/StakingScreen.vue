@@ -134,7 +134,7 @@
           <article
             v-for="item in filteredProducts"
             :key="item.asset + item.subtitle"
-            class="flex justify-center items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-sm"
+            class="flex justify-between items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-4 shadow-sm"
           >
             <!-- Asset -->
             <div class="flex items-center gap-3">
