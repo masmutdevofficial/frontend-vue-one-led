@@ -504,7 +504,7 @@
             <div class="mt-4">
               <div class="flex items-center justify-between">
                 <p class="text-[11px] font-bold text-gray-500">I want to {{ selectedMerchant.type === 'buy' ? 'spend' : 'receive' }}</p>
-                <button @click="tradeAmount = selectedMerchant.available.split(' ')[0].replace(/,/g, '')" class="text-[10px] font-bold text-[#0ba99d]">Max</button>
+                <button @click="tradeAmount = userBalance > 0 ? String(userBalance) : selectedMerchant.available.split(' ')[0].replace(/,/g, '')" class="text-[10px] font-bold text-[#0ba99d]">Max</button>
               </div>
               <div class="mt-2 flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-3 focus-within:border-[#0ba99d]">
                 <input v-model="tradeAmount" type="number" placeholder="0.00" class="min-w-0 flex-1 bg-transparent text-[16px] font-bold text-[#17212f] outline-none placeholder:text-gray-300" />
@@ -614,7 +614,7 @@ import { Icon } from '@iconify/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CoinIcon from '@/components/CoinIcon.vue'
 import { useMarketStore, coinIconClass } from '@/stores/market'
-import { p2pApi, makeApi, makeP2PApi, type P2PAccountInfo } from '@/services/api'
+import { p2pApi, makeApi, makeP2PApi, makeUserApi, type P2PAccountInfo } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -673,6 +673,9 @@ const lastOrderId       = ref('')
 const accountRequested  = ref(false)
 const accountLoading    = ref(false)
 const accountInfo       = ref<P2PAccountInfo | null>(null)
+
+// User balance (for Max button)
+const userBalance = ref<number>(0)
 
 // Merchants loaded from API
 const merchants = ref<Merchant[]>([])
@@ -797,6 +800,11 @@ onMounted(() => {
   fetchStats()
   p2pPollingTimer = setInterval(fetchMerchants, 10_000)
   if (authStore.isAuthenticated && !authStore.profile) authStore.refreshProfile()
+  if (authStore.accessToken) {
+    makeUserApi(authStore.accessToken).getBalance()
+      .then(d => { userBalance.value = parseFloat(d.total as unknown as string) || 0 })
+      .catch(() => {})
+  }
 })
 onUnmounted(() => {
   clearInterval(p2pPollingTimer)
