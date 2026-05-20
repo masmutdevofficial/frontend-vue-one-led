@@ -362,8 +362,6 @@ function toggleFavorite(name: string) {
   favorites.value = next
   localStorage.setItem('market-favorites', JSON.stringify([...next]))
 }
-
-// ── Mini spline chart ─────────────────────────────────────────
 const chartPoints = ref<number[]>([0.55, 0.42, 0.60, 0.38, 0.52, 0.30, 0.48, 0.22, 0.40, 0.18])
 const pnlValue = ref(0)
 const pnlPct = ref(0)

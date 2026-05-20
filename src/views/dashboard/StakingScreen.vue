@@ -158,7 +158,7 @@
             <!-- Min -->
             <div class="shrink-0 text-center">
               <p class="text-[10px] font-medium text-[#7a86a4]">Min.</p>
-              <p class="mt-1 text-[13px] font-semibold text-[#4b5575]">{{ item.minAmount }}</p>
+              <p class="mt-1 text-[12px] font-semibold text-[#4b5575]">{{ item.minAmount }}</p>
             </div>
             <!-- CTA -->
             <button
@@ -532,6 +532,12 @@ function onTncScroll(e: Event) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+function trimDecimal(val: string | number): string {
+  const n = Number(val)
+  if (isNaN(n)) return '0'
+  return n.toFixed(6)
+}
+
 function formatAmount(val: string | number): string {
   const n = Number(val)
   if (isNaN(n)) return '0.00'
@@ -596,7 +602,7 @@ onMounted(async () => {
         icon:      coinIconResolved(p.coin),
         iconClass: coinClass(p.coin),
         apr:       Number(p.apr).toFixed(2) + '%',
-        minAmount: p.min_amount + ' ' + p.coin,
+        minAmount: trimDecimal(p.min_amount) + ' ' + p.coin,
         type:      p.type === 'flexible' ? 'Flexible' : 'Locked',
       }))
     }
