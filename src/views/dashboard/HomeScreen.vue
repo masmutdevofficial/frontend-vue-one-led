@@ -263,16 +263,16 @@
               </div>
               <!-- Last Price -->
               <div class="w-22 text-right">
-                <p class="text-[12px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
-                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(coin.price) }}</p>
+                <p class="text-[12px] font-bold leading-none">{{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
+                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
               </div>
               <!-- 24h Change badge -->
               <div class="w-19 flex justify-end pr-1">
                 <span
                   class="inline-block rounded-lg px-2 py-1 text-[11px] font-bold"
-                  :class="coin.change >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
+                  :class="(tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
                 >
-                  {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
+                  {{ ((tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? '+' : '') + (Math.round((tickerMap.get(coin.binancePair)?.change ?? coin.change) * 100) / 100).toFixed(2) }}%
                 </span>
               </div>
               <!-- Star -->
@@ -544,18 +544,10 @@ watch(() => marketStore.loaded, (loaded) => {
   if (loaded) buildMarketsFromStore()
 })
 
-// displayedMarkets reads tickerMap.value directly — Vue tracks it as a reactive
-// dependency, so the computed re-runs on every WS tick automatically.
-// No need for a watch(tickerMap) that mutates marketsData.
-const displayedMarkets = computed(() => {
-  const map = tickerMap.value  // reactive dep — re-evaluates on every WS tick
-  return marketsData.value.map(coin => {
-    const t = map.get(coin.binancePair)
-    return t
-      ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 }
-      : coin
-  })
-})
+// displayedMarkets provides coin metadata; prices are read directly from
+// tickerMap in the template (same pattern as TradeScreen lines 106-111) so
+// Vue tracks the Map access as a direct render dep and re-renders on every tick.
+const displayedMarkets = computed(() => marketsData.value)
 </script>
 
 <style>
