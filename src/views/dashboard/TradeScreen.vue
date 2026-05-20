@@ -223,7 +223,7 @@
                   :step="baseCoin.priceStep"
                   min="0"
                   class="w-24 text-center text-[13px] font-semibold text-[#17212f] bg-transparent outline-none md:text-[15px]"
-                  @input="recalcSlider"
+                  @input="onPriceChange"
                 />
                 <span v-else class="min-w-20 text-center text-[13px] font-semibold text-[#10b8ad] md:min-w-22.5 md:text-[15px]">{{ formatPrice(orderPrice) }}</span>
                 <button class="text-[20px] font-semibold text-gray-500 active:scale-90 disabled:opacity-30" :disabled="activeOrderType === 'Market'" @click="adjustPrice(1)">+</button>
@@ -629,10 +629,10 @@
     <Transition name="modal-fade">
       <div
         v-if="filledOrderNotif"
-        class="fixed inset-0 z-300 flex items-end justify-center px-4 pb-10 md:items-center md:pb-0"
+        class="fixed inset-0 z-300 flex items-end justify-center w-full md:items-center md:pb-0"
         @click.self="filledOrderNotif = null"
       >
-        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+        <div class="w-full rounded-2xl bg-white p-6 shadow-2xl">
           <!-- Header -->
           <div class="mb-5 flex items-center gap-3">
             <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green-100">
@@ -886,6 +886,7 @@ const availableDisplay = computed(() =>
 function adjustPrice(dir: number) {
   const step = baseCoin.value.priceStep
   orderPrice.value = Math.max(step, parseFloat((orderPrice.value + dir * step).toFixed(8)))
+  if (activeSide.value === 'Buy') onPriceChange()
 }
 
 function adjustAmount(dir: number) {
@@ -975,12 +976,10 @@ onMounted(() => {
   liveHigh.value      = c.high24
   liveLow.value       = c.low24
   liveMarkPrice.value = c.markPrice
-  orderPrice.value    = c.price
+  orderPrice.value    = 0 // user must enter a price manually
   // Immediately apply any WS data already in the singleton tickerMap
   // (snapshot arrives before component mounts — watch(tickerMap) won't fire for it)
-  if (applyTickerToHeader(currentBinancePair.value)) {
-    _orderPriceSynced = true
-  }
+  applyTickerToHeader(currentBinancePair.value)
   const favs = JSON.parse(localStorage.getItem('market-favorites') ?? '[]') as string[]
   isFavorite.value = favs.includes(c.symbol)
   initOrderBook(livePrice.value)
@@ -1016,15 +1015,12 @@ watch(
     liveHigh.value      = c.high24
     liveLow.value       = c.low24
     liveMarkPrice.value = c.markPrice
-    orderPrice.value    = c.price
+    orderPrice.value    = 0 // user must enter a price manually
+    orderAmount.value   = 0.1
+    sliderPct.value     = 10
     wsReady = false   // reset — wait for WS price of the new pair before updating chart
     // Immediately override with live WS data if already available in singleton
-    if (applyTickerToHeader(newSym.toUpperCase() + 'USDT')) {
-      wsReady = true
-      _orderPriceSynced = true
-    } else {
-      _orderPriceSynced = false
-    }
+    applyTickerToHeader(newSym.toUpperCase() + 'USDT')
     const favs = JSON.parse(localStorage.getItem('market-favorites') ?? '[]') as string[]
     isFavorite.value = favs.includes(c.symbol)
     initOrderBook(livePrice.value)
@@ -1072,15 +1068,22 @@ watch(tickerMap, (map) => {
   updateLiveCandle()
 })
 
-// ── Sync orderPrice with live price ─────────────────────────────────────────
-let _orderPriceSynced = false
-watch(currentBinancePair, () => { _orderPriceSynced = false })
-watch(livePrice, (price) => {
-  if (price > 0 && !_orderPriceSynced) {
-    _orderPriceSynced = true
-    orderPrice.value  = price
+// ── Price input handler ────────────────────────────────────────
+/**
+ * Called whenever the user types in the Price field.
+ * For Buy: auto-calculates Amount = availableBalance / price.
+ * For Sell: no auto-calc (user should enter amount directly).
+ */
+function onPriceChange() {
+  if (activeSide.value === 'Buy' && orderPrice.value > 0) {
+    const maxAmt = availableBalance.value / orderPrice.value
+    // Preserve the current slider ratio to scale amount
+    orderAmount.value = parseFloat((maxAmt * sliderPct.value / 100).toFixed(8))
   }
-})
+  recalcSlider()
+}
+
+// When switching to Market order type, auto-fill price from live price
 watch(activeOrderType, (type) => {
   if (type === 'Market') orderPrice.value = livePrice.value
 })
@@ -1265,9 +1268,8 @@ async function loadChartData() {
         if (liveHigh.value === 0 || last.high > liveHigh.value) liveHigh.value = last.high
         if (liveLow.value  === 0 || last.low  < liveLow.value)  liveLow.value  = last.low
         liveMarkPrice.value = last.close
-        if (activeOrderType.value === 'Market' || !_orderPriceSynced) {
-          orderPrice.value  = last.close
-          _orderPriceSynced = true
+        if (activeOrderType.value === 'Market') {
+          orderPrice.value = last.close
         }
         // Allow updateLiveCandle to run from klines price (tick loop will animate it)
         wsReady = true
