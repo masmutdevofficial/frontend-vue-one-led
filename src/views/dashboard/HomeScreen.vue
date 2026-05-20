@@ -544,16 +544,18 @@ watch(() => marketStore.loaded, (loaded) => {
   if (loaded) buildMarketsFromStore()
 })
 
-watch(tickerMap, () => {
-  if (!marketsData.value.length) return
-  const map = tickerMap.value
-  marketsData.value = marketsData.value.map(coin => {
+// displayedMarkets reads tickerMap.value directly — Vue tracks it as a reactive
+// dependency, so the computed re-runs on every WS tick automatically.
+// No need for a watch(tickerMap) that mutates marketsData.
+const displayedMarkets = computed(() => {
+  const map = tickerMap.value  // reactive dep — re-evaluates on every WS tick
+  return marketsData.value.map(coin => {
     const t = map.get(coin.binancePair)
-    return t ? { ...coin, price: t.price, change: t.change } : coin
+    return t
+      ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 }
+      : coin
   })
 })
-
-const displayedMarkets = computed(() => marketsData.value)
 </script>
 
 <style>

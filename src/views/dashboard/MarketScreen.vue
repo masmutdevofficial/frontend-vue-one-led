@@ -362,6 +362,9 @@ function tick() {
 }
 
 // Apply current WS tickerMap immediately (catches snapshot that arrived before mount)
+// NOTE: this only seeds marketsData baseline prices — the displayedMarkets computed
+// overlays live tickerMap on top on every re-render, so this is just for the
+// klines-based 24h change% fallback stored in marketsData.
 function applyTickerPrices() {
   const map = tickerMap.value
   marketsData.value = marketsData.value.map(coin => {
@@ -404,18 +407,6 @@ onUnmounted(() => {
   clearInterval(priceRefreshTimer)
 })
 
-// ── Update prices and market caps from WS ticker ───────────────
-watch(tickerMap, (map) => {
-  marketsData.value = marketsData.value.map(coin => {
-    const t = map.get(coin.binancePair)
-    if (!t) return coin
-    return {
-      ...coin,
-      price:  t.price,
-      change: Math.round(t.change * 100) / 100,
-    }
-  })
-})
 
 // ── Update volume sparkline from real 24h volume data ─────────
 watch(volumeValue, (val) => {
