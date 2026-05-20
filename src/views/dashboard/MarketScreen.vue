@@ -281,13 +281,13 @@ interface Market {
 }
 
 const marketsData = ref<Market[]>([
-  { name: 'BTC',  fullName: 'Bitcoin',   icon: 'mdi:bitcoin',                 price: 64923.45, change:  1.24, chartPoints: [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60], binancePair: 'BTCUSDT',  tags: ['Layer 1', 'Top 100'] },
-  { name: 'ETH',  fullName: 'Ethereum',  icon: 'mdi:ethereum',                price:  3215.67, change:  2.35, chartPoints: [0.25, 0.35, 0.38, 0.46, 0.50, 0.55, 0.62, 0.72], binancePair: 'ETHUSDT',  tags: ['Layer 1', 'DeFi', 'Top 100'] },
-  { name: 'SOL',  fullName: 'Solana',    icon: 'mdi:circle-multiple-outline', price:   171.25, change: -0.45, chartPoints: [0.65, 0.60, 0.62, 0.55, 0.58, 0.52, 0.54, 0.48], binancePair: 'SOLUSDT',  tags: ['Layer 1', 'Top 100'] },
-  { name: 'BNB',  fullName: 'BNB',       icon: 'mdi:alpha-b-circle',          price:   593.31, change:  0.81, chartPoints: [0.35, 0.40, 0.38, 0.44, 0.42, 0.48, 0.46, 0.52], binancePair: 'BNBUSDT',  tags: ['Layer 1', 'Top 100'] },
-  { name: 'XRP',  fullName: 'XRP',       icon: 'mdi:close',                   price:    0.522, change:  1.05, chartPoints: [0.40, 0.44, 0.42, 0.48, 0.50, 0.52, 0.54, 0.56], binancePair: 'XRPUSDT',  tags: ['Top 100'] },
-  { name: 'WIF',  fullName: 'dogwifhat', icon: 'mdi:dog',                     price:     2.45, change:  8.32, chartPoints: [0.20, 0.28, 0.35, 0.45, 0.55, 0.62, 0.70, 0.78], binancePair: 'WIFUSDT',  isNewListing: true, tags: ['Top 100'] },
-  { name: 'RNDR', fullName: 'Render',    icon: 'mdi:cube-scan',               price:     7.89, change: -1.23, chartPoints: [0.70, 0.65, 0.68, 0.60, 0.58, 0.55, 0.52, 0.48], binancePair: 'RNDRUSDT', isNewListing: true, tags: ['DeFi', 'Top 100'] },
+  { name: 'BTC',  fullName: 'Bitcoin',   icon: 'mdi:bitcoin',                 price: 0, change:  0, chartPoints: [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60], binancePair: 'BTCUSDT',  tags: ['Layer 1', 'Top 100'] },
+  { name: 'ETH',  fullName: 'Ethereum',  icon: 'mdi:ethereum',                price: 0, change:  0, chartPoints: [0.25, 0.35, 0.38, 0.46, 0.50, 0.55, 0.62, 0.72], binancePair: 'ETHUSDT',  tags: ['Layer 1', 'DeFi', 'Top 100'] },
+  { name: 'SOL',  fullName: 'Solana',    icon: 'mdi:circle-multiple-outline', price: 0, change:  0, chartPoints: [0.65, 0.60, 0.62, 0.55, 0.58, 0.52, 0.54, 0.48], binancePair: 'SOLUSDT',  tags: ['Layer 1', 'Top 100'] },
+  { name: 'BNB',  fullName: 'BNB',       icon: 'mdi:alpha-b-circle',          price: 0, change:  0, chartPoints: [0.35, 0.40, 0.38, 0.44, 0.42, 0.48, 0.46, 0.52], binancePair: 'BNBUSDT',  tags: ['Layer 1', 'Top 100'] },
+  { name: 'XRP',  fullName: 'XRP',       icon: 'mdi:close',                   price: 0, change:  0, chartPoints: [0.40, 0.44, 0.42, 0.48, 0.50, 0.52, 0.54, 0.56], binancePair: 'XRPUSDT',  tags: ['Top 100'] },
+  { name: 'WIF',  fullName: 'dogwifhat', icon: 'mdi:dog',                     price: 0, change:  0, chartPoints: [0.20, 0.28, 0.35, 0.45, 0.55, 0.62, 0.70, 0.78], binancePair: 'WIFUSDT',  isNewListing: true, tags: ['Top 100'] },
+  { name: 'RNDR', fullName: 'Render',    icon: 'mdi:cube-scan',               price: 0, change:  0, chartPoints: [0.70, 0.65, 0.68, 0.60, 0.58, 0.55, 0.52, 0.48], binancePair: 'RNDRUSDT', isNewListing: true, tags: ['DeFi', 'Top 100'] },
 ])
 
 // Live WS prices
@@ -349,8 +349,8 @@ const displayedMarkets = computed(() => {
   return result
 })
 
-// ── Live animation ─────────────────────────────────────────────
 let timer: ReturnType<typeof setInterval>
+let priceRefreshTimer: ReturnType<typeof setInterval>
 
 function tick() {
   // Animate per-coin sparklines — prices come from WS (watch below)
@@ -361,11 +361,48 @@ function tick() {
   })
 }
 
-onMounted(() => {
+// Apply current WS tickerMap immediately (catches snapshot that arrived before mount)
+function applyTickerPrices() {
+  const map = tickerMap.value
+  marketsData.value = marketsData.value.map(coin => {
+    const t = map.get(coin.binancePair)
+    return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
+  })
+}
+
+// Fetch real prices from Binance klines (overrides stale WS snapshot)
+async function fetchKlinesPrices() {
+  const coins = marketsData.value
+  await Promise.allSettled(coins.map(async (coin) => {
+    try {
+      const res = await fetch(
+        `https://api.one-led.io/v1/public/klines?symbol=${coin.binancePair}&interval=1d&limit=1`
+      )
+      if (!res.ok) return
+      const raw = await res.json()
+      if (!Array.isArray(raw) || !raw[0]) return
+      const close  = parseFloat(raw[0][4])
+      const open   = parseFloat(raw[0][1])
+      if (isNaN(close) || close <= 0) return
+      const change = open > 0 ? Math.round(((close - open) / open) * 10000) / 100 : 0
+      marketsData.value = marketsData.value.map(c =>
+        c.name === coin.name ? { ...c, price: close, change } : c
+      )
+    } catch { /* ignore */ }
+  }))
+}
+
+onMounted(async () => {
   timer = setInterval(tick, 1200)
-  fetchMarketCoins()
+  await fetchMarketCoins()
+  applyTickerPrices()
+  fetchKlinesPrices()
+  priceRefreshTimer = setInterval(fetchKlinesPrices, 30_000)
 })
-onUnmounted(() => { clearInterval(timer) })
+onUnmounted(() => {
+  clearInterval(timer)
+  clearInterval(priceRefreshTimer)
+})
 
 // ── Update prices and market caps from WS ticker ───────────────
 watch(tickerMap, (map) => {

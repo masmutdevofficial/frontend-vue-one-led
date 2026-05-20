@@ -407,15 +407,19 @@ function tickChart() {
 }
 // ──────────────────────────────────────────────────────────────
 
+let priceRefreshTimer: ReturnType<typeof setInterval>
+
 onMounted(() => {
   chartTimer = setInterval(tickChart, 1200)
   // Fetch coin metadata from market store
   marketStore.fetchCoins()
   if (marketStore.loaded) buildMarketsFromStore()
-  // Apply any WS snapshot data already in tickerMap (snapshot may arrive before mount)
+  // Apply any WS snapshot data already in tickerMap
   applyTickerPrices()
-  // Fetch prices from REST for any coin still at 0 (WS not yet ready or pair not tracked)
-  fetchMissingPrices()
+  // Always fetch from klines REST API — overrides stale WS snapshot data
+  fetchKlinesPrices()
+  // Refresh every 30 s so prices stay live even if WS server has stale data
+  priceRefreshTimer = setInterval(fetchKlinesPrices, 30_000)
   // Fetch real balance
   if (auth.accessToken) {
     makeUserApi(auth.accessToken).getBalance()
@@ -430,6 +434,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearInterval(chartTimer)
+  clearInterval(priceRefreshTimer)
 })
 
 interface QuickAction {
@@ -513,20 +518,20 @@ function applyTickerPrices() {
   })
 }
 
-// Fallback: fetch last close price from Binance klines for any coin still at price=0
-async function fetchMissingPrices() {
-  const missing = marketsData.value.filter(c => c.price === 0)
-  if (!missing.length) return
-  await Promise.allSettled(missing.map(async (coin) => {
+// Fetch current price and 24h change from Binance klines (overrides stale WS snapshot)
+async function fetchKlinesPrices() {
+  await Promise.allSettled(marketsData.value.map(async (coin) => {
     try {
+      // interval=1d: open=midnight UTC (≈24h open), close=current price
       const res = await fetch(
-        `https://api.one-led.io/v1/public/klines?symbol=${coin.binancePair}&interval=1m&limit=1`
+        `https://api.one-led.io/v1/public/klines?symbol=${coin.binancePair}&interval=1d&limit=1`
       )
       if (!res.ok) return
       const raw = await res.json()
       if (!Array.isArray(raw) || !raw[0]) return
       const close  = parseFloat(raw[0][4])
       const open   = parseFloat(raw[0][1])
+      if (isNaN(close) || close <= 0) return
       const change = open > 0 ? Math.round(((close - open) / open) * 10000) / 100 : 0
       marketsData.value = marketsData.value.map(c =>
         c.symbol === coin.symbol ? { ...c, price: close, change } : c
