@@ -412,6 +412,10 @@ onMounted(() => {
   // Fetch coin metadata from market store
   marketStore.fetchCoins()
   if (marketStore.loaded) buildMarketsFromStore()
+  // Apply any WS snapshot data already in tickerMap (snapshot may arrive before mount)
+  applyTickerPrices()
+  // Fetch prices from REST for any coin still at 0 (WS not yet ready or pair not tracked)
+  fetchMissingPrices()
   // Fetch real balance
   if (auth.accessToken) {
     makeUserApi(auth.accessToken).getBalance()
@@ -498,6 +502,37 @@ function buildMarketsFromStore() {
     } as Market
   }).filter(Boolean) as Market[]
   if (updated.length) marketsData.value = updated
+}
+
+// Apply current tickerMap state immediately (handles WS snapshot that arrived before mount)
+function applyTickerPrices() {
+  const map = tickerMap.value
+  marketsData.value = marketsData.value.map(coin => {
+    const t = map.get(coin.binancePair)
+    return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
+  })
+}
+
+// Fallback: fetch last close price from Binance klines for any coin still at price=0
+async function fetchMissingPrices() {
+  const missing = marketsData.value.filter(c => c.price === 0)
+  if (!missing.length) return
+  await Promise.allSettled(missing.map(async (coin) => {
+    try {
+      const res = await fetch(
+        `https://api.one-led.io/v1/public/klines?symbol=${coin.binancePair}&interval=1m&limit=1`
+      )
+      if (!res.ok) return
+      const raw = await res.json()
+      if (!Array.isArray(raw) || !raw[0]) return
+      const close  = parseFloat(raw[0][4])
+      const open   = parseFloat(raw[0][1])
+      const change = open > 0 ? Math.round(((close - open) / open) * 10000) / 100 : 0
+      marketsData.value = marketsData.value.map(c =>
+        c.symbol === coin.symbol ? { ...c, price: close, change } : c
+      )
+    } catch { /* ignore */ }
+  }))
 }
 
 watch(() => marketStore.loaded, (loaded) => {
