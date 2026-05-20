@@ -470,9 +470,9 @@
                     <p class="mt-0.5 text-[11px] font-semibold text-[#17212f]">{{ Number(order.amount) > 0 ? ((Number(order.filled) / Number(order.amount)) * 100).toFixed(0) + '%' : '0%' }}</p>
                   </div>
                   <div>
-                    <p class="text-[9px] font-bold text-gray-400">Distance</p>
-                    <p class="mt-0.5 text-[11px] font-semibold" :class="order.distancePct > 0 ? 'text-red-400' : order.distancePct < 0 ? 'text-[#10b8ad]' : 'text-gray-500'">
-                      {{ order.distancePct >= 0 ? '+' : '' }}{{ order.distancePct.toFixed(2) }}%
+                    <p class="text-[9px] font-bold text-gray-400">P&L (USDT)</p>
+                    <p class="mt-0.5 text-[11px] font-semibold" :class="order.pnl > 0 ? 'text-[#10b8ad]' : order.pnl < 0 ? 'text-red-400' : 'text-gray-500'">
+                      {{ order.pnl >= 0 ? '+' : '' }}{{ formatPrice(Math.abs(order.pnl)) }}
                     </p>
                   </div>
                 </div>
@@ -481,7 +481,7 @@
             <!-- Desktop: table view -->
             <div v-if="openOrdersList.length > 0" class="hidden md:block">
               <div class="grid grid-cols-[1.2fr_0.65fr_0.9fr_0.9fr_0.8fr_0.9fr_0.8fr_0.5fr] gap-2 border-b border-gray-100 px-4 py-3 text-[11px] font-bold text-gray-400">
-                <span>Pair / Type</span><span>Side</span><span>Price</span><span>Amount</span><span>Filled</span><span>Total</span><span>Distance</span><span class="text-right">Action</span>
+                <span>Pair / Type</span><span>Side</span><span>Price</span><span>Amount</span><span>Filled</span><span>Total</span><span>P&amp;L (USDT)</span><span class="text-right">Action</span>
               </div>
               <div>
                 <div
@@ -506,8 +506,8 @@
                     <p class="mt-1 text-[11px] font-semibold text-gray-400">{{ Number(order.filled).toFixed(4) }}</p>
                   </div>
                   <span class="text-[13px] font-semibold text-[#17212f]">{{ order.total ? formatPrice(Number(order.total)) : '—' }}</span>
-                  <span class="text-[13px] font-semibold" :class="order.distancePct > 0 ? 'text-red-400' : order.distancePct < 0 ? 'text-[#10b8ad]' : 'text-gray-500'">
-                    {{ order.distancePct >= 0 ? '+' : '' }}{{ order.distancePct.toFixed(2) }}%
+                  <span class="text-[13px] font-semibold" :class="order.pnl > 0 ? 'text-[#10b8ad]' : order.pnl < 0 ? 'text-red-400' : 'text-gray-500'">
+                    {{ order.pnl >= 0 ? '+' : '' }}{{ formatPrice(Math.abs(order.pnl)) }}
                   </span>
                   <button class="text-right text-[13px] font-semibold text-red-400 active:scale-95" @click="cancelOrder(order.id)">Cancel</button>
                 </div>
@@ -1434,16 +1434,20 @@ const pendingLimitIds = ref<Set<string>>(new Set())
  */
 const filledValueMap = ref<Record<string, number>>({})
 
-/** Enriched open orders with a `distancePct` field showing % from market price. */
+/** Enriched open orders with real-time P&L in USDT. */
 const openOrdersWithDistance = computed(() =>
   openOrdersList.value.map(o => {
     const orderPrice = Number(o.price)
     const marketPrice = livePrice.value
-    let distancePct = 0
+    let pnl = 0
     if (orderPrice > 0 && marketPrice > 0) {
-      distancePct = ((marketPrice - orderPrice) / orderPrice) * 100
+      if (o.side === 'Buy') {
+        pnl = (marketPrice - orderPrice) * Number(o.amount)
+      } else {
+        pnl = (orderPrice - marketPrice) * Number(o.amount)
+      }
     }
-    return { ...o, distancePct }
+    return { ...o, pnl }
   })
 )
 
