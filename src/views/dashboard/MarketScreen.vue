@@ -326,11 +326,16 @@ async function fetchMarketCoins() {
   }
 }
 
-// ── Computed filtered & sorted list ───────────────────────────
-// Prices are stored in marketsData and updated on every WS tick by
-// watch(tickerMap, ...) below — same proven pattern as TradeScreen.
+// ── Computed filtered & sorted list — with live WS prices ─────────────────────
+// Reading tickerMap.value inside this computed lets Vue auto-track the dependency.
+// Every applyTick() call replaces tickerMap.value → computed invalidates →
+// template re-renders with fresh prices. Same mechanism as volumeValue above.
 const displayedMarkets = computed(() => {
-  let result = marketsData.value.slice()
+  const map = tickerMap.value
+  let result = marketsData.value.map(coin => {
+    const t = map.get(coin.binancePair)
+    return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
+  })
 
   // Top tab
   if (activeTopTab.value === 'Top Gainers') {
@@ -350,19 +355,6 @@ const displayedMarkets = computed(() => {
 
   return result
 })
-
-// ── Watch tickerMap → update marketsData prices → trigger re-render ──────────
-// Same proven pattern as TradeScreen:
-//   watch(tickerMap, callback) explicitly subscribes to the ref so every WS tick
-//   fires the callback. Callback updates marketsData (ref<[]> replacement) →
-//   displayedMarkets computed re-runs → template re-renders with fresh prices.
-//   tick() sparkline animation preserves prices via { ...coin } spread. ✓
-watch(tickerMap, (map) => {
-  marketsData.value = marketsData.value.map(coin => {
-    const t = map.get(coin.binancePair)
-    return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
-  })
-}, { immediate: true })
 
 let timer: ReturnType<typeof setInterval>
 let priceRefreshTimer: ReturnType<typeof setInterval>

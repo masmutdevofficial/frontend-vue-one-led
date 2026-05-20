@@ -544,19 +544,18 @@ watch(() => marketStore.loaded, (loaded) => {
   if (loaded) buildMarketsFromStore()
 })
 
-// ── Watch tickerMap → update marketsData prices → trigger re-render ──────────
-// Same proven pattern as TradeScreen:
-//   watch(tickerMap, callback) explicitly subscribes to the ref so every WS tick
-//   fires the callback. Callback mutates marketsData (ref<[]> replacement) →
-//   displayedMarkets computed re-runs → template re-renders with fresh prices.
-watch(tickerMap, (map) => {
-  marketsData.value = marketsData.value.map(coin => {
+// ── displayedMarkets: overlay live WS prices directly from tickerMap ──────────
+// Reading tickerMap.value inside a computed lets Vue auto-track the dependency.
+// Every applyTick() call replaces tickerMap.value with a new Map object →
+// this computed invalidates immediately → template re-renders with fresh prices.
+// This is the same mechanism that volumeValue/volumeChange use in MarketScreen.
+const displayedMarkets = computed(() => {
+  const map = tickerMap.value
+  return marketsData.value.map(coin => {
     const t = map.get(coin.binancePair)
     return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
   })
-}, { immediate: true })
-
-const displayedMarkets = computed(() => marketsData.value)
+})
 </script>
 
 <style>
