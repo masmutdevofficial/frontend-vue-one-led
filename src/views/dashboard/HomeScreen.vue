@@ -261,18 +261,18 @@
                   <p class="mt-1 text-[10px] text-gray-400 truncate">{{ coin.fullName }}</p>
                 </div>
               </div>
-              <!-- Last Price -->
+              <!-- Last Price (read tickerMap directly — same as TradeScreen coin picker) -->
               <div class="w-22 text-right">
-                <p class="text-[12px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
-                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(coin.price) }}</p>
+                <p class="text-[12px] font-bold leading-none">{{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
+                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
               </div>
               <!-- 24h Change badge -->
               <div class="w-19 flex justify-end pr-1">
                 <span
                   class="inline-block rounded-lg px-2 py-1 text-[11px] font-bold"
-                  :class="coin.change >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
+                  :class="(tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
                 >
-                  {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
+                  {{ ((tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? '+' : '') + (tickerMap.get(coin.binancePair)?.change ?? coin.change).toFixed(2) }}%
                 </span>
               </div>
               <!-- Star -->
