@@ -397,7 +397,6 @@ function toggleFavorite(name: string) {
 const chartPoints = ref<number[]>([0.55, 0.42, 0.60, 0.38, 0.52, 0.30, 0.48, 0.22, 0.40, 0.18])
 const pnlValue = ref(0)
 const pnlPct = ref(0)
-const hasNonUsdtHoldings = ref(false)
 
 function buildSplinePath(pts: number[], filled = false): string {
   const W = 105, H = 58, padTop = 4, padBottom = 6
@@ -449,12 +448,10 @@ function tickChart() {
   chartPoints.value = [...chartPoints.value.slice(1), next]
 
   const pnlDelta = (Math.random() - 0.48) * 0.12
-  if (hasNonUsdtHoldings.value) {
-    pnlValue.value = Math.round((pnlValue.value + pnlDelta) * 100) / 100
-    pnlPct.value = balanceTotal.value > 0
-      ? Math.round((pnlValue.value / balanceTotal.value) * 10000) / 100
-      : 0
-  }
+  pnlValue.value = Math.round((pnlValue.value + pnlDelta) * 100) / 100
+  pnlPct.value = balanceTotal.value > 0
+    ? Math.round((pnlValue.value / balanceTotal.value) * 10000) / 100
+    : 0
 
   // Animate sparkline chart points only (prices come from WS)
   marketsData.value = marketsData.value.map(coin => {
@@ -477,9 +474,6 @@ onMounted(() => {
     makeUserApi(auth.accessToken).getBalance()
       .then(d => {
         balanceTotal.value = parseFloat(d.total as unknown as string) || 0
-        hasNonUsdtHoldings.value = (d.balances ?? []).some(
-          (b: any) => b.coin.toUpperCase() !== 'USDT' && parseFloat(b.amount) > 0
-        )
         pnlValue.value = 0
         pnlPct.value = 0
       })
