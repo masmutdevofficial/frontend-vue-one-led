@@ -1312,8 +1312,10 @@ async function cancelOrder(id: string) {
   if (!tradeApi.value) return
   try {
     await tradeApi.value.cancelOrder(id)
+    // Cancelled order moves from open → history; funds are unlocked
     await fetchOpenOrders()
     await fetchCoinBalances()
+    await fetchHistory()
   } catch { /* ignore */ }
 }
 
@@ -1321,24 +1323,83 @@ async function cancelAll() {
   if (!tradeApi.value) return
   try {
     await tradeApi.value.cancelAll()
+    // All cancelled orders move from open → history; funds are unlocked
     await fetchOpenOrders()
     await fetchCoinBalances()
+    await fetchHistory()
   } catch { /* ignore */ }
 }
 
 async function placeOrder() {
   if (!tradeApi.value) return
   placeOrderError.value = ''
+
+  // ── Client-side validation ──────────────────────────────────
+  const side = activeSide.value
+  const amount = orderAmount.value
+  const price  = activeOrderType.value === 'Market'
+    ? livePrice.value
+    : orderPrice.value
+
+  // 1. Validate amount
+  if (!amount || amount <= 0) {
+    placeOrderError.value = 'Please enter a valid amount.'
+    return
+  }
+  if (amount < baseCoin.value.amountStep) {
+    placeOrderError.value = `Minimum amount is ${baseCoin.value.amountStep} ${coin.value.symbol}.`
+    return
+  }
+
+  // 2. Validate price (for non-market orders)
+  if (activeOrderType.value !== 'Market') {
+    if (!price || price <= 0) {
+      placeOrderError.value = 'Please enter a valid price.'
+      return
+    }
+    if (price < baseCoin.value.priceStep) {
+      placeOrderError.value = `Minimum price is ${baseCoin.value.priceStep} USDT.`
+      return
+    }
+  }
+
+  // 3. BUY validation — check USDT balance
+  if (side === 'Buy') {
+    const totalCost = price * amount
+    if (availableBalance.value <= 0) {
+      placeOrderError.value = 'Insufficient USDT balance.'
+      return
+    }
+    if (totalCost > availableBalance.value) {
+      placeOrderError.value = `Insufficient USDT balance. You need ${formatPrice(totalCost)} USDT but only have ${formatPrice(availableBalance.value)} USDT.`
+      return
+    }
+  }
+
+  // 4. SELL validation — check coin balance
+  if (side === 'Sell') {
+    if (availableCoin.value <= 0) {
+      placeOrderError.value = `You don't have any ${coin.value.symbol} to sell.`
+      return
+    }
+    if (amount > availableCoin.value) {
+      placeOrderError.value = `Insufficient ${coin.value.symbol} balance. You need ${amount.toFixed(8)} ${coin.value.symbol} but only have ${availableCoin.value.toFixed(8)} ${coin.value.symbol}.`
+      return
+    }
+  }
+
+  // ── Place order ─────────────────────────────────────────────
   placeOrderLoading.value = true
   try {
     const body: Parameters<ReturnType<typeof makeTradeApi>['placeOrder']>[0] = {
       symbol: coin.value.symbol + 'USDT',
-      side:   activeSide.value,
+      side:   side,
       type:   activeOrderType.value === 'Stop' ? 'Stop-Limit' : activeOrderType.value as 'Market' | 'Limit',
-      amount: orderAmount.value,
+      amount: amount,
     }
-    if (activeOrderType.value !== 'Market') body.price = orderPrice.value
+    if (activeOrderType.value !== 'Market') body.price = price
     await tradeApi.value.placeOrder(body)
+    // Refresh balances after order (locked/reduced)
     await fetchCoinBalances()
     if (activeOrderType.value === 'Market') {
       // Market orders fill immediately → jump to Positions tab
@@ -1349,6 +1410,8 @@ async function placeOrder() {
       await fetchOpenOrders()
       activeBottomTab.value = 'open-orders'
     }
+    // Also refresh history
+    fetchHistory()
   } catch (err: any) {
     placeOrderError.value = err?.message ?? 'Failed to place order.'
   } finally {
