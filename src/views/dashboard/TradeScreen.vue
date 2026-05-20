@@ -1631,7 +1631,7 @@ async function placeOrder() {
       type:   activeOrderType.value === 'Stop' ? 'Stop-Limit' : activeOrderType.value as 'Market' | 'Limit',
       amount: amount,
     }
-    if (activeOrderType.value !== 'Market') body.price = price
+    body.price = price
     const { order: placedOrder } = await tradeApi.value.placeOrder(body)
     // Refresh balances after order (locked/reduced)
     await fetchCoinBalances()
