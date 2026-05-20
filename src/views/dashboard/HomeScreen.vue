@@ -234,81 +234,52 @@
               See All <Icon icon="mdi:arrow-right" class="inline text-[12px]" />
             </button>
           </div>
-          <!-- Tabs -->
-          <div class="mt-4 flex items-center gap-5 border-b border-gray-100 pb-2.5">
-            <button
-              v-for="tab in marketTabs"
-              :key="tab"
-              @click="activeTab = tab"
-              class="relative pb-2.5 -mb-2.5 text-[11px] font-bold transition-colors"
-              :class="activeTab === tab ? 'text-[#1bb9b2]' : 'text-gray-400'"
-            >
-              {{ tab }}
-              <span
-                v-if="activeTab === tab"
-                class="absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-[#1bb9b2]"
-              ></span>
-            </button>
-          </div>
           <!-- Header -->
-          <div class="mt-3 flex items-center text-[8px] font-bold text-gray-400">
+          <div class="mt-4 flex items-center border-b border-gray-100 pb-2.5 text-[10px] font-bold text-gray-400">
             <span class="flex-1">Name</span>
-            <span class="w-20 text-center shrink-0">Last Price</span>
-            <span class="w-28 text-center shrink-0">24h Chg%</span>
-            <span class="w-5 shrink-0"></span>
+            <span class="w-22 text-right">Last Price</span>
+            <span class="w-19 text-right pr-1">24h Chg%</span>
+            <span class="w-8"></span>
           </div>
+          <!-- Empty state -->
+          <div v-if="displayedMarkets.length === 0" class="px-4 py-10 text-center text-[13px] font-semibold text-gray-400">No data</div>
           <!-- Rows -->
-          <div class="mt-2 space-y-3">
+          <div v-else class="divide-y divide-gray-100">
             <div
               v-for="coin in displayedMarkets"
               :key="coin.symbol"
-              class="flex items-center cursor-pointer rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              class="flex items-center py-3 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
               @click="router.push('/trade/' + coin.symbol.toLowerCase())"
             >
               <!-- Name + icon -->
-              <div class="flex flex-1 min-w-0 items-center gap-2">
-                <div class="flex h-7 w-7 shrink-0 items-center justify-center">
-                  <CoinIcon :icon="coin.icon" :symbol="coin.symbol" icon-class="text-[26px]" img-class="h-7 w-7 rounded-full object-contain" />
+              <div class="flex flex-1 min-w-0 items-center gap-2.5">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center">
+                  <CoinIcon :icon="coin.icon" :symbol="coin.symbol" icon-class="text-[28px]" img-class="h-8 w-8 rounded-full object-contain" />
                 </div>
                 <div class="min-w-0">
-                  <p class="text-[10px] font-extrabold leading-none">{{ coin.symbol }}</p>
-                  <p class="mt-1 text-[8px] text-gray-400 truncate">{{ coin.fullName }}</p>
+                  <p class="text-[12px] font-extrabold leading-none">{{ coin.symbol }}</p>
+                  <p class="mt-1 text-[10px] text-gray-400 truncate">{{ coin.fullName }}</p>
                 </div>
               </div>
               <!-- Last Price -->
-              <div class="w-20 shrink-0 flex flex-col items-center">
-                <p class="text-[10px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
-                <p class="mt-1 text-[8px] text-gray-400">${{ formatPrice(coin.price) }}</p>
+              <div class="w-22 text-right">
+                <p class="text-[12px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
+                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(coin.price) }}</p>
               </div>
-              <!-- 24h Change + mini spline chart -->
-              <div class="w-28 shrink-0 flex items-center justify-center gap-1">
-                <p class="text-[10px] font-bold" :class="coin.change >= 0 ? 'text-emerald-500' : 'text-red-400'">
+              <!-- 24h Change badge -->
+              <div class="w-19 flex justify-end pr-1">
+                <span
+                  class="inline-block rounded-lg px-2 py-1 text-[11px] font-bold"
+                  :class="coin.change >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
+                >
                   {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
-                </p>
-                <svg class="h-6.5 w-11 shrink-0" viewBox="0 0 52 26" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient :id="`cg-${coin.symbol}`" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stop-color="#62d9d3" stop-opacity="0.25" />
-                      <stop offset="100%" stop-color="#62d9d3" stop-opacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path :d="buildMiniPath(coin.chartPoints, true)" :fill="`url(#cg-${coin.symbol})`" />
-                  <path
-                    :d="buildMiniPath(coin.chartPoints)"
-                    fill="none"
-                    stroke="#62d9d3"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    style="transition: d 0.4s ease"
-                  />
-                </svg>
+                </span>
               </div>
               <!-- Star -->
-              <button class="shrink-0 ml-1 w-5 flex items-center justify-center" @click.stop="toggleFavorite(coin.symbol)">
+              <button class="flex w-8 shrink-0 justify-end" @click.stop="toggleFavorite(coin.symbol)">
                 <Icon
                   :icon="favorites.has(coin.symbol) ? 'mdi:star' : 'mdi:star-outline'"
-                  class="text-[16px] transition-colors"
+                  class="text-[18px] transition-colors"
                   :class="favorites.has(coin.symbol) ? 'text-yellow-400' : 'text-gray-300'"
                 />
               </button>
@@ -374,7 +345,6 @@ const router = useRouter()
 const auth   = useAuthStore()
 const marketStore = useMarketStore()
 const { tickerMap } = useMarketWs()
-const activeTab = ref('Crypto')
 const balanceVisible = ref(true)
 
 // ── Real balance (USDT) ───────────────────────────────────────────────────────
@@ -420,25 +390,6 @@ function buildSplinePath(pts: number[], filled = false): string {
 const chartLinePath = computed(() => buildSplinePath(chartPoints.value))
 const chartFillPath = computed(() => buildSplinePath(chartPoints.value, true))
 
-function buildMiniPath(pts: number[], filled = false): string {
-  const W = 52, H = 26, padTop = 2, padBottom = 2
-  const usableH = H - padTop - padBottom
-  const xStep = W / (pts.length - 1)
-  const coords = pts.map((y, i) => ({
-    x: i * xStep,
-    y: padTop + (1 - y) * usableH,
-  }))
-  const cpx = xStep * 0.45
-  let d = `M ${coords[0].x.toFixed(1)},${coords[0].y.toFixed(1)}`
-  for (let i = 0; i < coords.length - 1; i++) {
-    d += ` C ${(coords[i].x + cpx).toFixed(1)},${coords[i].y.toFixed(1)}`
-      + ` ${(coords[i + 1].x - cpx).toFixed(1)},${coords[i + 1].y.toFixed(1)}`
-      + ` ${coords[i + 1].x.toFixed(1)},${coords[i + 1].y.toFixed(1)}`
-  }
-  if (filled) d += ` L ${((pts.length - 1) * xStep).toFixed(1)},${H} L 0,${H} Z`
-  return d
-}
-
 let chartTimer: ReturnType<typeof setInterval>
 
 function tickChart() {
@@ -453,14 +404,6 @@ function tickChart() {
     ? Math.round((pnlValue.value / balanceTotal.value) * 10000) / 100
     : 0
 
-  // Animate sparkline chart points only (prices come from WS)
-  marketsData.value = marketsData.value.map(coin => {
-    const ptLast = coin.chartPoints[coin.chartPoints.length - 1]
-    const bias = coin.change > 0 ? 0.44 : 0.56
-    const ptDelta = (Math.random() - bias) * 0.1
-    const ptNext = Math.max(0.05, Math.min(0.95, ptLast + ptDelta))
-    return { ...coin, chartPoints: [...coin.chartPoints.slice(1), ptNext] }
-  })
 }
 // ──────────────────────────────────────────────────────────────
 
@@ -511,8 +454,6 @@ const quickActions: QuickAction[] = [
   { label: 'Staking', icon: 'mdi:bank-outline', route: '/staking' },
 ]
 
-const marketTabs = ['Crypto', 'Top Gainers', 'New Listing']
-
 function formatPrice(price: number): string {
   if (price >= 1000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   if (price >= 1) return price.toFixed(2)
@@ -527,27 +468,36 @@ interface Market {
   price: number
   change: number
   chartPoints: number[]
-  isNewListing?: boolean
 }
 
-const marketsData = ref<Market[]>([])
+const FEATURED_SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP']
+
+const marketsData = ref<Market[]>([
+  { symbol: 'BTC', fullName: 'Bitcoin',   icon: 'mdi:bitcoin',                 binancePair: 'BTCUSDT', price: 0, change: 0, chartPoints: [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60] },
+  { symbol: 'ETH', fullName: 'Ethereum',  icon: 'mdi:ethereum',                binancePair: 'ETHUSDT', price: 0, change: 0, chartPoints: [0.25, 0.35, 0.38, 0.46, 0.50, 0.55, 0.62, 0.72] },
+  { symbol: 'BNB', fullName: 'BNB',       icon: 'mdi:alpha-b-circle',          binancePair: 'BNBUSDT', price: 0, change: 0, chartPoints: [0.35, 0.40, 0.38, 0.44, 0.42, 0.48, 0.46, 0.52] },
+  { symbol: 'SOL', fullName: 'Solana',    icon: 'mdi:circle-multiple-outline', binancePair: 'SOLUSDT', price: 0, change: 0, chartPoints: [0.65, 0.60, 0.62, 0.55, 0.58, 0.52, 0.54, 0.48] },
+  { symbol: 'XRP', fullName: 'XRP',       icon: 'mdi:close',                   binancePair: 'XRPUSDT', price: 0, change: 0, chartPoints: [0.40, 0.44, 0.42, 0.48, 0.50, 0.52, 0.54, 0.56] },
+])
 
 function buildMarketsFromStore() {
   const map = tickerMap.value
-  marketsData.value = marketStore.coins.slice(0, 10).map(c => {
-    const t = map.get(c.binancePair)
-    const existing = marketsData.value.find(m => m.symbol === c.symbol)
+  const updated = FEATURED_SYMBOLS.map(sym => {
+    const c = marketStore.coins.find(x => x.symbol === sym)
+    const existing = marketsData.value.find(m => m.symbol === sym)
+    if (!c && !existing) return null
+    const t = map.get((c?.binancePair ?? existing?.binancePair)!)
     return {
-      symbol: c.symbol,
-      fullName: c.name,
-      icon: c.icon,
-      binancePair: c.binancePair,
+      symbol: sym,
+      fullName: c?.name ?? existing!.fullName,
+      icon: c?.icon ?? existing!.icon,
+      binancePair: c?.binancePair ?? existing!.binancePair,
       price: t?.price ?? existing?.price ?? 0,
-      change: t?.change ?? existing?.change ?? 0,
+      change: t ? Math.round(t.change * 100) / 100 : (existing?.change ?? 0),
       chartPoints: existing?.chartPoints ?? [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60],
-      isNewListing: false,
-    }
-  })
+    } as Market
+  }).filter(Boolean) as Market[]
+  if (updated.length) marketsData.value = updated
 }
 
 watch(() => marketStore.loaded, (loaded) => {
@@ -563,13 +513,7 @@ watch(tickerMap, () => {
   })
 })
 
-const displayedMarkets = computed(() => {
-  if (activeTab.value === 'Top Gainers')
-    return [...marketsData.value].sort((a, b) => b.change - a.change)
-  if (activeTab.value === 'New Listing')
-    return marketsData.value.filter(m => m.isNewListing)
-  return marketsData.value.filter(m => !m.isNewListing)
-})
+const displayedMarkets = computed(() => marketsData.value)
 </script>
 
 <style>
