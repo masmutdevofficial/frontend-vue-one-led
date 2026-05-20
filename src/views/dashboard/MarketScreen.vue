@@ -132,17 +132,17 @@
 
               <!-- Last Price -->
               <div class="w-22 text-right">
-                <p class="text-[12px] font-bold leading-none">{{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
-                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
+                <p class="text-[12px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
+                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(coin.price) }}</p>
               </div>
 
               <!-- 24h Change -->
               <div class="w-19 flex justify-end pr-1">
                 <span
                   class="inline-block rounded-lg px-2 py-1 text-[11px] font-bold"
-                  :class="(tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
+                  :class="coin.change >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
                 >
-                  {{ ((tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? '+' : '') + (Math.round((tickerMap.get(coin.binancePair)?.change ?? coin.change) * 100) / 100).toFixed(2) }}%
+                  {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
                 </span>
               </div>
 
@@ -327,21 +327,14 @@ async function fetchMarketCoins() {
 }
 
 // ── Computed filtered & sorted list ───────────────────────────
-// Prices are read from tickerMap DIRECTLY in the template (same pattern as
-// TradeScreen) — Vue tracks the Map access as a direct render dep so the
-// component re-renders on every WS tick automatically.
+// Prices are stored in marketsData and updated on every WS tick by
+// watch(tickerMap, ...) below — same proven pattern as TradeScreen.
 const displayedMarkets = computed(() => {
   let result = marketsData.value.slice()
 
   // Top tab
   if (activeTopTab.value === 'Top Gainers') {
-    // Sort by live tickerMap change so ranking is real-time too
-    const map = tickerMap.value
-    result = result.sort((a, b) => {
-      const ca = map.get(a.binancePair)?.change ?? a.change
-      const cb = map.get(b.binancePair)?.change ?? b.change
-      return cb - ca
-    })
+    result = result.sort((a, b) => b.change - a.change)
   } else if (activeTopTab.value === 'New Listing') {
     result = result.filter(c => c.isNewListing)
   } else {
@@ -357,6 +350,19 @@ const displayedMarkets = computed(() => {
 
   return result
 })
+
+// ── Watch tickerMap → update marketsData prices → trigger re-render ──────────
+// Same proven pattern as TradeScreen:
+//   watch(tickerMap, callback) explicitly subscribes to the ref so every WS tick
+//   fires the callback. Callback updates marketsData (ref<[]> replacement) →
+//   displayedMarkets computed re-runs → template re-renders with fresh prices.
+//   tick() sparkline animation preserves prices via { ...coin } spread. ✓
+watch(tickerMap, (map) => {
+  marketsData.value = marketsData.value.map(coin => {
+    const t = map.get(coin.binancePair)
+    return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
+  })
+}, { immediate: true })
 
 let timer: ReturnType<typeof setInterval>
 let priceRefreshTimer: ReturnType<typeof setInterval>

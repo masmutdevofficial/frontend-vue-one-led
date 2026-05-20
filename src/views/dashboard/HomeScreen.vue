@@ -263,16 +263,16 @@
               </div>
               <!-- Last Price -->
               <div class="w-22 text-right">
-                <p class="text-[12px] font-bold leading-none">{{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
-                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
+                <p class="text-[12px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
+                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(coin.price) }}</p>
               </div>
               <!-- 24h Change badge -->
               <div class="w-19 flex justify-end pr-1">
                 <span
                   class="inline-block rounded-lg px-2 py-1 text-[11px] font-bold"
-                  :class="(tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
+                  :class="coin.change >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
                 >
-                  {{ ((tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? '+' : '') + (Math.round((tickerMap.get(coin.binancePair)?.change ?? coin.change) * 100) / 100).toFixed(2) }}%
+                  {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
                 </span>
               </div>
               <!-- Star -->
@@ -544,9 +544,18 @@ watch(() => marketStore.loaded, (loaded) => {
   if (loaded) buildMarketsFromStore()
 })
 
-// displayedMarkets provides coin metadata; prices are read directly from
-// tickerMap in the template (same pattern as TradeScreen lines 106-111) so
-// Vue tracks the Map access as a direct render dep and re-renders on every tick.
+// ── Watch tickerMap → update marketsData prices → trigger re-render ──────────
+// Same proven pattern as TradeScreen:
+//   watch(tickerMap, callback) explicitly subscribes to the ref so every WS tick
+//   fires the callback. Callback mutates marketsData (ref<[]> replacement) →
+//   displayedMarkets computed re-runs → template re-renders with fresh prices.
+watch(tickerMap, (map) => {
+  marketsData.value = marketsData.value.map(coin => {
+    const t = map.get(coin.binancePair)
+    return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
+  })
+}, { immediate: true })
+
 const displayedMarkets = computed(() => marketsData.value)
 </script>
 
