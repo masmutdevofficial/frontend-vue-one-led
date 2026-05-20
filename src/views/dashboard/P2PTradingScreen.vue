@@ -516,7 +516,7 @@
               <p class="text-[11px] font-bold text-gray-400">I will {{ selectedMerchant.type === 'buy' ? (isFiatLocalCurrency(selectedMerchant.currency) ? 'pay' : 'receive') : (isFiatLocalCurrency(selectedMerchant.currency) ? 'receive' : 'pay') }}</p>
               <p class="text-[16px] font-bold text-[#0ba99d]">≈ {{ tradeReceive }} <span class="text-[11px] text-gray-400">{{ isFiatLocalCurrency(selectedMerchant.currency) ? selectedMerchant.currency : activeAsset }}</span></p>
             </div>
-            <!-- Bank info (shown when buying) -->
+            <!-- Bank info (shown when buying, hidden for sell) -->
             <div v-if="selectedMerchant.type === 'buy' && (selectedMerchant.bank_name || selectedMerchant.bank_account)" class="mt-3 rounded-xl border border-dashed border-[#0ba99d]/40 bg-[#f0fffd] px-4 py-3 space-y-1">
               <p class="text-[10px] font-bold text-[#0ba99d] uppercase tracking-wider">Payment destination</p>
               <p v-if="selectedMerchant.bank_name" class="text-[12px] font-bold text-[#17212f]">{{ selectedMerchant.bank_name }}</p>
@@ -558,7 +558,7 @@
                 <span class="text-[10px] font-bold text-[#17212f]">{{ selectedMerchant?.name }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-[10px] font-bold text-gray-400">{{ selectedMerchant && isFiatLocalCurrency(selectedMerchant.currency) ? 'You pay' : 'You receive' }}</span>
+                <span class="text-[10px] font-bold text-gray-400">{{ selectedMerchant?.type === 'sell' ? 'You get' : (selectedMerchant && isFiatLocalCurrency(selectedMerchant.currency) ? 'You pay' : 'You receive') }}</span>
                 <span class="text-[10px] font-bold text-[#0ba99d]">{{ tradeReceive }} {{ selectedMerchant && isFiatLocalCurrency(selectedMerchant.currency) ? selectedMerchant.currency : activeAsset }}</span>
               </div>
             </div>
@@ -582,9 +582,9 @@
               </div>
             </Transition>
 
-            <!-- CTA: Request Account Bank → then Done -->
+            <!-- CTA: Request Account Bank for buy, direct Done for sell -->
             <button
-              v-if="!accountRequested"
+              v-if="!accountRequested && selectedMerchant?.type !== 'sell'"
               @click="requestAccount"
               :disabled="accountLoading"
               class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-bold text-white active:scale-95 disabled:opacity-60"
@@ -979,6 +979,13 @@ async function confirmTrade() {
     accountInfo.value      = null
     showTradeModal.value = false
     showSuccess.value    = true
+    // Refresh balance after placing order (especially for sell orders)
+    if (authStore.accessToken) {
+      makeUserApi(authStore.accessToken).getBalance()
+        .then(d => { userBalance.value = parseFloat(d.total as unknown as string) || 0 })
+        .catch(() => {})
+      if (authStore.profile) authStore.refreshProfile()
+    }
   } catch (err: any) {
     const msg = err?.body?.error?.message ?? err?.message ?? 'Order failed. Please try again.'
     if (msg.toLowerCase().includes('password')) {

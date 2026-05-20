@@ -28,10 +28,10 @@
               </p>
 
               <div class="mt-3 flex items-end gap-2">
-                <h1 class="text-[34px] font-semibold leading-none tracking-[0.08em] text-[#0b1638]">
+                <h1 class="text-[26px] font-bold leading-none tracking-tight">
                   2,450.30
                 </h1>
-                <span class="mb-1 text-sm font-semibold text-[#0ba99d]">
+                <span class="mb-1 text-[11px] font-semibold">
                   USDT
                 </span>
               </div>
