@@ -536,7 +536,7 @@
                   </div>
                   <div class="text-right">
                     <p class="text-[13px] font-semibold text-[#17212f]">
-                      {{ tickerMap.get(h.coin + 'USDT')?.price ? formatPrice((tickerMap.get(h.coin + 'USDT')!.price) * h.amount) + ' USDT' : '—' }}
+                      {{ filledValueMap[h.coin] ? formatPrice(filledValueMap[h.coin]) + ' USDT' : (tickerMap.get(h.coin + 'USDT')?.price ? formatPrice((tickerMap.get(h.coin + 'USDT')!.price) * h.amount) + ' USDT' : '—') }}
                     </p>
                   </div>
                 </div>
@@ -1014,6 +1014,15 @@ function checkPendingLimitFills() {
   openOrdersList.value = openOrdersList.value.filter(o => !filledIds.includes(o.id))
   for (const o of filledOrders) {
     historyList.value = [{ ...o, status: 'filled' as any }, ...historyList.value]
+    // Track USDT value for spot holdings display
+    if (o.side === 'Buy' && o.price) {
+      const coinSym = o.symbol.replace('USDT', '')
+      const usdtValue = Number(o.price) * Number(o.amount)
+      filledValueMap.value = {
+        ...filledValueMap.value,
+        [coinSym]: (filledValueMap.value[coinSym] ?? 0) + usdtValue,
+      }
+    }
   }
   fetchCoinBalances()
   fetchPositions()
@@ -1422,6 +1431,13 @@ const orderFillTimers  = new Map<string, number>()
 // Market orders skip this and fill immediately via a short timer.
 const pendingLimitIds = ref<Set<string>>(new Set())
 
+/**
+ * Tracks the total USDT value paid per coin from filled BUY orders.
+ * Key = coin symbol (e.g. "BTC"), value = total USDT spent.
+ * Used in spotHoldings display as a reliable fallback when tickerMap has no data.
+ */
+const filledValueMap = ref<Record<string, number>>({})
+
 /** Enriched open orders with a `distancePct` field showing % from market price. */
 const openOrdersWithDistance = computed(() =>
   openOrdersList.value.map(o => {
@@ -1640,6 +1656,15 @@ async function placeOrder() {
         // Auto-cancel the pending open order refetch to keep state clean
         await fetchCoinBalances()
         await fetchHistory()
+        // Track USDT value for spot holdings display
+        if (placedOrder.side === 'Buy') {
+          const coinSym = placedOrder.symbol.replace('USDT', '')
+          const usdtValue = Number(placedOrder.amount) * livePrice.value
+          filledValueMap.value = {
+            ...filledValueMap.value,
+            [coinSym]: (filledValueMap.value[coinSym] ?? 0) + usdtValue,
+          }
+        }
         filledOrderNotif.value = {
           symbol: placedOrder.symbol,
           side:   placedOrder.side,
