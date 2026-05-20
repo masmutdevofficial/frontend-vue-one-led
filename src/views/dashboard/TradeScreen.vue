@@ -952,6 +952,7 @@ watch(
 
 watch(activeTimeframe, () => {
   lastCandleTime = 0; lastCandle = null; lastVolume = null
+  wsReady = false // reset so klines close price re-seeds the header on reload
   loadChartData() // reload data only, keep chart structure
 })
 
@@ -1171,6 +1172,22 @@ async function loadChartData() {
       lastCandleTime = last.time as number
       lastCandle     = { ...last }
       lastVolume     = { ...volumes[volumes.length - 1] }
+
+      // Sync header price with real klines close price so it matches the chart.
+      // The WS watch will take over in real-time once a ticker arrives; until then
+      // (or if BTCUSDT isn't in the WS stream) the header shows the Binance close.
+      if (!wsReady) {
+        livePrice.value = last.close
+        if (liveHigh.value === 0 || last.high > liveHigh.value) liveHigh.value = last.high
+        if (liveLow.value  === 0 || last.low  < liveLow.value)  liveLow.value  = last.low
+        liveMarkPrice.value = last.close
+        if (activeOrderType.value === 'Market' || !_orderPriceSynced) {
+          orderPrice.value  = last.close
+          _orderPriceSynced = true
+        }
+        // Allow updateLiveCandle to run from klines price (tick loop will animate it)
+        wsReady = true
+      }
     }
     // Show last 50 bars on initial load — user can scroll left to see the rest
     const total = candles.length
