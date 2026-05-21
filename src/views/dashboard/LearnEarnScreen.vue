@@ -194,6 +194,8 @@ function openQuiz(course: CourseItem) {
     quizAnswers.value = data.quiz.map(() => -1)
   }).catch(() => {
     quizData.value = []
+    quizStep.value = 'result'
+    quizResult.value = { correct: 0, total: 0, score: 0, passed: false, reward_usdt: '0' }
   }).finally(() => {
     quizLoading.value = false
   })
