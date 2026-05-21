@@ -253,7 +253,7 @@
             <article
               v-for="merchant in filteredMerchants"
               :key="merchant.name"
-              class="relative w-full min-w-[540px] overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_6px_20px_rgba(0,0,0,0.07)] transition hover:shadow-[0_8px_26px_rgba(0,0,0,0.10)] lg:min-w-0"
+              class="relative w-full overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_6px_20px_rgba(0,0,0,0.07)] transition hover:shadow-[0_8px_26px_rgba(0,0,0,0.10)] lg:min-w-0"
             >
               <!-- Header -->
               <div class="flex items-start justify-between gap-4">
@@ -263,7 +263,7 @@
                     <img
                       :src="merchant.avatar"
                       :alt="merchant.name"
-                      class="h-13 w-13 rounded-full object-cover sm:h-14 sm:w-14"
+                      class="h-8 w-8 rounded-full object-cover sm:h-14 sm:w-14"
                       @error="($event.target as HTMLImageElement).src = '/images/user-default.png'"
                     />
 
@@ -276,7 +276,7 @@
                   <!-- Seller info -->
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
-                      <h3 class="truncate text-[15px] font-semibold tracking-[0.08em] text-[#17212f] sm:text-[17px]">
+                      <h3 class="truncate text-[14px] font-semibold text-[#17212f] sm:text-[17px]">
                         {{ merchant.name }}
                       </h3>
 
@@ -311,44 +311,44 @@
                   @click="hasBankAccount ? openTrade(merchant) : router.push('/verification')"
                   class="mt-1 shrink-0 text-gray-400 transition active:scale-95"
                 >
-                  <Icon icon="mdi:chevron-right" class="text-[28px]" />
+                  <Icon icon="mdi:chevron-right" class="text-[16px]" />
                 </button>
               </div>
 
               <!-- Price / Limit / Available -->
               <div class="mt-5 grid grid-cols-3 border-b border-gray-100 pb-4">
                 <div class="min-w-0 pr-4">
-                  <p class="text-[11px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[12px]">
+                  <p class="text-[11px] font-semibold text-gray-500 sm:text-[12px]">
                     Price
                   </p>
 
                   <div class="mt-3 flex items-end gap-1.5">
-                    <span class="truncate text-[20px] font-semibold leading-none tracking-[0.08em] text-[#17212f] sm:text-[23px]">
+                    <span class="truncate text-[12px] font-semibold leading-none text-[#17212f] sm:text-[23px]">
                       {{ merchant.price }}
                     </span>
 
-                    <span class="pb-0.5 text-[11px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[12px]">
+                    <span class="pb-0.5 text-[10px] font-semibold text-gray-500 sm:text-[12px]">
                       {{ merchant.currency }}
                     </span>
                   </div>
                 </div>
 
                 <div class="min-w-0 border-l border-gray-100 px-4">
-                  <p class="text-[11px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[12px]">
+                  <p class="text-[11px] font-semibold text-gray-500 sm:text-[12px]">
                     Limit
                   </p>
 
-                  <p class="mt-3 truncate text-[14px] font-semibold tracking-[0.07em] text-[#17212f] sm:text-[16px]">
+                  <p class="mt-3 truncate text-[12px] font-semibold text-[#17212f] sm:text-[16px]">
                     {{ merchant.limit }} USDT
                   </p>
                 </div>
 
                 <div class="min-w-0 border-l border-gray-100 pl-4">
-                  <p class="text-[11px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[12px]">
+                  <p class="text-[11px] font-semibold text-gray-500 sm:text-[12px]">
                     Available
                   </p>
 
-                  <p class="mt-3 truncate text-[14px] font-semibold tracking-[0.07em] text-[#17212f] sm:text-[16px]">
+                  <p class="mt-3 truncate text-[12px] font-semibold text-[#17212f] sm:text-[16px]">
                     {{ merchant.available }} USDT
                   </p>
                 </div>
@@ -357,7 +357,7 @@
               <!-- Footer -->
               <div class="mt-4 flex items-center justify-between gap-4">
                 <div class="flex min-w-0 items-center gap-3">
-                  <p class="shrink-0 text-[11px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[12px]">
+                  <p class="shrink-0 text-[11px] font-semibold text-gray-500 sm:text-[12px]">
                     Payment Methods
                   </p>
 
