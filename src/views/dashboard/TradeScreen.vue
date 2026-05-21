@@ -1009,14 +1009,12 @@ function checkPendingLimitFills() {
   for (const id of filledIds) newPending.delete(id)
   pendingLimitIds.value = newPending
 
-  // Move filled orders from open to history; update balances & positions
+  // Move filled orders from open to history for immediate UI update
   const filledOrders = openOrdersList.value.filter(o => filledIds.includes(o.id))
   openOrdersList.value = openOrdersList.value.filter(o => !filledIds.includes(o.id))
   for (const o of filledOrders) {
     historyList.value = [{ ...o, status: 'filled' as any }, ...historyList.value]
   }
-  fetchCoinBalances()
-  fetchPositions()
 
   // Show modal for the first filled order
   const first = filledOrders[0]
@@ -1029,6 +1027,15 @@ function checkPendingLimitFills() {
     }
     activeBottomTab.value = 'positions'
   }
+
+  // Call backend to fill orders and persist balance update (async, non-blocking)
+  ;(async () => {
+    if (tradeApi.value) {
+      await Promise.allSettled(filledIds.map(id => tradeApi.value!.fillOrder(id)))
+    }
+    await fetchCoinBalances()
+    await fetchPositions()
+  })()
 }
 
 onMounted(() => {
@@ -1475,6 +1482,12 @@ async function fetchOpenOrders() {
       o => !serverIds.has(o.id) && pendingLimitIds.value.has(o.id)
     )
     openOrdersList.value = [...pendingExtras, ...orders]
+    // Re-populate pendingLimitIds from server so open limit orders survive
+    // a page refresh — they will auto-fill again when price crosses.
+    const serverLimitIds = orders
+      .filter(o => o.type === 'Limit' || o.type === 'Stop-Limit')
+      .map(o => o.id)
+    pendingLimitIds.value = new Set([...pendingLimitIds.value, ...serverLimitIds])
   } catch { /* ignore */ } finally {
     isLoadingOrders.value = false
   }

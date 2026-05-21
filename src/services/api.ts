@@ -216,6 +216,8 @@ export function makeTradeApi(token: string) {
       api.post<{ order: SpotOrder }>('/trade/orders', body),
     cancelOrder:  (id: string) =>
       request<{ success: boolean }>('PATCH', `/trade/orders/${encodeURIComponent(id)}/cancel`, {}, token),
+    fillOrder:    (id: string) =>
+      request<{ order: SpotOrder | null }>('PATCH', `/trade/orders/${encodeURIComponent(id)}/fill`, {}, token),
     cancelAll:    () => api.post<{ cancelled: number }>('/trade/orders/cancel-all', {}),
     getPositions: () => api.get<{ positions: FuturesPosition[] }>('/trade/positions'),
     getBalances:  () => api.get<UserBalance>('/balance'),
