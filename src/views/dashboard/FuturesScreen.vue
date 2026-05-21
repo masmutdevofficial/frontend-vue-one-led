@@ -575,9 +575,9 @@ const positionActions = [
   { label: 'Close Position',    icon: 'mdi:close-circle-outline',  danger: true  },
 ]
 
-// ── Live price from WS ────────────────────────────────────────
-const livePrice  = ref(64023.45)
-const liveChange = ref(1.24)
+// ── Live price from WS + simulation (same as TradeScreen) ──────
+const livePrice  = ref(67000)
+const liveChange = ref(0)
 
 // ── UI state ──────────────────────────────────────────────────
 const activeMobileTab = ref<'chart' | 'order'>('chart')
