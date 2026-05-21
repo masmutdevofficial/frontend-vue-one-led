@@ -263,7 +263,7 @@
                     <img
                       :src="merchant.avatar"
                       :alt="merchant.name"
-                      class="h-8 w-8 rounded-full object-cover sm:h-14 sm:w-14"
+                      class="h-10 w-10 rounded-full object-cover sm:h-14 sm:w-14"
                       @error="($event.target as HTMLImageElement).src = '/images/user-default.png'"
                     />
 
@@ -280,7 +280,7 @@
                         {{ merchant.name }}
                       </h3>
 
-                      <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0ba99d] text-white">
+                      <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#0ba99d] text-white">
                         <Icon icon="mdi:check" class="text-[12px]" />
                       </span>
                     </div>
@@ -365,11 +365,11 @@
                     <span
                       v-for="(payment, idx) in merchant.payments"
                       :key="idx"
-                      class="flex h-8 w-8 items-center justify-center rounded-md border border-gray-100 bg-white shadow-sm sm:h-9 sm:w-9"
+                      class="flex h-6 w-6 items-center justify-center rounded-md border border-gray-100 bg-white shadow-sm sm:h-9 sm:w-9"
                     >
                       <Icon
                         :icon="payment.icon"
-                        class="text-[18px] sm:text-[20px]"
+                        class="text-[15px] sm:text-[20px]"
                         :class="payment.color"
                       />
                     </span>
@@ -385,7 +385,7 @@
 
                 <button
                   @click="hasBankAccount ? openTrade(merchant) : router.push('/verification')"
-                  class="shrink-0 rounded-xl px-8 py-2.5 text-[14px] font-semibold tracking-[0.06em] text-white transition active:scale-[0.98] sm:px-10 sm:py-3 sm:text-[15px]"
+                  class="shrink-0 rounded-xl px-5 py-2 text-[12px] font-semibold tracking-[0.06em] text-white transition active:scale-[0.98] sm:px-10 sm:py-3 sm:text-[15px]"
                   :class="merchant.type === 'buy'
                     ? 'bg-[#0ba99d] hover:bg-[#099990]'
                     : 'bg-[#f05b6b] hover:bg-[#e04c5c]'"
