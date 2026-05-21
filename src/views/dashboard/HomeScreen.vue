@@ -10,7 +10,6 @@
           :loop="true"
           class="hero-swiper h-36.25 rounded-2xl bg-white shadow-sm border border-gray-100"
         >
-          <!-- Slide 1: Trading -->
           <SwiperSlide>
             <div class="relative h-36.25">
               <div class="absolute right-0 top-0 h-full w-[52%] bg-linear-to-l from-cyan-100/80 via-cyan-50/70 to-transparent"></div>
@@ -32,7 +31,6 @@
             </div>
           </SwiperSlide>
 
-          <!-- Slide 2: Copy Trade -->
           <SwiperSlide>
             <div class="relative h-36.25">
               <div class="absolute right-0 top-0 h-full w-[52%] bg-linear-to-l from-violet-100/80 via-violet-50/70 to-transparent"></div>
@@ -54,7 +52,6 @@
             </div>
           </SwiperSlide>
 
-          <!-- Slide 3: Events -->
           <SwiperSlide>
             <div class="relative h-36.25">
               <div class="absolute right-0 top-0 h-full w-[52%] bg-linear-to-l from-amber-100/80 via-amber-50/70 to-transparent"></div>
@@ -111,7 +108,6 @@
               </button>
             </div>
             <div class="flex flex-col items-end">
-              <!-- SVG SPLINE CHART -->
               <svg class="h-14.5 w-26.25" viewBox="0 0 105 58" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="miniChartGrad" x1="0" y1="0" x2="0" y2="1">
@@ -158,14 +154,9 @@
                 <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm border border-gray-100">
                   <Icon :icon="item.icon" class="text-[22px] text-[#22bdb5]" />
                 </div>
-                <span
-                  v-if="item.hot"
-                  class="absolute -right-1 -top-0.5 rounded-full bg-[#19c9c0] px-1.5 py-px text-[7px] font-bold leading-none text-white"
-                >HOT</span>
+                <span v-if="item.hot" class="absolute -right-1 -top-0.5 rounded-full bg-[#19c9c0] px-1.5 py-px text-[7px] font-bold leading-none text-white">HOT</span>
               </div>
-              <span class="w-12 whitespace-pre-line text-center text-[9px] font-semibold leading-tight text-[#2f3a45]">
-                {{ item.label }}
-              </span>
+              <span class="w-12 whitespace-pre-line text-center text-[9px] font-semibold leading-tight text-[#2f3a45]">{{ item.label }}</span>
             </button>
           </SwiperSlide>
         </Swiper>
@@ -173,16 +164,13 @@
 
       <!-- COPY TRADE + EVENT CENTER -->
       <section class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 px-3">
-        <!-- Copy Trade -->
         <div class="relative flex min-h-42.5 flex-col overflow-hidden rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
           <div class="relative z-10 flex flex-1 flex-col pr-24">
             <div class="flex items-center gap-2">
               <h3 class="text-[15px] font-extrabold">Copy Trade</h3>
               <span class="rounded-full bg-[#e9fffc] px-2 py-0.5 text-[9px] font-bold text-[#21b8b1]">Top Traders</span>
             </div>
-            <p class="mt-1 text-[10px] leading-snug text-gray-500">
-              Follow elite traders and maximize your profits
-            </p>
+            <p class="mt-1 text-[10px] leading-snug text-gray-500">Follow elite traders and maximize your profits</p>
             <div class="mt-4 flex items-center">
               <img src="https://i.pravatar.cc/40?img=11" class="h-6 w-6 rounded-full border-2 border-white" alt="trader" />
               <img src="https://i.pravatar.cc/40?img=12" class="-ml-2 h-6 w-6 rounded-full border-2 border-white" alt="trader" />
@@ -192,36 +180,20 @@
                 <p class="text-[8px] text-gray-400">Copiers</p>
               </div>
             </div>
-            <button class="mt-auto pt-3 text-left text-[10px] font-bold text-[#1bb9b2]" @click="router.push('/copy-trade')">
-              Explore Now <Icon icon="mdi:arrow-right" class="inline text-[12px]" />
-            </button>
+            <button class="mt-auto pt-3 text-left text-[10px] font-bold text-[#1bb9b2]" @click="router.push('/copy-trade')">Explore Now <Icon icon="mdi:arrow-right" class="inline text-[12px]" /></button>
           </div>
-          <img
-            src="/images/home-copy-trade.webp"
-            alt="Copy Trade"
-            class="absolute right-0 top-1/2 -translate-y-1/2 h-full w-22 rounded-2xl object-cover"
-          />
+          <img src="/images/home-copy-trade.webp" alt="Copy Trade" class="absolute right-0 top-1/2 -translate-y-1/2 h-full w-22 rounded-2xl object-cover" />
         </div>
-
-        <!-- Event Center -->
         <div class="relative flex min-h-42.5 flex-col overflow-hidden rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
           <div class="relative z-10 flex flex-1 flex-col pr-24">
             <div class="flex items-center gap-2">
               <h3 class="text-[15px] font-extrabold">Event Center</h3>
               <span class="rounded-full bg-[#e9fffc] px-2 py-0.5 text-[9px] font-bold text-[#21b8b1]">Live</span>
             </div>
-            <p class="mt-1 max-w-32.5 text-[10px] leading-snug text-gray-500">
-              Join events and win amazing rewards
-            </p>
-            <button class="mt-auto text-left text-[10px] font-bold text-[#1bb9b2]" @click="router.push('/events')">
-              Join Now <Icon icon="mdi:arrow-right" class="inline text-[12px]" />
-            </button>
+            <p class="mt-1 max-w-32.5 text-[10px] leading-snug text-gray-500">Join events and win amazing rewards</p>
+            <button class="mt-auto text-left text-[10px] font-bold text-[#1bb9b2]" @click="router.push('/events')">Join Now <Icon icon="mdi:arrow-right" class="inline text-[12px]" /></button>
           </div>
-          <img
-            src="/images/rewards-banner.webp"
-            alt="Event"
-            class="absolute right-0 top-1/2 -translate-y-1/2 h-full w-30 rounded-2xl object-cover"
-          />
+          <img src="/images/rewards-banner.webp" alt="Event" class="absolute right-0 top-1/2 -translate-y-1/2 h-full w-30 rounded-2xl object-cover" />
         </div>
       </section>
 
@@ -230,28 +202,17 @@
         <div class="rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
           <div class="flex items-center justify-between">
             <h3 class="text-[14px] font-extrabold">Market Overview</h3>
-            <button class="text-[10px] font-bold text-[#1bb9b2]" @click="router.push('/market')">
-              See All <Icon icon="mdi:arrow-right" class="inline text-[12px]" />
-            </button>
+            <button class="text-[10px] font-bold text-[#1bb9b2]" @click="router.push('/market')">See All <Icon icon="mdi:arrow-right" class="inline text-[12px]" /></button>
           </div>
-          <!-- Header -->
           <div class="mt-4 flex items-center border-b border-gray-100 pb-2.5 text-[10px] font-bold text-gray-400">
             <span class="flex-1">Name</span>
             <span class="w-22 text-right">Last Price</span>
             <span class="w-19 text-right pr-1">24h Chg%</span>
             <span class="w-8"></span>
           </div>
-          <!-- Empty state -->
           <div v-if="displayedMarkets.length === 0" class="px-4 py-10 text-center text-[13px] font-semibold text-gray-400">No data</div>
-          <!-- Rows -->
           <div v-else class="divide-y divide-gray-100">
-            <div
-              v-for="coin in displayedMarkets"
-              :key="coin.symbol"
-              class="flex items-center py-3 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
-              @click="router.push('/trade/' + coin.symbol.toLowerCase())"
-            >
-              <!-- Name + icon -->
+            <div v-for="coin in displayedMarkets" :key="coin.symbol" class="flex items-center py-3 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors" @click="router.push('/trade/' + coin.symbol.toLowerCase())">
               <div class="flex flex-1 min-w-0 items-center gap-2.5">
                 <div class="flex h-8 w-8 shrink-0 items-center justify-center">
                   <CoinIcon :icon="coin.icon" :symbol="coin.symbol" icon-class="text-[28px]" img-class="h-8 w-8 rounded-full object-contain" />
@@ -261,27 +222,17 @@
                   <p class="mt-1 text-[10px] text-gray-400 truncate">{{ coin.fullName }}</p>
                 </div>
               </div>
-              <!-- Last Price -->
               <div class="w-22 text-right">
                 <p class="text-[12px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
                 <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(coin.price) }}</p>
               </div>
-              <!-- 24h Change badge -->
               <div class="w-19 flex justify-end pr-1">
-                <span
-                  class="inline-block rounded-lg px-2 py-1 text-[11px] font-bold"
-                  :class="coin.change >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
-                >
+                <span class="inline-block rounded-lg px-2 py-1 text-[11px] font-bold" :class="coin.change >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'">
                   {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
                 </span>
               </div>
-              <!-- Star -->
               <button class="flex w-8 shrink-0 justify-end" @click.stop="toggleFavorite(coin.symbol)">
-                <Icon
-                  :icon="favorites.has(coin.symbol) ? 'mdi:star' : 'mdi:star-outline'"
-                  class="text-[18px] transition-colors"
-                  :class="favorites.has(coin.symbol) ? 'text-yellow-400' : 'text-gray-300'"
-                />
+                <Icon :icon="favorites.has(coin.symbol) ? 'mdi:star' : 'mdi:star-outline'" class="text-[18px] transition-colors" :class="favorites.has(coin.symbol) ? 'text-yellow-400' : 'text-gray-300'" />
               </button>
             </div>
           </div>
@@ -293,23 +244,10 @@
         <div class="rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
           <div class="mb-2 flex items-center justify-between">
             <h2 class="text-[16px] font-extrabold text-[#17212f]">News</h2>
-            <button
-              type="button"
-              class="flex items-center gap-1 text-[10px] font-bold text-[#1bb9b2]"
-              @click="router.push('/news')"
-            >
-              See All
-              <Icon icon="mdi:arrow-right" class="text-[13px]" />
-            </button>
+            <button type="button" class="flex items-center gap-1 text-[10px] font-bold text-[#1bb9b2]" @click="router.push('/news')">See All <Icon icon="mdi:arrow-right" class="text-[13px]" /></button>
           </div>
           <div>
-            <button
-              v-for="item in newsItems"
-              :key="item.title"
-              type="button"
-              class="flex w-full items-center justify-between border-b border-gray-100 py-2.5 text-left last:border-b-0 active:bg-gray-50"
-              @click="router.push('/news')"
-            >
+            <button v-for="item in newsItems" :key="item.title" type="button" class="flex w-full items-center justify-between border-b border-gray-100 py-2.5 text-left last:border-b-0 active:bg-gray-50" @click="router.push('/news')">
               <div class="flex items-start gap-3">
                 <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#13b8b0]"></span>
                 <div>
@@ -327,7 +265,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
@@ -341,24 +279,35 @@ import { makeUserApi } from '@/services/api'
 import { useMarketStore } from '@/stores/market'
 import { useMarketWs } from '@/services/marketWs'
 
+// ══════════════════════════════════════════════════════════════════
+//  DIAGNOSTIC: console log untuk debug WS data flow
+// ══════════════════════════════════════════════════════════════════
+console.log('[HomeScreen] script setup — component initializing')
+
 const router = useRouter()
 const auth   = useAuthStore()
 const marketStore = useMarketStore()
 const { tickerMap } = useMarketWs()
 const balanceVisible = ref(true)
 
-// ── Real balance ────────────────────────────────────────────────────────────────
+console.log('[HomeScreen] useMarketWs() called, tickerMap type:', typeof tickerMap, 'value type:', typeof tickerMap.value)
+console.log('[HomeScreen] initial tickerMap.size:', tickerMap.value.size)
+if (tickerMap.value.size > 0) {
+  console.log('[HomeScreen] initial tickerMap entries:', Array.from(tickerMap.value.entries()).map(([k, v]) => `${k}:${v.price}`))
+}
+
+// ── Balance state ──────────────────────────────────────────────────
 const usdtBalance    = ref<number>(0)
 const coinBalanceMap = ref<Record<string, number>>({})
-const costBasisMap   = ref<Record<string, number>>({}) // coin → VWAP avg buy price from server
-const initialPriceMap = ref<Record<string, number>>({}) // fallback: price saat load
+const costBasisMap   = ref<Record<string, number>>({})
+const initialPriceMap = ref<Record<string, number>>({})
 
-// ── Live price refs (mutated by tick(), same pattern as TradeScreen) ──────────
+// ── Live display refs ──────────────────────────────────────────────
 const totalBalance = ref<number>(0)
 const pnlValue     = ref<number>(0)
 const pnlPct       = ref<number>(0)
 
-// ── Market overview refs (mutated by tick(), same pattern as TradeScreen) ─────
+// ── Markets ────────────────────────────────────────────────────────
 interface Market {
   symbol: string; fullName: string; icon: string; binancePair: string
   price: number; change: number; chartPoints: number[]
@@ -371,13 +320,16 @@ const marketsData = ref<Market[]>([
   { symbol: 'SOL', fullName: 'Solana',    icon: 'mdi:circle-multiple-outline', binancePair: 'SOLUSDT', price: 0, change: 0, chartPoints: [0.65, 0.60, 0.62, 0.55, 0.58, 0.52, 0.54, 0.48] },
   { symbol: 'XRP', fullName: 'XRP',       icon: 'mdi:close',                   binancePair: 'XRPUSDT', price: 0, change: 0, chartPoints: [0.40, 0.44, 0.42, 0.48, 0.50, 0.52, 0.54, 0.56] },
 ])
-const displayedMarkets = computed(() => marketsData.value)
+const displayedMarkets = computed(() => {
+  console.log('[HomeScreen] displayedMarkets computed —', marketsData.value.map(m => `${m.symbol}:${m.price}`))
+  return marketsData.value
+})
 
 function fmtBalance(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// ── Favorites (localStorage) ──────────────────────────────────
+// ── Favorites ──────────────────────────────────────────────────────
 const favorites = ref<Set<string>>(new Set(JSON.parse(localStorage.getItem('market-favorites') ?? '[]')))
 function toggleFavorite(name: string) {
   const next = new Set(favorites.value)
@@ -391,16 +343,13 @@ function buildSplinePath(pts: number[], filled = false): string {
   const W = 105, H = 58, padTop = 4, padBottom = 6
   const usableH = H - padTop - padBottom
   const xStep = W / (pts.length - 1)
-  const coords = pts.map((y, i) => ({
-    x: i * xStep,
-    y: padTop + (1 - y) * usableH,
-  }))
+  const coords = pts.map((y, i) => ({ x: i * xStep, y: padTop + (1 - y) * usableH }))
   const cpx = xStep * 0.45
   let d = `M ${coords[0].x.toFixed(1)},${coords[0].y.toFixed(1)}`
   for (let i = 0; i < coords.length - 1; i++) {
-    d += ` C ${(coords[i].x + cpx).toFixed(1)},${coords[i].y.toFixed(1)}`
-      + ` ${(coords[i + 1].x - cpx).toFixed(1)},${coords[i + 1].y.toFixed(1)}`
-      + ` ${coords[i + 1].x.toFixed(1)},${coords[i + 1].y.toFixed(1)}`
+    d += ` C ${(coords[i].x + cpx).toFixed(1)},${coords[i].y.toFixed(1)}` +
+         ` ${(coords[i + 1].x - cpx).toFixed(1)},${coords[i + 1].y.toFixed(1)}` +
+         ` ${coords[i + 1].x.toFixed(1)},${coords[i + 1].y.toFixed(1)}`
   }
   if (filled) d += ` L ${((pts.length - 1) * xStep).toFixed(1)},${H} L 0,${H} Z`
   return d
@@ -422,7 +371,6 @@ function formatPrice(price: number): string {
   return price.toFixed(6)
 }
 
-// ── Build market list from store metadata ──────────────────────────────────
 function buildMarketsFromStore() {
   const updated = FEATURED_SYMBOLS.map(sym => {
     const c = marketStore.coins.find(x => x.symbol === sym)
@@ -433,8 +381,7 @@ function buildMarketsFromStore() {
       fullName: c?.name ?? existing!.fullName,
       icon: c?.icon ?? existing!.icon,
       binancePair: c?.binancePair ?? existing!.binancePair,
-      price: existing?.price ?? 0,
-      change: existing?.change ?? 0,
+      price: 0, change: 0,
       chartPoints: existing?.chartPoints ?? [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60],
     } as Market
   }).filter(Boolean) as Market[]
@@ -442,16 +389,43 @@ function buildMarketsFromStore() {
 }
 watch(() => marketStore.loaded, (loaded) => { if (loaded) buildMarketsFromStore() })
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  LIVE TICK — same interval-driven pattern as TradeScreen's tick()
-//  Reads tickerMap (from WebSocket) every 700ms and updates refs directly.
-//  This guarantees reactive updates even if the WS ref-counting has issues.
-// ═══════════════════════════════════════════════════════════════════════════
-let tickTimer: ReturnType<typeof setInterval>
+// ══════════════════════════════════════════════════════════════════
+//  CORE UPDATE FUNCTION — dipanggil oleh watchEffect DAN interval
+// ══════════════════════════════════════════════════════════════════
+let _updateCounter = 0
 
-function computePnL(): { value: number; pct: number } {
+function tick() {
+  _updateCounter++
   const map = tickerMap.value
-  let total = 0
+  const mapSize = map.size
+
+  // DEBUG: log setiap 10 tick
+  if (_updateCounter % 10 === 0 || _updateCounter === 1) {
+    console.log(`[HomeScreen] tick #${_updateCounter} — tickerMap.size=${mapSize}`, 
+      Array.from(map.entries()).slice(0, 3).map(([k, v]) => `${k}=${v.price.toFixed(2)}`))
+    console.log(`[HomeScreen] tick #${_updateCounter} — balance: USDT=${usdtBalance.value}, coins=`, Object.keys(coinBalanceMap.value))
+  }
+
+  // 1. Update markets
+  let marketsChanged = false
+  const nextMarkets = marketsData.value.map(coin => {
+    const t = map.get(coin.binancePair)
+    if (t) {
+      const newPrice = t.price
+      const newChange = Math.round(t.change * 100) / 100
+      if (coin.price !== newPrice || coin.change !== newChange) {
+        marketsChanged = true
+      }
+      return { ...coin, price: newPrice, change: newChange }
+    }
+    return coin
+  })
+  if (marketsChanged) {
+    marketsData.value = nextMarkets
+  }
+
+  // 2. Compute PnL
+  let pnlTotal = 0
   let costTotal = 0
   for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
     if (coin === 'USDT' || amount <= 0) continue
@@ -459,122 +433,107 @@ function computePnL(): { value: number; pct: number } {
     if (!t || t.price <= 0) continue
     const avgBuy = costBasisMap.value[coin] ?? initialPriceMap.value[coin]
     if (avgBuy > 0) {
-      total += amount * (t.price - avgBuy)
+      pnlTotal += amount * (t.price - avgBuy)
       costTotal += amount * avgBuy
     } else {
-      total += amount * t.price * (t.change / 100)
+      pnlTotal += amount * t.price * (t.change / 100)
       costTotal += amount * t.price
     }
   }
-  const value = Math.round(total * 100) / 100
-  const pct = costTotal > 0 ? Math.round((total / costTotal) * 10000) / 100 : 0
-  return { value, pct }
-}
+  pnlValue.value = Math.round(pnlTotal * 100) / 100
+  pnlPct.value   = costTotal > 0 ? Math.round((pnlTotal / costTotal) * 10000) / 100 : 0
 
-function computeTotalBalance(): number {
-  const map = tickerMap.value
-  let total = usdtBalance.value
+  // 3. Compute balance
+  let balTotal = usdtBalance.value
   for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
     if (coin === 'USDT' || amount <= 0) continue
     const t = map.get(coin + 'USDT')
-    if (t && t.price > 0) total += amount * t.price
+    if (t && t.price > 0) balTotal += amount * t.price
   }
-  return total
+  totalBalance.value = balTotal
 }
 
-function tick() {
-  // 1. Update market prices from tickerMap (same approach as TradeScreen)
+// ══════════════════════════════════════════════════════════════════
+//  LAPISAN 1: watchEffect — auto-track tickerMap.value changes
+//  Re-render setiap kali WebSocket mengirim data baru
+// ══════════════════════════════════════════════════════════════════
+watchEffect(() => {
+  // Access tickerMap.value to register reactivity dependency
   const map = tickerMap.value
-  const nextMarkets = marketsData.value.map(coin => {
-    const t = map.get(coin.binancePair)
-    return t
-      ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 }
-      : coin
-  })
-  marketsData.value = nextMarkets
+  if (map.size > 0) {
+    console.log('[HomeScreen] watchEffect triggered — tickerMap updated, size:', map.size)
+    tick()
+  }
+})
 
-  // 2. Update PnL from tickerMap
-  const pnl = computePnL()
-  pnlValue.value = pnl.value
-  pnlPct.value   = pnl.pct
-
-  // 3. Update total balance from tickerMap
-  totalBalance.value = computeTotalBalance()
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-
-let priceRefreshTimer: ReturnType<typeof setInterval>
+// ══════════════════════════════════════════════════════════════════
+//  LAPISAN 2: interval refresh — fallback setiap 1 detik
+//  Memastikan UI tetap update meski watchEffect lambat
+// ══════════════════════════════════════════════════════════════════
+let tickTimer: ReturnType<typeof setInterval>
 
 onMounted(() => {
+  console.log('[HomeScreen] onMounted — starting timers')
+
   chartTimer = setInterval(tickChart, 1200)
   marketStore.fetchCoins()
   if (marketStore.loaded) buildMarketsFromStore()
 
-  // Start live tick — 700ms interval, same as TradeScreen's 600ms
-  // This ensures prices/PnL update even without WebSocket reactivity
+  // Initial tick
   tick()
-  tickTimer = setInterval(tick, 700)
+  console.log('[HomeScreen] initial tick complete')
 
-  // Fallback REST refresh every 30s
-  priceRefreshTimer = setInterval(async () => {
-    // Re-fetch market prices from klines as fallback
-    await Promise.allSettled(marketsData.value.map(async (coin) => {
-      try {
-        const res = await fetch(
-          `https://api.one-led.io/v1/public/klines?symbol=${coin.binancePair}&interval=1d&limit=1`
-        )
-        if (!res.ok) return
-        const raw = await res.json()
-        if (!Array.isArray(raw) || !raw[0]) return
-        const close  = parseFloat(raw[0][4])
-        const open   = parseFloat(raw[0][1])
-        if (isNaN(close) || close <= 0) return
-        const change = open > 0 ? Math.round(((close - open) / open) * 10000) / 100 : 0
-        marketsData.value = marketsData.value.map(c =>
-          c.symbol === coin.symbol ? { ...c, price: close, change } : c
-        )
-      } catch { /* ignore */ }
-    }))
-    // Recompute PnL/balance after REST prices come in
-    tick()
-  }, 30_000)
+  // Interval refresh every 1s
+  tickTimer = setInterval(tick, 1000)
+  console.log('[HomeScreen] tick interval started (1000ms)')
 
-  // Fetch real balance + cost basis for PnL
+  // Fetch balance + cost basis
   if (auth.accessToken) {
+    console.log('[HomeScreen] fetching balance with token')
     makeUserApi(auth.accessToken).getBalance()
       .then(d => {
+        console.log('[HomeScreen] balance response:', JSON.stringify(d).substring(0, 200))
         usdtBalance.value = parseFloat(d.total as unknown as string) || 0
         const map: Record<string, number> = {}
-        for (const b of (d.balances ?? [])) map[(b.coin as string).toUpperCase()] = Number(b.amount)
+        for (const b of (d.balances ?? [])) {
+          map[(b.coin as string).toUpperCase()] = Number(b.amount)
+        }
         coinBalanceMap.value = map
-        // Apply server-side cost basis (VWAP)
+        console.log('[HomeScreen] parsed balances:', JSON.stringify(map))
+
         if (d.cost_basis) {
           const cb: Record<string, number> = {}
           for (const [coin, price] of Object.entries(d.cost_basis)) {
             cb[coin] = parseFloat(price as string)
           }
           costBasisMap.value = cb
+          console.log('[HomeScreen] cost_basis:', JSON.stringify(cb))
         }
-        // Save initial price for coins without cost basis
+
         const initPrices: Record<string, number> = {}
         for (const coin of Object.keys(coinBalanceMap.value)) {
           if (coin === 'USDT') continue
           const t = tickerMap.value.get(coin + 'USDT')
-          if (t && t.price > 0) initPrices[coin] = t.price
+          if (t && t.price > 0) {
+            initPrices[coin] = t.price
+          }
         }
         initialPriceMap.value = initPrices
-        // Force recalculation after balance loads
+        console.log('[HomeScreen] initial prices:', JSON.stringify(initPrices))
+
         tick()
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('[HomeScreen] balance fetch failed:', err)
+      })
+  } else {
+    console.log('[HomeScreen] no accessToken — skipping balance fetch')
   }
 })
 
 onUnmounted(() => {
   clearInterval(chartTimer)
   clearInterval(tickTimer)
-  clearInterval(priceRefreshTimer)
 })
 
 interface QuickAction {
@@ -614,10 +573,7 @@ const quickActions: QuickAction[] = [
   --swiper-pagination-bullet-horizontal-gap: 3px;
   --swiper-pagination-bottom: 8px;
 }
-.hero-swiper .swiper-pagination-bullet-active {
-  width: 20px !important;
-  border-radius: 3px;
-}
+.hero-swiper .swiper-pagination-bullet-active { width: 20px !important; border-radius: 3px; }
 .qa-swiper {
   --swiper-pagination-color: #1fc7c0;
   --swiper-pagination-bullet-inactive-color: #e5e7eb;
@@ -627,8 +583,5 @@ const quickActions: QuickAction[] = [
   --swiper-pagination-bottom: 7px;
   padding-bottom: 28px;
 }
-.qa-swiper .swiper-pagination-bullet-active {
-  width: 20px !important;
-  border-radius: 3px;
-}
+.qa-swiper .swiper-pagination-bullet-active { width: 20px !important; border-radius: 3px; }
 </style>
