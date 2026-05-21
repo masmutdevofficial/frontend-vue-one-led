@@ -249,55 +249,55 @@
           </div>
 
           <!-- Merchant cards -->
-          <div v-else-if="!isLoading" class="flex flex-col gap-4 overflow-x-auto pb-2">
+          <div v-else-if="!isLoading" class="flex flex-col gap-3 overflow-x-auto pb-2">
             <article
               v-for="merchant in filteredMerchants"
               :key="merchant.name"
-              class="relative min-w-[760px] overflow-hidden rounded-[28px] border border-gray-100 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition hover:shadow-[0_12px_36px_rgba(0,0,0,0.10)]"
+              class="relative w-full min-w-[540px] overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_6px_20px_rgba(0,0,0,0.07)] transition hover:shadow-[0_8px_26px_rgba(0,0,0,0.10)] lg:min-w-0"
             >
               <!-- Header -->
-              <div class="flex items-start justify-between gap-6">
-                <div class="flex min-w-0 items-center gap-5">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex min-w-0 items-center gap-3">
                   <!-- Avatar -->
                   <div class="relative shrink-0">
                     <img
                       :src="merchant.avatar"
                       :alt="merchant.name"
-                      class="h-20 w-20 rounded-full object-cover"
+                      class="h-13 w-13 rounded-full object-cover sm:h-14 sm:w-14"
                       @error="($event.target as HTMLImageElement).src = '/images/user-default.png'"
                     />
 
                     <span
-                      class="absolute bottom-1 right-1 h-5 w-5 rounded-full border-[4px] border-white"
+                      class="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-[3px] border-white"
                       :class="merchant.onlineType === 'online' ? 'bg-emerald-500' : 'bg-orange-400'"
                     ></span>
                   </div>
 
                   <!-- Seller info -->
                   <div class="min-w-0">
-                    <div class="flex items-center gap-2.5">
-                      <h3 class="truncate text-[24px] font-semibold tracking-[0.12em] text-[#17212f]">
+                    <div class="flex items-center gap-2">
+                      <h3 class="truncate text-[15px] font-semibold tracking-[0.08em] text-[#17212f] sm:text-[17px]">
                         {{ merchant.name }}
                       </h3>
 
-                      <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0ba99d] text-white">
-                        <Icon icon="mdi:check" class="text-[17px]" />
+                      <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0ba99d] text-white">
+                        <Icon icon="mdi:check" class="text-[12px]" />
                       </span>
                     </div>
 
-                    <div class="mt-4 flex items-center gap-5 text-[17px] font-medium text-gray-500">
+                    <div class="mt-2.5 flex items-center gap-3 text-[11px] font-medium text-gray-500 sm:text-[12px]">
                       <span>{{ merchant.completion }}</span>
 
-                      <span class="flex items-center gap-2">
-                        <Icon icon="mdi:thumb-up-outline" class="text-[19px]" />
+                      <span class="flex items-center gap-1">
+                        <Icon icon="mdi:thumb-up-outline" class="text-[13px]" />
                         {{ merchant.orders }}
                       </span>
 
-                      <span class="h-5 w-px bg-gray-200"></span>
+                      <span class="h-4 w-px bg-gray-200"></span>
 
-                      <span class="flex items-center gap-3">
+                      <span class="flex items-center gap-2">
                         <span
-                          class="h-4 w-4 rounded-full"
+                          class="h-2.5 w-2.5 rounded-full"
                           :class="merchant.onlineType === 'online' ? 'bg-[#0ba99d]' : 'bg-orange-400'"
                         ></span>
                         {{ merchant.online }}
@@ -309,74 +309,74 @@
                 <!-- Arrow -->
                 <button
                   @click="hasBankAccount ? openTrade(merchant) : router.push('/verification')"
-                  class="mt-3 shrink-0 text-gray-400 transition active:scale-95"
+                  class="mt-1 shrink-0 text-gray-400 transition active:scale-95"
                 >
-                  <Icon icon="mdi:chevron-right" class="text-[42px]" />
+                  <Icon icon="mdi:chevron-right" class="text-[28px]" />
                 </button>
               </div>
 
               <!-- Price / Limit / Available -->
-              <div class="mt-8 grid grid-cols-3 border-b border-gray-100 pb-6">
-                <div class="min-w-0 pr-6">
-                  <p class="text-[18px] font-semibold tracking-[0.08em] text-gray-500">
+              <div class="mt-5 grid grid-cols-3 border-b border-gray-100 pb-4">
+                <div class="min-w-0 pr-4">
+                  <p class="text-[11px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[12px]">
                     Price
                   </p>
 
-                  <div class="mt-5 flex items-end gap-2">
-                    <span class="truncate text-[34px] font-semibold leading-none tracking-[0.12em] text-[#17212f]">
+                  <div class="mt-3 flex items-end gap-1.5">
+                    <span class="truncate text-[20px] font-semibold leading-none tracking-[0.08em] text-[#17212f] sm:text-[23px]">
                       {{ merchant.price }}
                     </span>
 
-                    <span class="pb-1 text-[18px] font-semibold tracking-[0.14em] text-gray-500">
+                    <span class="pb-0.5 text-[11px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[12px]">
                       {{ merchant.currency }}
                     </span>
                   </div>
                 </div>
 
-                <div class="min-w-0 border-l border-gray-100 px-8">
-                  <p class="text-[18px] font-semibold tracking-[0.08em] text-gray-500">
+                <div class="min-w-0 border-l border-gray-100 px-4">
+                  <p class="text-[11px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[12px]">
                     Limit
                   </p>
 
-                  <p class="mt-5 truncate text-[25px] font-semibold tracking-[0.12em] text-[#17212f]">
+                  <p class="mt-3 truncate text-[14px] font-semibold tracking-[0.07em] text-[#17212f] sm:text-[16px]">
                     {{ merchant.limit }} USDT
                   </p>
                 </div>
 
-                <div class="min-w-0 border-l border-gray-100 pl-8">
-                  <p class="text-[18px] font-semibold tracking-[0.08em] text-gray-500">
+                <div class="min-w-0 border-l border-gray-100 pl-4">
+                  <p class="text-[11px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[12px]">
                     Available
                   </p>
 
-                  <p class="mt-5 truncate text-[25px] font-semibold tracking-[0.12em] text-[#17212f]">
+                  <p class="mt-3 truncate text-[14px] font-semibold tracking-[0.07em] text-[#17212f] sm:text-[16px]">
                     {{ merchant.available }} USDT
                   </p>
                 </div>
               </div>
 
               <!-- Footer -->
-              <div class="mt-5 flex items-center justify-between gap-6">
-                <div class="flex min-w-0 items-center gap-5">
-                  <p class="shrink-0 text-[18px] font-semibold tracking-[0.08em] text-gray-500">
+              <div class="mt-4 flex items-center justify-between gap-4">
+                <div class="flex min-w-0 items-center gap-3">
+                  <p class="shrink-0 text-[11px] font-semibold tracking-[0.08em] text-gray-500 sm:text-[12px]">
                     Payment Methods
                   </p>
 
-                  <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-2">
                     <span
                       v-for="(payment, idx) in merchant.payments"
                       :key="idx"
-                      class="flex h-11 w-11 items-center justify-center rounded-lg border border-gray-100 bg-white shadow-sm"
+                      class="flex h-8 w-8 items-center justify-center rounded-md border border-gray-100 bg-white shadow-sm sm:h-9 sm:w-9"
                     >
                       <Icon
                         :icon="payment.icon"
-                        class="text-[25px]"
+                        class="text-[18px] sm:text-[20px]"
                         :class="payment.color"
                       />
                     </span>
 
                     <span
                       v-if="merchant.more"
-                      class="flex h-11 min-w-12 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-[18px] font-semibold text-gray-500 shadow-sm"
+                      class="flex h-8 min-w-9 items-center justify-center rounded-md border border-gray-200 bg-white px-2 text-[12px] font-semibold text-gray-500 shadow-sm sm:h-9 sm:min-w-10"
                     >
                       {{ merchant.more }}
                     </span>
@@ -385,7 +385,7 @@
 
                 <button
                   @click="hasBankAccount ? openTrade(merchant) : router.push('/verification')"
-                  class="shrink-0 rounded-2xl px-16 py-4 text-[24px] font-semibold tracking-[0.08em] text-white transition active:scale-[0.98]"
+                  class="shrink-0 rounded-xl px-8 py-2.5 text-[14px] font-semibold tracking-[0.06em] text-white transition active:scale-[0.98] sm:px-10 sm:py-3 sm:text-[15px]"
                   :class="merchant.type === 'buy'
                     ? 'bg-[#0ba99d] hover:bg-[#099990]'
                     : 'bg-[#f05b6b] hover:bg-[#e04c5c]'"
@@ -397,13 +397,13 @@
               <!-- Blur overlay when no bank account -->
               <div
                 v-if="!hasBankAccount"
-                class="absolute inset-0 flex cursor-pointer items-center justify-center rounded-[28px] bg-white/60 backdrop-blur-[3px]"
+                class="absolute inset-0 flex cursor-pointer items-center justify-center rounded-2xl bg-white/60 backdrop-blur-[3px]"
                 @click="router.push('/verification')"
               >
                 <div class="flex flex-col items-center gap-2 px-4 text-center">
-                  <Icon icon="mdi:bank-lock-outline" class="text-[38px] text-amber-500" />
-                  <p class="text-[13px] font-bold text-slate-700">Bank account required</p>
-                  <p class="text-[12px] font-semibold text-slate-400">Tap to verify your bank account</p>
+                  <Icon icon="mdi:bank-lock-outline" class="text-[30px] text-amber-500" />
+                  <p class="text-[12px] font-bold text-slate-700">Bank account required</p>
+                  <p class="text-[11px] font-semibold text-slate-400">Tap to verify your bank account</p>
                 </div>
               </div>
             </article>

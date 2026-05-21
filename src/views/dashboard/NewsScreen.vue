@@ -139,6 +139,7 @@
               {{ activeNews.title }}
             </h2>
             <p class="mt-3 text-[12px] leading-relaxed text-gray-500">{{ activeNews.excerpt }}</p>
+            <div v-if="activeNews.content" class="mt-4 text-[12px] leading-relaxed text-gray-600" v-html="activeNews.content"></div>
             <button
               @click="activeNews = null"
               class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-semibold text-white active:scale-95"
@@ -168,6 +169,7 @@ interface NewsItem {
   source: string
   time: string
   excerpt: string
+  content: string | null
   image: string
   category: string
 }
@@ -207,6 +209,7 @@ onMounted(async () => {
       source:   a.source ?? a.category_name ?? 'News',
       time:     relativeTime(a.published_at),
       excerpt:  a.summary ?? '',
+      content:  a.content ?? null,
       image:    a.thumbnail_url ?? `https://picsum.photos/600/300?random=${200 + i}`,
       category: a.category_name ?? 'Market',
     }))
