@@ -536,7 +536,7 @@
                   </div>
                   <div class="text-right">
                     <p class="text-[13px] font-semibold text-[#17212f]">
-                      {{ filledValueMap[h.coin] ? formatPrice(filledValueMap[h.coin]) + ' USDT' : (tickerMap.get(h.coin + 'USDT')?.price ? formatPrice((tickerMap.get(h.coin + 'USDT')!.price) * h.amount) + ' USDT' : '—') }}
+                      {{ tickerMap.get(h.coin + 'USDT')?.price ? formatPrice(tickerMap.get(h.coin + 'USDT')!.price * h.amount) + ' USDT' : '—' }}
                     </p>
                   </div>
                 </div>
@@ -1451,7 +1451,7 @@ const openOrdersWithDistance = computed(() =>
   })
 )
 
-// Spot holdings: non-USDT coins with a positive balance (shown in Positions tab)
+// Spot holdings: real spot balances from backend API, not local filledValueMap
 const spotHoldings = computed(() =>
   Object.entries(coinBalanceMap.value)
     .filter(([coin, amount]) => coin !== 'USDT' && amount > 0)
