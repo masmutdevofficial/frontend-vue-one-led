@@ -1487,6 +1487,9 @@ function getSpotPrice(holding: { coin: string; amount: number }): number {
   const pair = meta?.binancePair ?? (holding.coin + 'USDT')
   const tickerFromMap = tickerMap.value.get(pair)
   if (tickerFromMap?.price && tickerFromMap.price > 0) return tickerFromMap.price
+  // Fallback: use hardcoded catalog price
+  const catalog = CATALOG_FALLBACK[holding.coin.toLowerCase()]
+  if (catalog && catalog.price > 0) return catalog.price
   // Last resort: only use livePrice if this coin matches current trading pair
   if (holding.coin === baseCoin.value.symbol) return livePrice.value || 0
   return 0
