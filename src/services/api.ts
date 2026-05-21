@@ -434,6 +434,29 @@ export interface LearnCourse {
   thumbnail_url: string | null
 }
 
+export interface QuizQuestion {
+  id: number
+  question: string
+  options: string[]
+  correct_index: number
+  order_num: number
+}
+
+export interface AnswerResult {
+  correct: number
+  total: number
+  score: number
+  passed: boolean
+  reward_usdt: string
+}
+
+export interface LearnProgress {
+  course_id: number
+  completed: number
+  score: number | null
+  completed_at: string | null
+}
+
 export interface CopyTrader {
   id: number
   name: string
@@ -480,6 +503,12 @@ export function makeContentApi(token: string) {
       api.get<{ categories: NewsCategory[] }>('/news/categories'),
     getLearnCourses: (limit = 30) =>
       api.get<{ courses: LearnCourse[] }>(`/learn-earn/courses?limit=${limit}`),
+    getCourseQuiz: (courseId: number) =>
+      api.get<{ quiz: QuizQuestion[] }>(`/learn-earn/courses/${courseId}/quiz`),
+    submitQuizAnswers: (courseId: number, answers: number[]) =>
+      api.post<{ result: AnswerResult }>(`/learn-earn/courses/${courseId}/answer`, { answers }),
+    getLearnProgress: () =>
+      api.get<{ progress: LearnProgress[] }>('/learn-earn/progress'),
     getCopyTraders: (limit = 50) =>
       api.get<{ traders: CopyTrader[] }>(`/copy-trade/traders?limit=${limit}`),
     getCopyStats: () =>
