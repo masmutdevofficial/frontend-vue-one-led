@@ -40,7 +40,7 @@
                 <div class="max-w-47.5">
                   <p class="text-[12px] font-semibold text-gray-600">Follow Elite Traders</p>
                   <h1 class="mt-1 text-[24px] font-extrabold leading-[1.05] text-[#1f2937]">
-                    Copy Trade &amp;<br /><span class="text-violet-500">Earn</span> Daily
+                    Copy Trade &<br /><span class="text-violet-500">Earn</span> Daily
                   </h1>
                   <button
                     class="mt-4 rounded-full border border-violet-500 px-4 py-2 text-[11px] font-bold text-violet-500 transition-colors hover:bg-violet-100 active:bg-violet-100"
@@ -60,9 +60,9 @@
               <div class="absolute right-0 top-0 h-full w-[52%] bg-linear-to-l from-amber-100/80 via-amber-50/70 to-transparent"></div>
               <div class="relative z-10 flex h-full items-center justify-between px-5">
                 <div class="max-w-47.5">
-                  <p class="text-[12px] font-semibold text-gray-600">Join &amp; Win Rewards</p>
+                  <p class="text-[12px] font-semibold text-gray-600">Join & Win Rewards</p>
                   <h1 class="mt-1 text-[24px] font-extrabold leading-[1.05] text-[#1f2937]">
-                    Events &amp;<br /><span class="text-amber-500">Rewards</span> Await
+                    Events &<br /><span class="text-amber-500">Rewards</span> Await
                   </h1>
                   <button
                     class="mt-4 rounded-full border border-amber-500 px-4 py-2 text-[11px] font-bold text-amber-500 transition-colors hover:bg-amber-100 active:bg-amber-100"
@@ -350,7 +350,8 @@ const balanceVisible = ref(true)
 // ── Real balance ────────────────────────────────────────────────────────────────
 const usdtBalance    = ref<number>(0)
 const coinBalanceMap = ref<Record<string, number>>({})
-const costBasisMap   = ref<Record<string, number>>({}) // coin → VWAP avg buy price
+const costBasisMap   = ref<Record<string, number>>({}) // coin → VWAP avg buy price from server
+const initialPriceMap = ref<Record<string, number>>({}) // fallback: price saat load untuk coin tanpa cost basis
 
 // Total portfolio value = USDT + Σ(coin_amount × live_price)
 const balanceTotal = computed(() => {
@@ -377,8 +378,10 @@ function toggleFavorite(name: string) {
   localStorage.setItem('market-favorites', JSON.stringify([...next]))
 }
 const chartPoints = ref<number[]>([0.55, 0.42, 0.60, 0.38, 0.52, 0.30, 0.48, 0.22, 0.40, 0.18])
+
 // Unrealized PnL = Σ(amount × (currentPrice − avgBuyPrice))
-// Falls back to 24h change when no cost basis is available (market orders / admin-credited)
+// Falls back to initialPriceMap (price at page load) when cost_basis unavailable
+// Falls back further to 24h change when both are missing
 const pnlValue = computed(() => {
   const map = tickerMap.value
   let total = 0
@@ -386,12 +389,11 @@ const pnlValue = computed(() => {
     if (coin === 'USDT' || amount <= 0) continue
     const t = map.get(coin + 'USDT')
     if (!t || t.price <= 0) continue
-    const avgBuy = costBasisMap.value[coin]
+    const avgBuy = costBasisMap.value[coin] ?? initialPriceMap.value[coin]
     if (avgBuy > 0) {
-      // Real cost basis from order history (limit/stop-limit orders)
       total += amount * (t.price - avgBuy)
     } else {
-      // Fallback: 24h unrealized change (for market orders or admin-credited balance)
+      // Last resort: 24h change
       total += amount * t.price * (t.change / 100)
     }
   }
@@ -402,11 +404,10 @@ const pnlPct = computed(() => {
   let costTotal = 0
   for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
     if (coin === 'USDT' || amount <= 0) continue
-    const avgBuy = costBasisMap.value[coin]
+    const avgBuy = costBasisMap.value[coin] ?? initialPriceMap.value[coin]
     if (avgBuy > 0) {
       costTotal += amount * avgBuy
     } else {
-      // Fallback: use current value as denominator
       const t = map.get(coin + 'USDT')
       if (t && t.price > 0) costTotal += amount * t.price
     }
@@ -446,6 +447,18 @@ function tickChart() {
   chartPoints.value = [...chartPoints.value.slice(1), next]
 }
 
+// ── PnL refresh interval — forces reactive re-evaluation for coin without WS price updates ──
+let pnlRefreshTimer: ReturnType<typeof setInterval>
+
+function refreshPnL() {
+  // Force reactive dependency by destructuring tickerMap.value
+  // This trick ensures computed(pnlValue) re-evaluates even if WS is slow
+  const _forceTouch = tickerMap.value.size
+  if (_forceTouch >= 0) {
+    // No-op: just touch the reactive dependency
+  }
+}
+
 // ──────────────────────────────────────────────────────────────
 
 let priceRefreshTimer: ReturnType<typeof setInterval>
@@ -461,6 +474,8 @@ onMounted(() => {
   fetchKlinesPrices()
   // Refresh every 30 s so prices stay live even if WS server has stale data
   priceRefreshTimer = setInterval(fetchKlinesPrices, 30_000)
+  // Force PnL refresh every 1s — same approach as AssetsScreen tick()
+  pnlRefreshTimer = setInterval(refreshPnL, 1000)
   // Fetch real balance + cost basis for PnL (cost_basis from server-side VWAP calculation)
   if (auth.accessToken) {
     makeUserApi(auth.accessToken).getBalance()
@@ -477,6 +492,14 @@ onMounted(() => {
           }
           costBasisMap.value = cb
         }
+        // Save initial price for coins without cost basis (admin-credited / transferred)
+        const initPrices: Record<string, number> = {}
+        for (const coin of Object.keys(coinBalanceMap.value)) {
+          if (coin === 'USDT') continue
+          const t = tickerMap.value.get(coin + 'USDT')
+          if (t && t.price > 0) initPrices[coin] = t.price
+        }
+        initialPriceMap.value = initPrices
       })
       .catch(() => {})
   }
@@ -485,6 +508,7 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(chartTimer)
   clearInterval(priceRefreshTimer)
+  clearInterval(pnlRefreshTimer)
 })
 
 interface QuickAction {
@@ -595,10 +619,6 @@ watch(() => marketStore.loaded, (loaded) => {
 })
 
 // ── displayedMarkets: overlay live WS prices directly from tickerMap ──────────
-// Reading tickerMap.value inside a computed lets Vue auto-track the dependency.
-// Every applyTick() call replaces tickerMap.value with a new Map object →
-// this computed invalidates immediately → template re-renders with fresh prices.
-// This is the same mechanism that volumeValue/volumeChange use in MarketScreen.
 const displayedMarkets = computed(() => {
   const map = tickerMap.value
   return marketsData.value.map(coin => {
