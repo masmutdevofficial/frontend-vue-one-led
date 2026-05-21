@@ -54,7 +54,7 @@
         </section>
 
         <!-- Info Cards -->
-        <section class="mx-3 -mt-5 space-y-3">
+        <section class="mx-3 mt-5 space-y-3">
           <!-- Date & Participants -->
           <div class="rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
             <div class="grid grid-cols-2 gap-4">
