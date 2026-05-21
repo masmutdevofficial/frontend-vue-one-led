@@ -536,7 +536,11 @@
                   </div>
                   <div class="text-right">
                     <p class="text-[13px] font-semibold text-[#17212f]">
-                      {{ tickerMap.get(h.coin + 'USDT')?.price ? formatPrice((tickerMap.get(h.coin + 'USDT')!.price) * h.amount) + ' USDT' : '—' }}
+                      {{ (() => {
+                        const ticker = tickerMap.get(h.coin + 'USDT')
+                        const price = ticker?.price ?? baseCoin.value.price
+                        return price ? formatPrice(price * h.amount) + ' USDT' : '—'
+                      })() }}
                     </p>
                   </div>
                 </div>
