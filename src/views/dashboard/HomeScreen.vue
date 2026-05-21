@@ -618,14 +618,23 @@ watch(() => marketStore.loaded, (loaded) => {
   if (loaded) buildMarketsFromStore()
 })
 
-// ── displayedMarkets: overlay live WS prices directly from tickerMap ──────────
-const displayedMarkets = computed(() => {
+// ── Live price overlay: update marketsData reactively via watch(tickerMap)
+//    Same approach as TradeScreen's applyTickerToHeader()
+function applyTickerToMarkets() {
   const map = tickerMap.value
-  return marketsData.value.map(coin => {
+  marketsData.value = marketsData.value.map(coin => {
     const t = map.get(coin.binancePair)
     return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
   })
-})
+}
+
+// Watch tickerMap for live WS updates — same pattern as TradeScreen
+watch(tickerMap, () => {
+  applyTickerToMarkets()
+}, { deep: false })
+
+// display helper — reads marketsData directly (already patched by watch)
+const displayedMarkets = computed(() => marketsData.value)
 </script>
 
 <style>
