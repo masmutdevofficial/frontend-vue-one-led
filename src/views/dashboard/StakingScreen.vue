@@ -131,6 +131,19 @@
 
         <!-- STAKING PRODUCTS -->
         <section class="mt-5 space-y-3">
+          <!-- Loading -->
+          <div v-if="loading" class="flex items-center justify-center py-12">
+            <Icon icon="mdi:loading" class="animate-spin text-3xl text-[#20c7b7]" />
+          </div>
+
+          <!-- No products -->
+          <div v-else-if="filteredProducts.length === 0" class="flex flex-col items-center gap-2 py-12 text-gray-400">
+            <Icon icon="mdi:archive-outline" class="text-5xl" />
+            <p class="text-sm font-semibold">No staking products available</p>
+          </div>
+
+          <!-- Product list -->
+          <template v-else>
           <article
             v-for="item in filteredProducts"
             :key="item.asset + item.subtitle"
@@ -169,6 +182,7 @@
               Stake
             </button>
           </article>
+          </template>
         </section>
 
         <!-- MY POSITIONS -->
@@ -533,12 +547,6 @@ function onTncScroll(e: Event) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function trimDecimal(val: string | number): string {
-  const n = Number(val)
-  if (isNaN(n)) return '0'
-  return n.toFixed(6)
-}
-
 function formatAmount(val: string | number): string {
   const n = Number(val)
   if (isNaN(n)) return '0.00'
@@ -564,16 +572,9 @@ function coinClass(coin: string): string {
   return coinIconClass(coin.toUpperCase())
 }
 
-// ── Defaults (shown when API unavailable) ────────────────────────────────────
-const defaultProducts: StakingProduct[] = [
-  { id: 0, asset: 'USDT', subtitle: 'Flexible Staking', image_url: null, icon: 'mdi:alpha-t-circle',          iconClass: coinIconClass('USDT'), apr: '4.00%', minAmount: '10 USDT',   type: 'Flexible' },
-  { id: 0, asset: 'ETH',  subtitle: 'Flexible Staking', image_url: null, icon: 'mdi:ethereum',                iconClass: coinIconClass('ETH'),  apr: '3.85%', minAmount: '0.01 ETH',  type: 'Flexible' },
-  { id: 0, asset: 'BTC',  subtitle: '30 Days',          image_url: null, icon: 'mdi:bitcoin',                 iconClass: coinIconClass('BTC'),  apr: '5.20%', minAmount: '0.001 BTC', type: 'Locked' },
-  { id: 0, asset: 'SOL',  subtitle: '30 Days',          image_url: null, icon: 'mdi:circle-multiple-outline', iconClass: coinIconClass('SOL'),  apr: '6.10%', minAmount: '0.1 SOL',   type: 'Locked' },
-  { id: 0, asset: 'BNB',  subtitle: '60 Days',          image_url: null, icon: 'mdi:alpha-b-circle',          iconClass: coinIconClass('BNB'),  apr: '5.80%', minAmount: '0.05 BNB',  type: 'Locked' },
-]
-
-const stakingProducts = ref<StakingProduct[]>(defaultProducts)
+// ── State (starts empty — populated from API) ─────────────────────────────
+const loading = ref(true)
+const stakingProducts = ref<StakingProduct[]>([])
 
 async function loadSummaryAndPositions() {
   if (!auth.accessToken) return
@@ -603,11 +604,14 @@ onMounted(async () => {
         icon:      coinIconResolved(p.coin),
         iconClass: coinClass(p.coin),
         apr:       Number(p.apr).toFixed(2) + '%',
-        minAmount: trimDecimal(p.min_amount) + ' ' + p.coin,
+        minAmount: p.min_amount + ' ' + p.coin,
         type:      p.type === 'flexible' ? 'Flexible' : 'Locked',
       }))
     }
-  } catch { /* silently use defaults */ }
+  } catch { /* keep empty */
+  } finally {
+    loading.value = false
+  }
   loadSummaryAndPositions()
 })
 

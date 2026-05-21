@@ -33,7 +33,19 @@
 
       <!-- NEWS LIST -->
       <section class="px-4 pt-4 pb-6">
+        <!-- Loading -->
+        <div v-if="loading" class="flex items-center justify-center py-20">
+          <Icon icon="mdi:loading" class="animate-spin text-3xl text-[#0ba99d]" />
+        </div>
+
+        <!-- No data -->
+        <div v-else-if="filteredNews.length === 0" class="flex flex-col items-center gap-3 py-20 text-gray-400">
+          <Icon icon="mdi:newspaper-variant-outline" class="text-5xl" />
+          <p class="text-sm font-semibold">No news available</p>
+        </div>
+
         <!-- Featured card -->
+        <template v-else>
         <div
           class="mb-4 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
           @click="openDetail(filteredNews[0])"
@@ -87,6 +99,7 @@
             <Icon icon="mdi:chevron-right" class="shrink-0 text-[18px] text-gray-300" />
           </button>
         </div>
+        </template>
       </section>
     </div>
 
@@ -114,7 +127,7 @@
           v-if="activeNews"
           class="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-107.5 overflow-hidden rounded-t-3xl bg-white shadow-2xl"
         >
-          <img :src="activeNews.image" :alt="activeNews.title" class="h-48 w-full object-cover" />
+          <img :src="activeNews.image" :alt="activeNews.title" class="h-48 w-full object-contain" />
           <div class="px-5 pt-4 pb-10">
             <div class="flex items-center gap-2">
               <span class="rounded-full bg-[#e9fffc] px-2 py-0.5 text-[9px] font-semibold text-[#13b8b0]">
@@ -126,11 +139,6 @@
               {{ activeNews.title }}
             </h2>
             <p class="mt-3 text-[12px] leading-relaxed text-gray-500">{{ activeNews.excerpt }}</p>
-            <p class="mt-3 text-[12px] leading-relaxed text-gray-500">
-              Market participants continue to monitor on-chain metrics and macro developments
-              closely. Analysts point to increasing institutional interest as a key driver,
-              while retail sentiment remains cautiously optimistic amid ongoing volatility.
-            </p>
             <button
               @click="activeNews = null"
               class="mt-5 h-12 w-full rounded-xl bg-[#08a99f] text-[13px] font-semibold text-white active:scale-95"
@@ -180,44 +188,33 @@ function relativeTime(dateStr: string | null): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-// ── Defaults ──────────────────────────────────────────────────────────────────
-const defaultCategories = ['All', 'Market', 'Blockchain', 'Altcoins', 'Stablecoins', 'DeFi', 'Regulation']
-const defaultNews: NewsItem[] = [
-  { title: 'Bitcoin holds above key support as bulls defend $64K',         source: 'Market',      time: '2m ago',  excerpt: 'Bitcoin continues to consolidate above the $64,000 support level, with traders watching for a decisive breakout. On-chain data shows accumulation by long-term holders at current prices.', image: 'https://picsum.photos/600/300?random=101', category: 'Market' },
-  { title: 'Ethereum network activity rises ahead of next upgrade',        source: 'Blockchain',  time: '10m ago', excerpt: 'Daily active addresses on the Ethereum network have surged 18% week-over-week, driven by increased DEX activity and NFT market recovery.', image: 'https://picsum.photos/600/300?random=102', category: 'Blockchain' },
-  { title: 'Solana ecosystem sees renewed demand from developers',         source: 'Altcoins',    time: '18m ago', excerpt: 'Solana continues to attract developer talent with improved tooling and lower fees. New DeFi protocols launching on the network have pushed TVL to a 6-month high.', image: 'https://picsum.photos/600/300?random=103', category: 'Altcoins' },
-  { title: 'BNB extends weekly gains amid exchange token rally',           source: 'Market',      time: '25m ago', excerpt: 'BNB has outperformed the broader market this week, gaining 5.4% as exchange tokens benefit from rising trading volumes across centralized exchanges.', image: 'https://picsum.photos/600/300?random=104', category: 'Market' },
-  { title: 'USDT transfer volume climbs to record weekly high',            source: 'Stablecoins', time: '40m ago', excerpt: 'Tether (USDT) on-chain transfer volume reached a new weekly record, signaling heightened market activity and potential positioning ahead of key price moves.', image: 'https://picsum.photos/600/300?random=105', category: 'Stablecoins' },
-  { title: 'DeFi total value locked approaches $120B milestone',           source: 'DeFi',        time: '1h ago',  excerpt: 'The total value locked across DeFi protocols is approaching the $120 billion milestone for the first time since early 2022, signaling renewed confidence in decentralized finance.', image: 'https://picsum.photos/600/300?random=106', category: 'DeFi' },
-  { title: 'SEC signals potential framework update for crypto ETFs',       source: 'Regulation',  time: '2h ago',  excerpt: 'US regulators have indicated they are reviewing existing guidance on spot crypto ETFs following record inflows, with market observers expecting clearer rules by Q3.', image: 'https://picsum.photos/600/300?random=107', category: 'Regulation' },
-  { title: 'Layer-2 networks see explosive growth in user base',           source: 'Blockchain',  time: '3h ago',  excerpt: 'Optimistic and ZK rollup solutions have collectively added over 2 million new wallets in the past 30 days, with transaction throughput surpassing some major layer-1 networks.', image: 'https://picsum.photos/600/300?random=108', category: 'Blockchain' },
-  { title: 'Render Network token rises as AI compute demand grows',        source: 'Altcoins',    time: '4h ago',  excerpt: 'RNDR has rallied 12% this week as growing demand for distributed GPU rendering and AI workloads drives adoption of the Render Network protocol.', image: 'https://picsum.photos/600/300?random=109', category: 'Altcoins' },
-]
+const loading = ref(true)
 
-const categories = ref<string[]>(defaultCategories)
+// ── State (starts empty — populated from API) ──────────────────────────────
+const categories = ref<string[]>(['All'])
 const activeCategory = ref('All')
-const allNews = ref<NewsItem[]>(defaultNews)
+const allNews = ref<NewsItem[]>([])
 
 onMounted(async () => {
-  if (!auth.accessToken) return
+  if (!auth.accessToken) { loading.value = false; return }
   try {
     const api = makeContentApi(auth.accessToken)
     const [newsData, catData] = await Promise.all([api.getNews(), api.getNewsCategories()])
 
-    if (catData.categories.length > 0) {
-      categories.value = ['All', ...catData.categories.map(c => c.name)]
-    }
-    if (newsData.articles.length > 0) {
-      allNews.value = newsData.articles.map((a, i) => ({
-        title:    a.title,
-        source:   a.source ?? a.category_name ?? 'News',
-        time:     relativeTime(a.published_at),
-        excerpt:  a.summary ?? '',
-        image:    a.thumbnail_url ?? `https://picsum.photos/600/300?random=${200 + i}`,
-        category: a.category_name ?? 'Market',
-      }))
-    }
-  } catch { /* silently use defaults */ }
+    categories.value = ['All', ...catData.categories.map(c => c.name)]
+    allNews.value = newsData.articles.map((a, i) => ({
+      title:    a.title,
+      source:   a.source ?? a.category_name ?? 'News',
+      time:     relativeTime(a.published_at),
+      excerpt:  a.summary ?? '',
+      image:    a.thumbnail_url ?? `https://picsum.photos/600/300?random=${200 + i}`,
+      category: a.category_name ?? 'Market',
+    }))
+  } catch {
+    // Keep empty — no-data state will show
+  } finally {
+    loading.value = false
+  }
 })
 
 const filteredNews = computed(() => {
