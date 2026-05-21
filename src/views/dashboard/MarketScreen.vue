@@ -130,19 +130,19 @@
                 </div>
               </div>
 
-              <!-- Last Price (read tickerMap directly — same as TradeScreen coin picker) -->
+              <!-- Last Price (read from marketsData updated by tick()) -->
               <div class="w-22 text-right">
-                <p class="text-[12px] font-bold leading-none">{{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
-                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
+                <p class="text-[12px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
+                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(coin.price) }}</p>
               </div>
 
               <!-- 24h Change -->
               <div class="w-19 flex justify-end pr-1">
                 <span
                   class="inline-block rounded-lg px-2 py-1 text-[11px] font-bold"
-                  :class="(tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
+                  :class="coin.change >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
                 >
-                  {{ ((tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? '+' : '') + (tickerMap.get(coin.binancePair)?.change ?? coin.change).toFixed(2) }}%
+                  {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
                 </span>
               </div>
 
@@ -183,30 +183,40 @@ const router = useRouter()
 // ── Overview stats (live) ──────────────────────────────────────
 const volumePts = ref<number[]>(Array(8).fill(98.56))
 
-// Live 24h volume = sum of (volume * price) for all tracked pairs in billions
+// Fallback price defaults for simulation when WS unavailable
+const PAIR_DEFAULTS: Record<string, { volume: number }> = {
+  BTCUSDT: { volume: 28_000_000_000 },
+  ETHUSDT: { volume: 15_000_000_000 },
+  BNBUSDT: { volume: 1_500_000_000 },
+  SOLUSDT: { volume: 2_800_000_000 },
+  XRPUSDT: { volume: 1_200_000_000 },
+  WIFUSDT: { volume: 450_000_000 },
+  RNDRUSDT:{ volume: 280_000_000 },
+}
+
+// Live 24h volume from marketsData (updated by tick())
 const volumeValue = computed(() => {
   let total = 0
   for (const coin of marketsData.value) {
-    const t = tickerMap.value.get(coin.binancePair)
-    if (t && t.volume > 0) total += t.volume * t.price
+    const vol = coin.volume
+    if (vol > 0) total += vol * coin.price
   }
   const bil = total / 1e9
-  return bil > 0 ? Math.round(bil * 100) / 100 : 98.56  // fallback until WS connects
+  return bil > 0 ? Math.round(bil * 100) / 100 : 98.56
 })
 
-// Volume change = weighted avg change of coins with WS data
+// Volume change = weighted avg change of coins
 const volumeChange = computed(() => {
   let totalVol = 0
   let weighted = 0
   for (const coin of marketsData.value) {
-    const t = tickerMap.value.get(coin.binancePair)
-    if (t && t.volume > 0) {
-      const usdVol = t.volume * t.price
+    if (coin.volume > 0) {
+      const usdVol = coin.volume * coin.price
       totalVol += usdVol
       weighted += coin.change * usdVol
     }
   }
-  if (totalVol === 0) return 3.31  // fallback
+  if (totalVol === 0) return 3.31
   return Math.round((weighted / totalVol) * 100) / 100
 })
 
@@ -255,10 +265,7 @@ const activeTopTab = ref('Crypto')
 const activeCategory = ref('All')
 const topTabs = ['Crypto', 'Top Gainers', 'New Listing']
 
-interface Category {
-  name: string
-  icon: string | null
-}
+interface Category { name: string; icon: string | null }
 const categories: Category[] = [
   { name: 'All',       icon: null },
   { name: 'Favorites', icon: 'mdi:star-outline' },
@@ -269,25 +276,19 @@ const categories: Category[] = [
 
 // ── Market data ────────────────────────────────────────────────
 interface Market {
-  name: string
-  fullName: string
-  icon: string
-  price: number
-  change: number
-  chartPoints: number[]
-  isNewListing?: boolean
-  tags: string[]
-  binancePair: string
+  name: string; fullName: string; icon: string
+  price: number; change: number; volume: number
+  chartPoints: number[]; isNewListing?: boolean; tags: string[]; binancePair: string
 }
 
 const marketsData = ref<Market[]>([
-  { name: 'BTC',  fullName: 'Bitcoin',   icon: 'mdi:bitcoin',                 price: 0, change:  0, chartPoints: [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60], binancePair: 'BTCUSDT',  tags: ['Layer 1', 'Top 100'] },
-  { name: 'ETH',  fullName: 'Ethereum',  icon: 'mdi:ethereum',                price: 0, change:  0, chartPoints: [0.25, 0.35, 0.38, 0.46, 0.50, 0.55, 0.62, 0.72], binancePair: 'ETHUSDT',  tags: ['Layer 1', 'DeFi', 'Top 100'] },
-  { name: 'SOL',  fullName: 'Solana',    icon: 'mdi:circle-multiple-outline', price: 0, change:  0, chartPoints: [0.65, 0.60, 0.62, 0.55, 0.58, 0.52, 0.54, 0.48], binancePair: 'SOLUSDT',  tags: ['Layer 1', 'Top 100'] },
-  { name: 'BNB',  fullName: 'BNB',       icon: 'mdi:alpha-b-circle',          price: 0, change:  0, chartPoints: [0.35, 0.40, 0.38, 0.44, 0.42, 0.48, 0.46, 0.52], binancePair: 'BNBUSDT',  tags: ['Layer 1', 'Top 100'] },
-  { name: 'XRP',  fullName: 'XRP',       icon: 'mdi:close',                   price: 0, change:  0, chartPoints: [0.40, 0.44, 0.42, 0.48, 0.50, 0.52, 0.54, 0.56], binancePair: 'XRPUSDT',  tags: ['Top 100'] },
-  { name: 'WIF',  fullName: 'dogwifhat', icon: 'mdi:dog',                     price: 0, change:  0, chartPoints: [0.20, 0.28, 0.35, 0.45, 0.55, 0.62, 0.70, 0.78], binancePair: 'WIFUSDT',  isNewListing: true, tags: ['Top 100'] },
-  { name: 'RNDR', fullName: 'Render',    icon: 'mdi:cube-scan',               price: 0, change:  0, chartPoints: [0.70, 0.65, 0.68, 0.60, 0.58, 0.55, 0.52, 0.48], binancePair: 'RNDRUSDT', isNewListing: true, tags: ['DeFi', 'Top 100'] },
+  { name: 'BTC',  fullName: 'Bitcoin',   icon: 'mdi:bitcoin',                 price: 0, change: 0, volume: 28_000_000_000, chartPoints: [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60], binancePair: 'BTCUSDT',  tags: ['Layer 1', 'Top 100'] },
+  { name: 'ETH',  fullName: 'Ethereum',  icon: 'mdi:ethereum',                price: 0, change: 0, volume: 15_000_000_000, chartPoints: [0.25, 0.35, 0.38, 0.46, 0.50, 0.55, 0.62, 0.72], binancePair: 'ETHUSDT',  tags: ['Layer 1', 'DeFi', 'Top 100'] },
+  { name: 'SOL',  fullName: 'Solana',    icon: 'mdi:circle-multiple-outline', price: 0, change: 0, volume:  2_800_000_000, chartPoints: [0.65, 0.60, 0.62, 0.55, 0.58, 0.52, 0.54, 0.48], binancePair: 'SOLUSDT',  tags: ['Layer 1', 'Top 100'] },
+  { name: 'BNB',  fullName: 'BNB',       icon: 'mdi:alpha-b-circle',          price: 0, change: 0, volume:  1_500_000_000, chartPoints: [0.35, 0.40, 0.38, 0.44, 0.42, 0.48, 0.46, 0.52], binancePair: 'BNBUSDT',  tags: ['Layer 1', 'Top 100'] },
+  { name: 'XRP',  fullName: 'XRP',       icon: 'mdi:close',                   price: 0, change: 0, volume:  1_200_000_000, chartPoints: [0.40, 0.44, 0.42, 0.48, 0.50, 0.52, 0.54, 0.56], binancePair: 'XRPUSDT',  tags: ['Top 100'] },
+  { name: 'WIF',  fullName: 'dogwifhat', icon: 'mdi:dog',                     price: 0, change: 0, volume:    450_000_000, chartPoints: [0.20, 0.28, 0.35, 0.45, 0.55, 0.62, 0.70, 0.78], binancePair: 'WIFUSDT',  isNewListing: true, tags: ['Top 100'] },
+  { name: 'RNDR', fullName: 'Render',    icon: 'mdi:cube-scan',               price: 0, change: 0, volume:    280_000_000, chartPoints: [0.70, 0.65, 0.68, 0.60, 0.58, 0.55, 0.52, 0.48], binancePair: 'RNDRUSDT', isNewListing: true, tags: ['DeFi', 'Top 100'] },
 ])
 
 // Live WS prices
@@ -308,45 +309,34 @@ async function fetchMarketCoins() {
     if (coins.length === 0) return
     marketsData.value = coins.map((c) => {
       const existing = marketsData.value.find(m => m.name === c.symbol)
-      const currentPrice = existing?.price ?? 0
       return {
         name:          c.symbol,
         fullName:      c.name,
         icon:          c.icon ?? 'mdi:currency-usd',
-        price:         currentPrice,
+        price:         existing?.price ?? 0,
         change:        existing?.change ?? 0,
+        volume:        existing?.volume ?? 0,
         chartPoints:   existing?.chartPoints ?? generateChartPoints(),
         isNewListing:  existing?.isNewListing ?? false,
         tags:          existing?.tags ?? (c.is_featured ? ['Top 100'] : []),
         binancePair:   (c.binance_pair as string | null) ?? (c.symbol + 'USDT'),
       } as Market
     })
-  } catch {
-    // keep hardcoded fallback
-  }
+  } catch { /* keep fallback */ }
 }
 
-// ── Computed filtered & sorted list — with live WS prices ─────────────────────
-// Reading tickerMap.value inside this computed lets Vue auto-track the dependency.
-// Every applyTick() call replaces tickerMap.value → computed invalidates →
-// template re-renders with fresh prices. Same mechanism as volumeValue above.
+// ── displayedMarkets — reads marketsData directly (updated by tick()) ──────
 const displayedMarkets = computed(() => {
-  const map = tickerMap.value
-  let result = marketsData.value.map(coin => {
-    const t = map.get(coin.binancePair)
-    return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
-  })
+  let result = marketsData.value
 
-  // Top tab
   if (activeTopTab.value === 'Top Gainers') {
-    result = result.sort((a, b) => b.change - a.change)
+    result = [...result].sort((a, b) => b.change - a.change)
   } else if (activeTopTab.value === 'New Listing') {
     result = result.filter(c => c.isNewListing)
   } else {
     result = result.filter(c => !c.isNewListing)
   }
 
-  // Category
   if (activeCategory.value === 'Favorites') {
     result = result.filter(c => favorites.value.has(c.name))
   } else if (activeCategory.value !== 'All' && activeCategory.value !== 'Top 100') {
@@ -356,38 +346,50 @@ const displayedMarkets = computed(() => {
   return result
 })
 
-let timer: ReturnType<typeof setInterval>
-let priceRefreshTimer: ReturnType<typeof setInterval>
+// ══════════════════════════════════════════════════════════════════
+//  LIVE TICK — updates marketsData from WS or simulation every 800ms
+// ══════════════════════════════════════════════════════════════════
+let tickTimer: ReturnType<typeof setInterval>
 
 function tick() {
-  // Animate per-coin sparklines — prices come from WS (watch below)
-  marketsData.value = marketsData.value.map(coin => {
-    const ptLast = coin.chartPoints[coin.chartPoints.length - 1]
-    const ptNext = Math.max(0.05, Math.min(0.95, ptLast + (Math.random() - (coin.change > 0 ? 0.44 : 0.56)) * 0.1))
-    return { ...coin, chartPoints: [...coin.chartPoints.slice(1), ptNext] }
-  })
-}
-
-// Apply current WS tickerMap immediately (catches snapshot that arrived before mount)
-// NOTE: this only seeds marketsData baseline prices — the displayedMarkets computed
-// overlays live tickerMap on top on every re-render, so this is just for the
-// klines-based 24h change% fallback stored in marketsData.
-function applyTickerPrices() {
   const map = tickerMap.value
+
   marketsData.value = marketsData.value.map(coin => {
-    const t = map.get(coin.binancePair)
-    return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
+    const wsTicker = map.get(coin.binancePair)
+
+    // Update price + change from WS if available, otherwise simulate
+    let price: number
+    let change: number
+    let volume: number
+
+    if (wsTicker && wsTicker.price > 0) {
+      price  = wsTicker.price
+      change = Math.round(wsTicker.change * 100) / 100
+      volume = wsTicker.volume || coin.volume
+    } else {
+      // SIMULATE price movement (same as HomeScreen / TradeScreen)
+      const basePrice = coin.price || 100
+      const delta = basePrice * (Math.random() - 0.499) * 0.002
+      price  = Math.max(0.000001, basePrice + delta)
+      change = Math.round((coin.change + (Math.random() - 0.49) * 0.06) * 100) / 100
+      volume = coin.volume
+    }
+
+    // Animate sparkline
+    const ptLast = coin.chartPoints[coin.chartPoints.length - 1]
+    const ptNext = Math.max(0.05, Math.min(0.95,
+      ptLast + (Math.random() - (change > 0 ? 0.44 : 0.56)) * 0.1
+    ))
+
+    return { ...coin, price, change, volume, chartPoints: [...coin.chartPoints.slice(1), ptNext] }
   })
 }
 
-// Fetch real prices from Binance klines (overrides stale WS snapshot)
+// Fetch real prices from Binance klines (initial seed)
 async function fetchKlinesPrices() {
-  const coins = marketsData.value
-  await Promise.allSettled(coins.map(async (coin) => {
+  await Promise.allSettled(marketsData.value.map(async (coin) => {
     try {
-      const res = await fetch(
-        `https://api.one-led.io/v1/public/klines?symbol=${coin.binancePair}&interval=1d&limit=1`
-      )
+      const res = await fetch(`https://api.one-led.io/v1/public/klines?symbol=${coin.binancePair}&interval=1d&limit=1`)
       if (!res.ok) return
       const raw = await res.json()
       if (!Array.isArray(raw) || !raw[0]) return
@@ -403,19 +405,19 @@ async function fetchKlinesPrices() {
 }
 
 onMounted(async () => {
-  timer = setInterval(tick, 1200)
   await fetchMarketCoins()
-  applyTickerPrices()
-  fetchKlinesPrices()
-  priceRefreshTimer = setInterval(fetchKlinesPrices, 30_000)
+  // Fetch real prices from klines REST as initial data
+  await fetchKlinesPrices()
+  // Start live tick every 800ms (like TradeScreen/HomeScreen)
+  tick()
+  tickTimer = setInterval(tick, 800)
 })
+
 onUnmounted(() => {
-  clearInterval(timer)
-  clearInterval(priceRefreshTimer)
+  clearInterval(tickTimer)
 })
 
-
-// ── Update volume sparkline from real 24h volume data ─────────
+// ── Update volume sparkline from real volume data ─────────
 watch(volumeValue, (val) => {
   if (val > 0) volumePts.value = [...volumePts.value.slice(1), val]
 })
