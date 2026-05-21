@@ -91,13 +91,13 @@
               </div>
               <div class="mt-2 flex items-end gap-2">
                 <h2 class="text-[26px] font-bold leading-none tracking-tight">
-                  {{ balanceVisible ? fmtBalance(balanceTotal) : '••••••••' }}
+                  {{ balanceVisible ? fmtBalance(totalBalance) : '••••••••' }}
                 </h2>
                 <button class="mb-1 flex items-center gap-1 text-[11px] font-semibold">
                   USDT <Icon icon="mdi:chevron-down" />
                 </button>
               </div>
-              <p class="mt-2 text-[12px] sm:text-[16px] text-gray-400">{{ balanceVisible ? '≈ $' + fmtBalance(balanceTotal) : '≈ $••••••••' }}</p>
+              <p class="mt-2 text-[12px] sm:text-[16px] text-gray-400">{{ balanceVisible ? '≈ $' + fmtBalance(totalBalance) : '≈ $••••••••' }}</p>
               <button class="mt-3 flex items-center gap-1 text-[12px] sm:text-[16px] text-gray-400">
                 Unrealized PnL
                 <span
@@ -261,18 +261,18 @@
                   <p class="mt-1 text-[10px] text-gray-400 truncate">{{ coin.fullName }}</p>
                 </div>
               </div>
-              <!-- Last Price (read tickerMap directly — same as TradeScreen coin picker) -->
+              <!-- Last Price -->
               <div class="w-22 text-right">
-                <p class="text-[12px] font-bold leading-none">{{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
-                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(tickerMap.get(coin.binancePair)?.price ?? coin.price) }}</p>
+                <p class="text-[12px] font-bold leading-none">{{ formatPrice(coin.price) }}</p>
+                <p class="mt-1 text-[10px] text-gray-400">${{ formatPrice(coin.price) }}</p>
               </div>
               <!-- 24h Change badge -->
               <div class="w-19 flex justify-end pr-1">
                 <span
                   class="inline-block rounded-lg px-2 py-1 text-[11px] font-bold"
-                  :class="(tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
+                  :class="coin.change >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
                 >
-                  {{ ((tickerMap.get(coin.binancePair)?.change ?? coin.change) >= 0 ? '+' : '') + (tickerMap.get(coin.binancePair)?.change ?? coin.change).toFixed(2) }}%
+                  {{ (coin.change >= 0 ? '+' : '') + coin.change.toFixed(2) }}%
                 </span>
               </div>
               <!-- Star -->
@@ -351,19 +351,27 @@ const balanceVisible = ref(true)
 const usdtBalance    = ref<number>(0)
 const coinBalanceMap = ref<Record<string, number>>({})
 const costBasisMap   = ref<Record<string, number>>({}) // coin → VWAP avg buy price from server
-const initialPriceMap = ref<Record<string, number>>({}) // fallback: price saat load untuk coin tanpa cost basis
+const initialPriceMap = ref<Record<string, number>>({}) // fallback: price saat load
 
-// Total portfolio value = USDT + Σ(coin_amount × live_price)
-const balanceTotal = computed(() => {
-  const map = tickerMap.value
-  let total = usdtBalance.value
-  for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
-    if (coin === 'USDT' || amount <= 0) continue
-    const t = map.get(coin + 'USDT')
-    if (t && t.price > 0) total += amount * t.price
-  }
-  return total
-})
+// ── Live price refs (mutated by tick(), same pattern as TradeScreen) ──────────
+const totalBalance = ref<number>(0)
+const pnlValue     = ref<number>(0)
+const pnlPct       = ref<number>(0)
+
+// ── Market overview refs (mutated by tick(), same pattern as TradeScreen) ─────
+interface Market {
+  symbol: string; fullName: string; icon: string; binancePair: string
+  price: number; change: number; chartPoints: number[]
+}
+const FEATURED_SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP']
+const marketsData = ref<Market[]>([
+  { symbol: 'BTC', fullName: 'Bitcoin',   icon: 'mdi:bitcoin',                 binancePair: 'BTCUSDT', price: 0, change: 0, chartPoints: [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60] },
+  { symbol: 'ETH', fullName: 'Ethereum',  icon: 'mdi:ethereum',                binancePair: 'ETHUSDT', price: 0, change: 0, chartPoints: [0.25, 0.35, 0.38, 0.46, 0.50, 0.55, 0.62, 0.72] },
+  { symbol: 'BNB', fullName: 'BNB',       icon: 'mdi:alpha-b-circle',          binancePair: 'BNBUSDT', price: 0, change: 0, chartPoints: [0.35, 0.40, 0.38, 0.44, 0.42, 0.48, 0.46, 0.52] },
+  { symbol: 'SOL', fullName: 'Solana',    icon: 'mdi:circle-multiple-outline', binancePair: 'SOLUSDT', price: 0, change: 0, chartPoints: [0.65, 0.60, 0.62, 0.55, 0.58, 0.52, 0.54, 0.48] },
+  { symbol: 'XRP', fullName: 'XRP',       icon: 'mdi:close',                   binancePair: 'XRPUSDT', price: 0, change: 0, chartPoints: [0.40, 0.44, 0.42, 0.48, 0.50, 0.52, 0.54, 0.56] },
+])
+const displayedMarkets = computed(() => marketsData.value)
 
 function fmtBalance(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -378,43 +386,6 @@ function toggleFavorite(name: string) {
   localStorage.setItem('market-favorites', JSON.stringify([...next]))
 }
 const chartPoints = ref<number[]>([0.55, 0.42, 0.60, 0.38, 0.52, 0.30, 0.48, 0.22, 0.40, 0.18])
-
-// Unrealized PnL = Σ(amount × (currentPrice − avgBuyPrice))
-// Falls back to initialPriceMap (price at page load) when cost_basis unavailable
-// Falls back further to 24h change when both are missing
-const pnlValue = computed(() => {
-  const map = tickerMap.value
-  let total = 0
-  for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
-    if (coin === 'USDT' || amount <= 0) continue
-    const t = map.get(coin + 'USDT')
-    if (!t || t.price <= 0) continue
-    const avgBuy = costBasisMap.value[coin] ?? initialPriceMap.value[coin]
-    if (avgBuy > 0) {
-      total += amount * (t.price - avgBuy)
-    } else {
-      // Last resort: 24h change
-      total += amount * t.price * (t.change / 100)
-    }
-  }
-  return Math.round(total * 100) / 100
-})
-const pnlPct = computed(() => {
-  const map = tickerMap.value
-  let costTotal = 0
-  for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
-    if (coin === 'USDT' || amount <= 0) continue
-    const avgBuy = costBasisMap.value[coin] ?? initialPriceMap.value[coin]
-    if (avgBuy > 0) {
-      costTotal += amount * avgBuy
-    } else {
-      const t = map.get(coin + 'USDT')
-      if (t && t.price > 0) costTotal += amount * t.price
-    }
-  }
-  if (costTotal <= 0) return 0
-  return Math.round((pnlValue.value / costTotal) * 10000) / 100
-})
 
 function buildSplinePath(pts: number[], filled = false): string {
   const W = 105, H = 58, padTop = 4, padBottom = 6
@@ -434,12 +405,10 @@ function buildSplinePath(pts: number[], filled = false): string {
   if (filled) d += ` L ${((pts.length - 1) * xStep).toFixed(1)},${H} L 0,${H} Z`
   return d
 }
-
 const chartLinePath = computed(() => buildSplinePath(chartPoints.value))
 const chartFillPath = computed(() => buildSplinePath(chartPoints.value, true))
 
 let chartTimer: ReturnType<typeof setInterval>
-
 function tickChart() {
   const last = chartPoints.value[chartPoints.value.length - 1]
   const delta = (Math.random() - 0.46) * 0.14
@@ -447,36 +416,131 @@ function tickChart() {
   chartPoints.value = [...chartPoints.value.slice(1), next]
 }
 
-// ── PnL refresh interval — forces reactive re-evaluation for coin without WS price updates ──
-let pnlRefreshTimer: ReturnType<typeof setInterval>
-
-function refreshPnL() {
-  // Force reactive dependency by destructuring tickerMap.value
-  // This trick ensures computed(pnlValue) re-evaluates even if WS is slow
-  const _forceTouch = tickerMap.value.size
-  if (_forceTouch >= 0) {
-    // No-op: just touch the reactive dependency
-  }
+function formatPrice(price: number): string {
+  if (price >= 1000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  if (price >= 1) return price.toFixed(2)
+  return price.toFixed(6)
 }
 
-// ──────────────────────────────────────────────────────────────
+// ── Build market list from store metadata ──────────────────────────────────
+function buildMarketsFromStore() {
+  const updated = FEATURED_SYMBOLS.map(sym => {
+    const c = marketStore.coins.find(x => x.symbol === sym)
+    const existing = marketsData.value.find(m => m.symbol === sym)
+    if (!c && !existing) return null
+    return {
+      symbol: sym,
+      fullName: c?.name ?? existing!.fullName,
+      icon: c?.icon ?? existing!.icon,
+      binancePair: c?.binancePair ?? existing!.binancePair,
+      price: existing?.price ?? 0,
+      change: existing?.change ?? 0,
+      chartPoints: existing?.chartPoints ?? [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60],
+    } as Market
+  }).filter(Boolean) as Market[]
+  if (updated.length) marketsData.value = updated
+}
+watch(() => marketStore.loaded, (loaded) => { if (loaded) buildMarketsFromStore() })
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LIVE TICK — same interval-driven pattern as TradeScreen's tick()
+//  Reads tickerMap (from WebSocket) every 700ms and updates refs directly.
+//  This guarantees reactive updates even if the WS ref-counting has issues.
+// ═══════════════════════════════════════════════════════════════════════════
+let tickTimer: ReturnType<typeof setInterval>
+
+function computePnL(): { value: number; pct: number } {
+  const map = tickerMap.value
+  let total = 0
+  let costTotal = 0
+  for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
+    if (coin === 'USDT' || amount <= 0) continue
+    const t = map.get(coin + 'USDT')
+    if (!t || t.price <= 0) continue
+    const avgBuy = costBasisMap.value[coin] ?? initialPriceMap.value[coin]
+    if (avgBuy > 0) {
+      total += amount * (t.price - avgBuy)
+      costTotal += amount * avgBuy
+    } else {
+      total += amount * t.price * (t.change / 100)
+      costTotal += amount * t.price
+    }
+  }
+  const value = Math.round(total * 100) / 100
+  const pct = costTotal > 0 ? Math.round((total / costTotal) * 10000) / 100 : 0
+  return { value, pct }
+}
+
+function computeTotalBalance(): number {
+  const map = tickerMap.value
+  let total = usdtBalance.value
+  for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
+    if (coin === 'USDT' || amount <= 0) continue
+    const t = map.get(coin + 'USDT')
+    if (t && t.price > 0) total += amount * t.price
+  }
+  return total
+}
+
+function tick() {
+  // 1. Update market prices from tickerMap (same approach as TradeScreen)
+  const map = tickerMap.value
+  const nextMarkets = marketsData.value.map(coin => {
+    const t = map.get(coin.binancePair)
+    return t
+      ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 }
+      : coin
+  })
+  marketsData.value = nextMarkets
+
+  // 2. Update PnL from tickerMap
+  const pnl = computePnL()
+  pnlValue.value = pnl.value
+  pnlPct.value   = pnl.pct
+
+  // 3. Update total balance from tickerMap
+  totalBalance.value = computeTotalBalance()
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 
 let priceRefreshTimer: ReturnType<typeof setInterval>
 
 onMounted(() => {
   chartTimer = setInterval(tickChart, 1200)
-  // Fetch coin metadata from market store
   marketStore.fetchCoins()
   if (marketStore.loaded) buildMarketsFromStore()
-  // Apply any WS snapshot data already in tickerMap
-  applyTickerPrices()
-  // Always fetch from klines REST API — overrides stale WS snapshot data
-  fetchKlinesPrices()
-  // Refresh every 30 s so prices stay live even if WS server has stale data
-  priceRefreshTimer = setInterval(fetchKlinesPrices, 30_000)
-  // Force PnL refresh every 1s — same approach as AssetsScreen tick()
-  pnlRefreshTimer = setInterval(refreshPnL, 1000)
-  // Fetch real balance + cost basis for PnL (cost_basis from server-side VWAP calculation)
+
+  // Start live tick — 700ms interval, same as TradeScreen's 600ms
+  // This ensures prices/PnL update even without WebSocket reactivity
+  tick()
+  tickTimer = setInterval(tick, 700)
+
+  // Fallback REST refresh every 30s
+  priceRefreshTimer = setInterval(async () => {
+    // Re-fetch market prices from klines as fallback
+    await Promise.allSettled(marketsData.value.map(async (coin) => {
+      try {
+        const res = await fetch(
+          `https://api.one-led.io/v1/public/klines?symbol=${coin.binancePair}&interval=1d&limit=1`
+        )
+        if (!res.ok) return
+        const raw = await res.json()
+        if (!Array.isArray(raw) || !raw[0]) return
+        const close  = parseFloat(raw[0][4])
+        const open   = parseFloat(raw[0][1])
+        if (isNaN(close) || close <= 0) return
+        const change = open > 0 ? Math.round(((close - open) / open) * 10000) / 100 : 0
+        marketsData.value = marketsData.value.map(c =>
+          c.symbol === coin.symbol ? { ...c, price: close, change } : c
+        )
+      } catch { /* ignore */ }
+    }))
+    // Recompute PnL/balance after REST prices come in
+    tick()
+  }, 30_000)
+
+  // Fetch real balance + cost basis for PnL
   if (auth.accessToken) {
     makeUserApi(auth.accessToken).getBalance()
       .then(d => {
@@ -484,7 +548,7 @@ onMounted(() => {
         const map: Record<string, number> = {}
         for (const b of (d.balances ?? [])) map[(b.coin as string).toUpperCase()] = Number(b.amount)
         coinBalanceMap.value = map
-        // Apply server-side cost basis (VWAP from all filled buy orders)
+        // Apply server-side cost basis (VWAP)
         if (d.cost_basis) {
           const cb: Record<string, number> = {}
           for (const [coin, price] of Object.entries(d.cost_basis)) {
@@ -492,7 +556,7 @@ onMounted(() => {
           }
           costBasisMap.value = cb
         }
-        // Save initial price for coins without cost basis (admin-credited / transferred)
+        // Save initial price for coins without cost basis
         const initPrices: Record<string, number> = {}
         for (const coin of Object.keys(coinBalanceMap.value)) {
           if (coin === 'USDT') continue
@@ -500,6 +564,8 @@ onMounted(() => {
           if (t && t.price > 0) initPrices[coin] = t.price
         }
         initialPriceMap.value = initPrices
+        // Force recalculation after balance loads
+        tick()
       })
       .catch(() => {})
   }
@@ -507,8 +573,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearInterval(chartTimer)
+  clearInterval(tickTimer)
   clearInterval(priceRefreshTimer)
-  clearInterval(pnlRefreshTimer)
 })
 
 interface QuickAction {
@@ -536,109 +602,9 @@ const quickActions: QuickAction[] = [
   { label: 'Deposit\nCrypto', icon: 'mdi:qrcode-scan',                  route: '/crypto-deposit' },
   { label: 'Staking', icon: 'mdi:bank-outline', route: '/staking' },
 ]
-
-function formatPrice(price: number): string {
-  if (price >= 1000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  if (price >= 1) return price.toFixed(2)
-  return price.toFixed(6)
-}
-
-interface Market {
-  symbol: string
-  fullName: string
-  icon: string
-  binancePair: string
-  price: number
-  change: number
-  chartPoints: number[]
-}
-
-const FEATURED_SYMBOLS = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP']
-
-const marketsData = ref<Market[]>([
-  { symbol: 'BTC', fullName: 'Bitcoin',   icon: 'mdi:bitcoin',                 binancePair: 'BTCUSDT', price: 0, change: 0, chartPoints: [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60] },
-  { symbol: 'ETH', fullName: 'Ethereum',  icon: 'mdi:ethereum',                binancePair: 'ETHUSDT', price: 0, change: 0, chartPoints: [0.25, 0.35, 0.38, 0.46, 0.50, 0.55, 0.62, 0.72] },
-  { symbol: 'BNB', fullName: 'BNB',       icon: 'mdi:alpha-b-circle',          binancePair: 'BNBUSDT', price: 0, change: 0, chartPoints: [0.35, 0.40, 0.38, 0.44, 0.42, 0.48, 0.46, 0.52] },
-  { symbol: 'SOL', fullName: 'Solana',    icon: 'mdi:circle-multiple-outline', binancePair: 'SOLUSDT', price: 0, change: 0, chartPoints: [0.65, 0.60, 0.62, 0.55, 0.58, 0.52, 0.54, 0.48] },
-  { symbol: 'XRP', fullName: 'XRP',       icon: 'mdi:close',                   binancePair: 'XRPUSDT', price: 0, change: 0, chartPoints: [0.40, 0.44, 0.42, 0.48, 0.50, 0.52, 0.54, 0.56] },
-])
-
-function buildMarketsFromStore() {
-  const map = tickerMap.value
-  const updated = FEATURED_SYMBOLS.map(sym => {
-    const c = marketStore.coins.find(x => x.symbol === sym)
-    const existing = marketsData.value.find(m => m.symbol === sym)
-    if (!c && !existing) return null
-    const t = map.get((c?.binancePair ?? existing?.binancePair)!)
-    return {
-      symbol: sym,
-      fullName: c?.name ?? existing!.fullName,
-      icon: c?.icon ?? existing!.icon,
-      binancePair: c?.binancePair ?? existing!.binancePair,
-      price: t?.price ?? existing?.price ?? 0,
-      change: t ? Math.round(t.change * 100) / 100 : (existing?.change ?? 0),
-      chartPoints: existing?.chartPoints ?? [0.30, 0.38, 0.35, 0.45, 0.42, 0.52, 0.50, 0.60],
-    } as Market
-  }).filter(Boolean) as Market[]
-  if (updated.length) marketsData.value = updated
-}
-
-// Apply current tickerMap state immediately (handles WS snapshot that arrived before mount)
-function applyTickerPrices() {
-  const map = tickerMap.value
-  marketsData.value = marketsData.value.map(coin => {
-    const t = map.get(coin.binancePair)
-    return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
-  })
-}
-
-// Fetch current price and 24h change from Binance klines (overrides stale WS snapshot)
-async function fetchKlinesPrices() {
-  await Promise.allSettled(marketsData.value.map(async (coin) => {
-    try {
-      // interval=1d: open=midnight UTC (≈24h open), close=current price
-      const res = await fetch(
-        `https://api.one-led.io/v1/public/klines?symbol=${coin.binancePair}&interval=1d&limit=1`
-      )
-      if (!res.ok) return
-      const raw = await res.json()
-      if (!Array.isArray(raw) || !raw[0]) return
-      const close  = parseFloat(raw[0][4])
-      const open   = parseFloat(raw[0][1])
-      if (isNaN(close) || close <= 0) return
-      const change = open > 0 ? Math.round(((close - open) / open) * 10000) / 100 : 0
-      marketsData.value = marketsData.value.map(c =>
-        c.symbol === coin.symbol ? { ...c, price: close, change } : c
-      )
-    } catch { /* ignore */ }
-  }))
-}
-
-watch(() => marketStore.loaded, (loaded) => {
-  if (loaded) buildMarketsFromStore()
-})
-
-// ── Live price overlay: update marketsData reactively via watch(tickerMap)
-//    Same approach as TradeScreen's applyTickerToHeader()
-function applyTickerToMarkets() {
-  const map = tickerMap.value
-  marketsData.value = marketsData.value.map(coin => {
-    const t = map.get(coin.binancePair)
-    return t ? { ...coin, price: t.price, change: Math.round(t.change * 100) / 100 } : coin
-  })
-}
-
-// Watch tickerMap for live WS updates — same pattern as TradeScreen
-watch(tickerMap, () => {
-  applyTickerToMarkets()
-}, { deep: false })
-
-// display helper — reads marketsData directly (already patched by watch)
-const displayedMarkets = computed(() => marketsData.value)
 </script>
 
 <style>
-/* Hero banner Swiper: teal bullet pagination, positioned inside the card */
 .hero-swiper {
   --swiper-pagination-color: #1fc7c0;
   --swiper-pagination-bullet-inactive-color: #d1d5db;
@@ -652,8 +618,6 @@ const displayedMarkets = computed(() => marketsData.value)
   width: 20px !important;
   border-radius: 3px;
 }
-
-/* Quick actions Swiper: teal pagination dots with dynamic bullets */
 .qa-swiper {
   --swiper-pagination-color: #1fc7c0;
   --swiper-pagination-bullet-inactive-color: #e5e7eb;
