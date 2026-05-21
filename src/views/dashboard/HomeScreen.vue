@@ -347,9 +347,22 @@ const marketStore = useMarketStore()
 const { tickerMap } = useMarketWs()
 const balanceVisible = ref(true)
 
-// ── Real balance (USDT) ───────────────────────────────────────────────────────
-const balanceTotal = ref<number>(0)
+// ── Real balance ────────────────────────────────────────────────────────────────
+const usdtBalance    = ref<number>(0)
 const coinBalanceMap = ref<Record<string, number>>({})
+const costBasisMap   = ref<Record<string, number>>({}) // coin → VWAP avg buy price
+
+// Total portfolio value = USDT + Σ(coin_amount × live_price)
+const balanceTotal = computed(() => {
+  const map = tickerMap.value
+  let total = usdtBalance.value
+  for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
+    if (coin === 'USDT' || amount <= 0) continue
+    const t = map.get(coin + 'USDT')
+    if (t && t.price > 0) total += amount * t.price
+  }
+  return total
+})
 
 function fmtBalance(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -364,29 +377,30 @@ function toggleFavorite(name: string) {
   localStorage.setItem('market-favorites', JSON.stringify([...next]))
 }
 const chartPoints = ref<number[]>([0.55, 0.42, 0.60, 0.38, 0.52, 0.30, 0.48, 0.22, 0.40, 0.18])
-// Unrealized PnL: sum of (24h change × current holding value) for all coin holdings
+// Unrealized PnL = Σ(amount × (currentPrice − avgBuyPrice))
 const pnlValue = computed(() => {
   const map = tickerMap.value
   let total = 0
   for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
     if (coin === 'USDT' || amount <= 0) continue
     const t = map.get(coin + 'USDT')
-    if (!t || t.price <= 0) continue
-    total += amount * t.price * (t.change / 100)
+    const avgBuy = costBasisMap.value[coin]
+    if (!t || t.price <= 0 || !avgBuy) continue
+    total += amount * (t.price - avgBuy)
   }
   return Math.round(total * 100) / 100
 })
 const pnlPct = computed(() => {
-  const map = tickerMap.value
-  let holdingsValue = 0
+  // percentage relative to total cost basis Σ(amount × avgBuyPrice)
+  let costTotal = 0
   for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
     if (coin === 'USDT' || amount <= 0) continue
-    const t = map.get(coin + 'USDT')
-    if (!t || t.price <= 0) continue
-    holdingsValue += amount * t.price
+    const avgBuy = costBasisMap.value[coin]
+    if (!avgBuy) continue
+    costTotal += amount * avgBuy
   }
-  if (holdingsValue <= 0) return 0
-  return Math.round((pnlValue.value / holdingsValue) * 10000) / 100
+  if (costTotal <= 0) return 0
+  return Math.round((pnlValue.value / costTotal) * 10000) / 100
 })
 
 function buildSplinePath(pts: number[], filled = false): string {
@@ -419,6 +433,30 @@ function tickChart() {
   const next = Math.max(0.05, Math.min(0.95, last + delta))
   chartPoints.value = [...chartPoints.value.slice(1), next]
 }
+
+/** Compute VWAP (weighted average buy price) per coin from filled spot orders */
+async function fetchCostBasis() {
+  if (!auth.accessToken) return
+  try {
+    const { orders } = await makeTradeApi(auth.accessToken).getOrders('history')
+    const totalSpent:  Record<string, number> = {}
+    const totalFilled: Record<string, number> = {}
+    for (const o of orders) {
+      if (o.side !== 'Buy' || o.status !== 'filled') continue
+      const coin   = o.symbol.replace('USDT', '')
+      const price  = Number(o.price)
+      const amount = Number(o.filled || o.amount)
+      if (price <= 0 || amount <= 0) continue
+      totalSpent[coin]  = (totalSpent[coin]  ?? 0) + price * amount
+      totalFilled[coin] = (totalFilled[coin] ?? 0) + amount
+    }
+    const map: Record<string, number> = {}
+    for (const coin of Object.keys(totalSpent)) {
+      if (totalFilled[coin] > 0) map[coin] = totalSpent[coin] / totalFilled[coin]
+    }
+    costBasisMap.value = map
+  } catch { /* ignore */ }
+}
 // ──────────────────────────────────────────────────────────────
 
 let priceRefreshTimer: ReturnType<typeof setInterval>
@@ -434,16 +472,17 @@ onMounted(() => {
   fetchKlinesPrices()
   // Refresh every 30 s so prices stay live even if WS server has stale data
   priceRefreshTimer = setInterval(fetchKlinesPrices, 30_000)
-  // Fetch real balance
+  // Fetch real balance + cost basis for PnL
   if (auth.accessToken) {
     makeUserApi(auth.accessToken).getBalance()
       .then(d => {
-        balanceTotal.value = parseFloat(d.total as unknown as string) || 0
+        usdtBalance.value = parseFloat(d.total as unknown as string) || 0
         const map: Record<string, number> = {}
         for (const b of (d.balances ?? [])) map[(b.coin as string).toUpperCase()] = Number(b.amount)
         coinBalanceMap.value = map
       })
       .catch(() => {})
+    fetchCostBasis()
   }
 })
 
