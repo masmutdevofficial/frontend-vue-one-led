@@ -117,7 +117,14 @@
       <section class="mt-5 px-3">
         <div class="rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
           <div class="mb-2 flex items-center justify-between"><h2 class="text-[16px] font-extrabold text-[#17212f]">News</h2><button type="button" class="flex items-center gap-1 text-[10px] font-bold text-[#1bb9b2]" @click="router.push('/news')">See All <Icon icon="mdi:arrow-right" class="text-[13px]" /></button></div>
-          <div><button v-for="item in newsItems" :key="item.title" type="button" class="flex w-full items-center justify-between border-b border-gray-100 py-2.5 text-left last:border-b-0 active:bg-gray-50" @click="router.push('/news')"><div class="flex items-start gap-3"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#13b8b0]"></span><div><h3 class="text-[12px] font-semibold leading-snug text-[#17212f]">{{ item.title }}</h3><p class="mt-0.5 text-[10px] font-medium text-gray-400">{{ item.source }} · {{ item.time }}</p></div></div><Icon icon="mdi:chevron-right" class="ml-4 shrink-0 text-[18px] text-gray-400" /></button></div>
+          <div v-if="newsLoading" class="flex items-center justify-center py-6">
+            <Icon icon="mdi:loading" class="animate-spin text-xl text-[#1bb9b2]" />
+          </div>
+          <div v-else-if="newsItems.length === 0" class="flex flex-col items-center gap-1 py-6 text-gray-400">
+            <Icon icon="mdi:newspaper-variant-outline" class="text-3xl" />
+            <p class="text-xs font-semibold">No news</p>
+          </div>
+          <div v-else><button v-for="item in newsItems" :key="item.title" type="button" class="flex w-full items-center justify-between border-b border-gray-100 py-2.5 text-left last:border-b-0 active:bg-gray-50" @click="router.push('/news')"><div class="flex items-start gap-3"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#13b8b0]"></span><div><h3 class="text-[12px] font-semibold leading-snug text-[#17212f]">{{ item.title }}</h3><p class="mt-0.5 text-[10px] font-medium text-gray-400">{{ item.source }} · {{ item.time }}</p></div></div><Icon icon="mdi:chevron-right" class="ml-4 shrink-0 text-[18px] text-gray-400" /></button></div>
         </div>
       </section>
     </div>
@@ -135,7 +142,7 @@ import { Autoplay, Pagination } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/pagination'
 import { useAuthStore } from '@/stores/auth'
-import { makeUserApi } from '@/services/api'
+import { makeUserApi, makeContentApi } from '@/services/api'
 import { useMarketStore } from '@/stores/market'
 import { useMarketWs } from '@/services/marketWs'
 
@@ -359,6 +366,24 @@ onMounted(async () => {
       tick()
     } catch { /* ignore */ }
   }
+
+  // Fetch news
+  if (auth.accessToken) {
+    try {
+      const contentApi = makeContentApi(auth.accessToken)
+      const newsData = await contentApi.getNews(5)
+      newsItems.value = newsData.articles.map(a => ({
+        title:  a.title,
+        source: a.source ?? a.category_name ?? 'News',
+        time:   relativeTime(a.published_at),
+      }))
+    } catch { /* keep empty */
+    } finally {
+      newsLoading.value = false
+    }
+  } else {
+    newsLoading.value = false
+  }
 })
 
 onUnmounted(() => {
@@ -367,13 +392,20 @@ onUnmounted(() => {
 })
 
 interface QuickAction { label: string; icon: string; hot?: boolean; route?: string }
-const newsItems = [
-  { title: 'Bitcoin holds above key support',       source: 'Market',       time: '2m ago' },
-  { title: 'Ethereum network activity rises',        source: 'Blockchain',   time: '10m ago' },
-  { title: 'Solana ecosystem sees renewed demand',   source: 'Altcoins',     time: '18m ago' },
-  { title: 'BNB extends weekly gains',               source: 'Market',       time: '25m ago' },
-  { title: 'USDT transfer volume climbs',            source: 'Stablecoins',  time: '40m ago' },
-]
+
+// ── News from API ─────────────────────────────────────────────────────────────
+const newsItems = ref<{ title: string; source: string; time: string }[]>([])
+const newsLoading = ref(true)
+
+function relativeTime(dateStr: string | null): string {
+  if (!dateStr) return 'Recently'
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
 const quickActions: QuickAction[] = [
   { label: 'Add Funds',       icon: 'mdi:wallet-plus-outline',          route: '/add-funds' },
   { label: 'Transfer',        icon: 'mdi:swap-horizontal',              route: '/transfer' },

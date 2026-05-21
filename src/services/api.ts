@@ -410,6 +410,7 @@ export interface AmaSession {
 export interface NewsArticle {
   id: number
   title: string
+  content: string | null
   summary: string | null
   source: string | null
   source_url: string | null

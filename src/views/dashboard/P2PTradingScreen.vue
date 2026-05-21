@@ -201,122 +201,214 @@
         <!-- TWO-PANEL layout on desktop: list (left) + sidebar (right) -->
         <div class="mt-4 lg:mt-5 lg:grid lg:grid-cols-[1fr_280px] lg:gap-5 xl:grid-cols-[1fr_300px]">
 
-          <!-- MERCHANT LIST -->
-          <div>
-            <div class="mb-3 flex items-center justify-between">
-              <p class="text-[11px] font-bold text-gray-400">
-                <span v-if="filteredMerchants.length > 0">{{ filteredMerchants.length }} offers found</span>
-                <span v-else class="text-orange-400">No offers found</span>
-              </p>
-              <button @click="toggleSort" class="flex items-center gap-1 text-[11px] font-bold text-gray-400 active:scale-95 transition-transform">
-                <Icon icon="mdi:sort" class="text-[14px]" />
-                Price
-                <Icon :icon="sortOrder === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-[12px] text-[#0ba99d]" />
-              </button>
-            </div>
+        <!-- MERCHANT LIST -->
+        <div>
+          <div class="mb-3 flex items-center justify-between">
+            <p class="text-[11px] font-bold text-gray-400">
+              <span v-if="filteredMerchants.length > 0">{{ filteredMerchants.length }} offers found</span>
+              <span v-else class="text-orange-400">No offers found</span>
+            </p>
 
-            <!-- Loading state -->
-            <div v-if="isLoading" class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-12 text-center">
-              <Icon icon="mdi:loading" class="animate-spin text-[48px] text-[#0ba99d]" />
-              <p class="mt-3 text-[13px] font-semibold text-gray-400">Loading offers…</p>
-            </div>
-
-            <!-- Empty state -->
-            <div v-else-if="filteredMerchants.length === 0" class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-12 text-center">
-              <Icon icon="mdi:magnify-remove-outline" class="text-[52px] text-gray-200" />
-              <p class="mt-3 text-[13px] font-semibold text-gray-400">No matching offers</p>
-              <p class="mt-1 text-[11px] font-semibold text-gray-300">Try adjusting your filters</p>
-              <button @click="clearFilters" class="mt-4 rounded-xl bg-[#eafffd] px-4 py-2 text-[11px] font-bold text-[#0ba99d] active:scale-95">Clear Filters</button>
-            </div>
-
-            <!-- 1-col mobile / 1-col inside lg panel -->
-            <div v-else-if="!isLoading" class="flex flex-col gap-3">
-              <article
-                v-for="merchant in filteredMerchants"
-                :key="merchant.name"
-                class="relative rounded-3xl bg-white px-5 py-5 shadow-[0_4px_20px_rgba(0,0,0,0.07)] transition hover:shadow-[0_8px_30px_rgba(0,0,0,0.10)] md:px-8 md:py-7"
-              >
-                <div class="grid grid-cols-1 gap-5 md:grid-cols-[260px_1fr_auto] md:items-start md:gap-8">
-
-                  <!-- Seller -->
-                  <div class="flex items-center gap-4 md:gap-6">
-                    <div class="relative h-16 w-16 shrink-0 md:h-20 md:w-20">
-                      <img :src="merchant.avatar" :alt="merchant.name" class="h-16 w-16 rounded-full object-cover md:h-20 md:w-20" @error="($event.target as HTMLImageElement).src = '/images/user-default.png'" />
-                      <span class="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white md:h-4 md:w-4" :class="merchant.onlineType === 'online' ? 'bg-emerald-500' : 'bg-orange-400'"></span>
-                    </div>
-                    <div>
-                      <div class="flex items-center gap-2">
-                        <h3 class="text-[15px] font-semibold tracking-wide text-[#17212f] md:text-[17px]">{{ merchant.name }}</h3>
-                        <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#0ba99d]">
-                          <Icon icon="mdi:check" class="text-[10px] text-white" />
-                        </span>
-                      </div>
-                      <div class="mt-3 flex items-center gap-3 text-[12px] text-gray-500 md:mt-4 md:text-[14px]">
-                        <span>{{ merchant.completion }}</span>
-                        <span class="flex items-center gap-1.5">
-                          <Icon icon="mdi:thumb-up-outline" class="text-[13px] md:text-[15px]" />
-                          {{ merchant.orders }}
-                        </span>
-                      </div>
-                      <div class="mt-3 flex items-center gap-2 text-[12px] text-gray-500 md:mt-4 md:text-[14px]">
-                        <span class="h-2.5 w-2.5 rounded-full md:h-3 md:w-3" :class="merchant.onlineType === 'online' ? 'bg-emerald-500' : 'bg-orange-400'"></span>
-                        <span>{{ merchant.online }}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Offer detail -->
-                  <div>
-                    <p class="mb-1 text-[11px] font-medium text-gray-400">Price</p>
-                    <div class="flex items-end gap-2">
-                      <span class="text-[16px] font-semibold leading-none tracking-wide text-[#17212f] md:text-[32px]">{{ merchant.price }}</span>
-                      <span class="pb-0.5 text-[13px] font-medium text-gray-500 md:text-[16px]">{{ merchant.currency }}</span>
-                    </div>
-                    <div class="mt-5 space-y-3 md:mt-6">
-                      <div class="grid grid-cols-[100px_1fr] text-[12px] md:grid-cols-[130px_1fr] md:text-[14px]">
-                        <span class="font-medium text-gray-400">Limit</span>
-                        <span class="font-semibold text-[#344054]">{{ merchant.limit }} USDT</span>
-                      </div>
-                      <div class="grid grid-cols-[100px_1fr] text-[12px] md:grid-cols-[130px_1fr] md:text-[14px]">
-                        <span class="font-medium text-gray-400">Available</span>
-                        <span class="font-semibold text-[#344054]">{{ merchant.available }} USDT</span>
-                      </div>
-                      <div class="grid grid-cols-[100px_1fr] items-center text-[12px] md:grid-cols-[130px_1fr] md:text-[14px]">
-                        <span class="font-medium text-gray-400">Payment</span>
-                        <div class="flex items-center gap-3">
-                          <Icon v-for="(payment, idx) in merchant.payments" :key="idx" :icon="payment.icon" class="text-[18px] md:text-[22px]" :class="payment.color" />
-                          <span v-if="merchant.more" class="text-[12px] font-semibold text-gray-400 md:text-[14px]">{{ merchant.more }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Button -->
-                  <div class="flex md:self-start">
-                    <button
-                      @click="hasBankAccount ? openTrade(merchant) : router.push('/verification')"
-                      class="h-11 w-full rounded-2xl text-[14px] font-semibold transition active:scale-[0.98] md:h-auto md:w-auto md:px-10 md:py-4 md:text-[17px]"
-                      :class="merchant.type === 'buy' ? 'bg-[#0ba99d] text-white hover:bg-[#099990]' : 'bg-[#ffe8eb] text-[#f05b6b] hover:bg-[#ffd5d9]'"
-                    >{{ merchant.action }}</button>
-                  </div>
-
-                  <!-- Blur overlay when no bank account -->
-                  <div
-                    v-if="!hasBankAccount"
-                    class="absolute inset-0 rounded-3xl backdrop-blur-[3px] bg-white/60 flex items-center justify-center cursor-pointer"
-                    @click="router.push('/verification')"
-                  >
-                    <div class="flex flex-col items-center gap-2 px-4 text-center">
-                      <Icon icon="mdi:bank-lock-outline" class="text-[32px] text-amber-500" />
-                      <p class="text-[12px] font-bold text-slate-700">Bank account required</p>
-                      <p class="text-[11px] font-semibold text-slate-400">Tap to verify your bank account</p>
-                    </div>
-                  </div>
-
-                </div>
-              </article>
-            </div>
+            <button
+              @click="toggleSort"
+              class="flex items-center gap-1 text-[11px] font-bold text-gray-400 active:scale-95 transition-transform"
+            >
+              <Icon icon="mdi:sort" class="text-[14px]" />
+              Price
+              <Icon
+                :icon="sortOrder === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'"
+                class="text-[12px] text-[#0ba99d]"
+              />
+            </button>
           </div>
+
+          <!-- Loading state -->
+          <div
+            v-if="isLoading"
+            class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-12 text-center"
+          >
+            <Icon icon="mdi:loading" class="animate-spin text-[48px] text-[#0ba99d]" />
+            <p class="mt-3 text-[13px] font-semibold text-gray-400">Loading offers…</p>
+          </div>
+
+          <!-- Empty state -->
+          <div
+            v-else-if="filteredMerchants.length === 0"
+            class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white py-12 text-center"
+          >
+            <Icon icon="mdi:magnify-remove-outline" class="text-[52px] text-gray-200" />
+            <p class="mt-3 text-[13px] font-semibold text-gray-400">No matching offers</p>
+            <p class="mt-1 text-[11px] font-semibold text-gray-300">Try adjusting your filters</p>
+
+            <button
+              @click="clearFilters"
+              class="mt-4 rounded-xl bg-[#eafffd] px-4 py-2 text-[11px] font-bold text-[#0ba99d] active:scale-95"
+            >
+              Clear Filters
+            </button>
+          </div>
+
+          <!-- Merchant cards -->
+          <div v-else-if="!isLoading" class="flex flex-col gap-4 overflow-x-auto pb-2">
+            <article
+              v-for="merchant in filteredMerchants"
+              :key="merchant.name"
+              class="relative min-w-[760px] overflow-hidden rounded-[28px] border border-gray-100 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition hover:shadow-[0_12px_36px_rgba(0,0,0,0.10)]"
+            >
+              <!-- Header -->
+              <div class="flex items-start justify-between gap-6">
+                <div class="flex min-w-0 items-center gap-5">
+                  <!-- Avatar -->
+                  <div class="relative shrink-0">
+                    <img
+                      :src="merchant.avatar"
+                      :alt="merchant.name"
+                      class="h-20 w-20 rounded-full object-cover"
+                      @error="($event.target as HTMLImageElement).src = '/images/user-default.png'"
+                    />
+
+                    <span
+                      class="absolute bottom-1 right-1 h-5 w-5 rounded-full border-[4px] border-white"
+                      :class="merchant.onlineType === 'online' ? 'bg-emerald-500' : 'bg-orange-400'"
+                    ></span>
+                  </div>
+
+                  <!-- Seller info -->
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2.5">
+                      <h3 class="truncate text-[24px] font-semibold tracking-[0.12em] text-[#17212f]">
+                        {{ merchant.name }}
+                      </h3>
+
+                      <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0ba99d] text-white">
+                        <Icon icon="mdi:check" class="text-[17px]" />
+                      </span>
+                    </div>
+
+                    <div class="mt-4 flex items-center gap-5 text-[17px] font-medium text-gray-500">
+                      <span>{{ merchant.completion }}</span>
+
+                      <span class="flex items-center gap-2">
+                        <Icon icon="mdi:thumb-up-outline" class="text-[19px]" />
+                        {{ merchant.orders }}
+                      </span>
+
+                      <span class="h-5 w-px bg-gray-200"></span>
+
+                      <span class="flex items-center gap-3">
+                        <span
+                          class="h-4 w-4 rounded-full"
+                          :class="merchant.onlineType === 'online' ? 'bg-[#0ba99d]' : 'bg-orange-400'"
+                        ></span>
+                        {{ merchant.online }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Arrow -->
+                <button
+                  @click="hasBankAccount ? openTrade(merchant) : router.push('/verification')"
+                  class="mt-3 shrink-0 text-gray-400 transition active:scale-95"
+                >
+                  <Icon icon="mdi:chevron-right" class="text-[42px]" />
+                </button>
+              </div>
+
+              <!-- Price / Limit / Available -->
+              <div class="mt-8 grid grid-cols-3 border-b border-gray-100 pb-6">
+                <div class="min-w-0 pr-6">
+                  <p class="text-[18px] font-semibold tracking-[0.08em] text-gray-500">
+                    Price
+                  </p>
+
+                  <div class="mt-5 flex items-end gap-2">
+                    <span class="truncate text-[34px] font-semibold leading-none tracking-[0.12em] text-[#17212f]">
+                      {{ merchant.price }}
+                    </span>
+
+                    <span class="pb-1 text-[18px] font-semibold tracking-[0.14em] text-gray-500">
+                      {{ merchant.currency }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="min-w-0 border-l border-gray-100 px-8">
+                  <p class="text-[18px] font-semibold tracking-[0.08em] text-gray-500">
+                    Limit
+                  </p>
+
+                  <p class="mt-5 truncate text-[25px] font-semibold tracking-[0.12em] text-[#17212f]">
+                    {{ merchant.limit }} USDT
+                  </p>
+                </div>
+
+                <div class="min-w-0 border-l border-gray-100 pl-8">
+                  <p class="text-[18px] font-semibold tracking-[0.08em] text-gray-500">
+                    Available
+                  </p>
+
+                  <p class="mt-5 truncate text-[25px] font-semibold tracking-[0.12em] text-[#17212f]">
+                    {{ merchant.available }} USDT
+                  </p>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="mt-5 flex items-center justify-between gap-6">
+                <div class="flex min-w-0 items-center gap-5">
+                  <p class="shrink-0 text-[18px] font-semibold tracking-[0.08em] text-gray-500">
+                    Payment Methods
+                  </p>
+
+                  <div class="flex items-center gap-3">
+                    <span
+                      v-for="(payment, idx) in merchant.payments"
+                      :key="idx"
+                      class="flex h-11 w-11 items-center justify-center rounded-lg border border-gray-100 bg-white shadow-sm"
+                    >
+                      <Icon
+                        :icon="payment.icon"
+                        class="text-[25px]"
+                        :class="payment.color"
+                      />
+                    </span>
+
+                    <span
+                      v-if="merchant.more"
+                      class="flex h-11 min-w-12 items-center justify-center rounded-lg border border-gray-200 bg-white px-3 text-[18px] font-semibold text-gray-500 shadow-sm"
+                    >
+                      {{ merchant.more }}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  @click="hasBankAccount ? openTrade(merchant) : router.push('/verification')"
+                  class="shrink-0 rounded-2xl px-16 py-4 text-[24px] font-semibold tracking-[0.08em] text-white transition active:scale-[0.98]"
+                  :class="merchant.type === 'buy'
+                    ? 'bg-[#0ba99d] hover:bg-[#099990]'
+                    : 'bg-[#f05b6b] hover:bg-[#e04c5c]'"
+                >
+                  {{ merchant.action }}
+                </button>
+              </div>
+
+              <!-- Blur overlay when no bank account -->
+              <div
+                v-if="!hasBankAccount"
+                class="absolute inset-0 flex cursor-pointer items-center justify-center rounded-[28px] bg-white/60 backdrop-blur-[3px]"
+                @click="router.push('/verification')"
+              >
+                <div class="flex flex-col items-center gap-2 px-4 text-center">
+                  <Icon icon="mdi:bank-lock-outline" class="text-[38px] text-amber-500" />
+                  <p class="text-[13px] font-bold text-slate-700">Bank account required</p>
+                  <p class="text-[12px] font-semibold text-slate-400">Tap to verify your bank account</p>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
 
           <!-- SIDEBAR (desktop only) -->
           <aside class="hidden lg:block">
@@ -979,13 +1071,6 @@ async function confirmTrade() {
     accountInfo.value      = null
     showTradeModal.value = false
     showSuccess.value    = true
-    // Refresh balance after placing order (especially for sell orders)
-    if (authStore.accessToken) {
-      makeUserApi(authStore.accessToken).getBalance()
-        .then(d => { userBalance.value = parseFloat(d.total as unknown as string) || 0 })
-        .catch(() => {})
-      if (authStore.profile) authStore.refreshProfile()
-    }
   } catch (err: any) {
     const msg = err?.body?.error?.message ?? err?.message ?? 'Order failed. Please try again.'
     if (msg.toLowerCase().includes('password')) {
