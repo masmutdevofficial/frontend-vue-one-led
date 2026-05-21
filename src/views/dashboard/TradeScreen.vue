@@ -535,17 +535,17 @@
                       <p class="mt-1 text-[9px] font-semibold text-gray-400 truncate">{{ marketStore.coinMap.get(h.coin)?.name ?? h.coin }}</p>
                     </div>
                   </div>
-                  <!-- Amount -->
+                  <!-- Amount (fmtCoin — same as AssetsScreen) -->
                   <div class="w-20 text-right shrink-0">
-                    <p class="text-[11px] font-semibold text-[#17212f] leading-none tabular-nums">{{ h.amount.toFixed(h.coin === 'USDT' ? 2 : 5) }}</p>
+                    <p class="text-[11px] font-semibold text-[#17212f] leading-none tabular-nums">{{ fmtCoin(h.amount, h.coin) }}</p>
                     <p class="mt-1 text-[9px] font-semibold text-gray-400">{{ h.coin }}</p>
                   </div>
-                  <!-- Value (USDT) -->
+                  <!-- Value (USDT) (fmt — same as AssetsScreen) -->
                   <div class="w-22 text-right shrink-0">
-                    <p class="text-[11px] font-semibold text-[#17212f] leading-none tabular-nums">{{ getSpotValue(h) }}</p>
-                    <p class="mt-1 text-[9px] font-semibold text-gray-400">≈ ${{ getSpotValue(h) }}</p>
+                    <p class="text-[11px] font-semibold text-[#17212f] leading-none tabular-nums">{{ fmt(getSpotPrice(h) * h.amount) }}</p>
+                    <p class="mt-1 text-[9px] font-semibold text-gray-400">≈ ${{ fmt(getSpotPrice(h) * h.amount) }}</p>
                   </div>
-                  <!-- 24h Change -->
+                  <!-- 24h Change (same format as AssetsScreen) -->
                   <div class="w-16 text-right shrink-0">
                     <span
                       class="inline-block rounded-lg px-2 py-1 text-[10px] font-bold"
@@ -1478,10 +1478,27 @@ function getSpotValue(holding: { coin: string; amount: number }): string {
   return price > 0 ? formatPrice(price * holding.amount) : '0.00'
 }
 
+/** Get spot price for a holding (same as AssetsScreen) */
+function getSpotPrice(holding: { coin: string; amount: number }): number {
+  const ticker = tickerMap.value.get(holding.coin + 'USDT')
+  return ticker?.price ?? livePrice.value ?? baseCoin.value.price ?? 0
+}
+
 /** Get 24h change for a spot holding (from tickerMap or fallback) */
 function getSpotChange(holding: { coin: string; amount: number }): number {
   const ticker = tickerMap.value.get(holding.coin + 'USDT')
   return ticker ? Math.round(ticker.change * 100) / 100 : liveChange.value
+}
+
+// ── Format helpers (same as AssetsScreen) ─────────────────────
+function fmt(n: number, dec = 2): string {
+  return n.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+}
+function fmtCoin(n: number, sym: string): string {
+  if (sym === 'USDT') return fmt(n, 2)
+  if (n >= 100) return fmt(n, 3)
+  if (n >= 1)   return n.toFixed(5)
+  return n.toFixed(7)
 }
 
 async function fetchCoinBalances() {
