@@ -378,26 +378,38 @@ function toggleFavorite(name: string) {
 }
 const chartPoints = ref<number[]>([0.55, 0.42, 0.60, 0.38, 0.52, 0.30, 0.48, 0.22, 0.40, 0.18])
 // Unrealized PnL = Σ(amount × (currentPrice − avgBuyPrice))
+// Falls back to 24h change when no cost basis is available (market orders / admin-credited)
 const pnlValue = computed(() => {
   const map = tickerMap.value
   let total = 0
   for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
     if (coin === 'USDT' || amount <= 0) continue
     const t = map.get(coin + 'USDT')
+    if (!t || t.price <= 0) continue
     const avgBuy = costBasisMap.value[coin]
-    if (!t || t.price <= 0 || !avgBuy) continue
-    total += amount * (t.price - avgBuy)
+    if (avgBuy > 0) {
+      // Real cost basis from order history (limit/stop-limit orders)
+      total += amount * (t.price - avgBuy)
+    } else {
+      // Fallback: 24h unrealized change (for market orders or admin-credited balance)
+      total += amount * t.price * (t.change / 100)
+    }
   }
   return Math.round(total * 100) / 100
 })
 const pnlPct = computed(() => {
-  // percentage relative to total cost basis Σ(amount × avgBuyPrice)
+  const map = tickerMap.value
   let costTotal = 0
   for (const [coin, amount] of Object.entries(coinBalanceMap.value)) {
     if (coin === 'USDT' || amount <= 0) continue
     const avgBuy = costBasisMap.value[coin]
-    if (!avgBuy) continue
-    costTotal += amount * avgBuy
+    if (avgBuy > 0) {
+      costTotal += amount * avgBuy
+    } else {
+      // Fallback: use current value as denominator
+      const t = map.get(coin + 'USDT')
+      if (t && t.price > 0) costTotal += amount * t.price
+    }
   }
   if (costTotal <= 0) return 0
   return Math.round((pnlValue.value / costTotal) * 10000) / 100
