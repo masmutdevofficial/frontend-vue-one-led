@@ -1,6 +1,22 @@
 <template>
   <DashboardLayout>
     <div class="min-h-screen bg-[#f6f8fb] text-[#0b1638]">
+      <!-- TOAST NOTIFICATION -->
+      <Transition name="toast-slide">
+        <div
+          v-if="toast.visible"
+          class="fixed left-1/2 top-4 z-50 w-11/12 max-w-md -translate-x-1/2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3.5 shadow-lg"
+        >
+          <div class="flex items-start gap-3">
+            <Icon icon="mdi:bell-ring-outline" class="mt-0.5 text-2xl text-emerald-600 shrink-0" />
+            <div>
+              <p class="text-sm font-semibold text-emerald-800">{{ toast.title }}</p>
+              <p class="mt-0.5 text-xs font-medium text-emerald-600">{{ toast.message }}</p>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
       <!-- PAGE HEADER -->
       <div class="relative flex h-14 items-center justify-center border-b border-gray-100 bg-white px-4">
         <button
@@ -87,6 +103,7 @@
             </div>
 
             <button
+              @click="showReminderToast(item.title)"
               class="h-11 rounded-xl border border-[#20c7b7] bg-white px-4 text-sm font-semibold text-[#20c7b7] active:scale-95"
             >
               Set Reminder
@@ -109,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
@@ -139,6 +156,21 @@ const defaultSessions: Session[] = [
   { title: 'Crypto Basics for New Users',         date: 'December 06, 2026', time: '8:00 PM UTC+8', avatar: 'https://i.pravatar.cc/120?img=32', badgeIcon: 'mdi:bitcoin' },
 ]
 
+const toast = reactive({
+  visible: false,
+  title: '',
+  message: '',
+})
+
+function showReminderToast(sessionTitle: string) {
+  toast.title = 'Reminder Set!'
+  toast.message = `You'll be notified before "${sessionTitle}" starts.`
+  toast.visible = true
+  setTimeout(() => {
+    toast.visible = false
+  }, 3500)
+}
+
 const sessions = ref<Session[]>(defaultSessions)
 
 onMounted(async () => {
@@ -161,3 +193,24 @@ onMounted(async () => {
   } catch { /* silently use defaults */ }
 })
 </script>
+
+<style scoped>
+.toast-slide-enter-active {
+  animation: slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-slide-leave-active {
+  animation: slide-down 0.3s ease-in reverse;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+</style>

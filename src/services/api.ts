@@ -372,6 +372,7 @@ export interface ApiEvent {
   title: string
   type: string
   description: string | null
+  content: string | null
   prize_pool: string | null
   start_date: string
   end_date: string
@@ -379,6 +380,7 @@ export interface ApiEvent {
   max_participants: number | null
   participants: number
   status: string
+  created_at?: string
 }
 
 export interface ApiCampaign {
@@ -463,6 +465,8 @@ export function makeContentApi(token: string) {
     },
     getEvents: (limit = 20) =>
       api.get<{ events: ApiEvent[] }>(`/events?limit=${limit}`),
+    getEventById: (id: number) =>
+      api.get<{ event: ApiEvent }>(`/events/${id}`),
     getCampaigns: (limit = 20) =>
       api.get<{ campaigns: ApiCampaign[] }>(`/campaigns?limit=${limit}`),
     getAmaSessions: (limit = 20) =>

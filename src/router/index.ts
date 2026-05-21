@@ -19,6 +19,8 @@ import DepositHistoryScreen from '../views/dashboard/DepositHistoryScreen.vue'
 import TransferScreen from '../views/dashboard/TransferScreen.vue'
 import CopyTradeScreen from '../views/dashboard/CopyTradeScreen.vue'
 import EventsScreen from '../views/dashboard/EventsScreen.vue'
+import AllEventsScreen from '../views/dashboard/AllEventsScreen.vue'
+import EventDetailScreen from '../views/dashboard/EventDetailScreen.vue'
 import TradeScreen from '../views/dashboard/TradeScreen.vue'
 import FuturesScreen from '../views/dashboard/FuturesScreen.vue'
 import CopyTraderProfileScreen from '../views/dashboard/CopyTraderProfileScreen.vue'
@@ -75,6 +77,8 @@ const routes = [
   { path: '/transfer',          meta: { requiresAuth: true }, component: TransferScreen },
   { path: '/copy-trade',        meta: { requiresAuth: true }, component: CopyTradeScreen },
   { path: '/events',            meta: { requiresAuth: true }, component: EventsScreen },
+  { path: '/events/all',        meta: { requiresAuth: true }, component: AllEventsScreen },
+  { path: '/events/:id',        meta: { requiresAuth: true }, component: EventDetailScreen },
   { path: '/trade',             redirect: '/trade/btc' },
   { path: '/trade/:symbol',     meta: { requiresAuth: true }, component: TradeScreen },
   { path: '/futures',           meta: { requiresAuth: true }, component: FuturesScreen },

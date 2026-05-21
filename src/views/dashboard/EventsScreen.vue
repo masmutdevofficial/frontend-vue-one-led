@@ -73,7 +73,7 @@
       <section class="mt-4 px-3">
         <div class="flex items-center justify-between">
           <h2 class="text-[14px] font-semibold text-[#17212f]">Upcoming Events</h2>
-          <button class="flex items-center gap-1 text-[10px] font-semibold text-[#0ba99d]">
+          <button class="flex items-center gap-1 text-[10px] font-semibold text-[#0ba99d]" @click="router.push('/events/all')">
             View All
             <Icon icon="mdi:arrow-right" class="text-[13px]" />
           </button>
@@ -117,7 +117,7 @@
               <button
                 class="h-9 min-w-19.5 rounded-xl px-3 text-[10px] font-semibold active:scale-95"
                 :class="item.primary ? 'bg-[#08a99f] text-white' : 'border border-[#0ba99d] bg-white text-[#0ba99d]'"
-                @click="openModal(item)"
+                @click="router.push(`/events/${item.id}`)"
               >
                 {{ item.button }}
               </button>
@@ -167,60 +167,7 @@
     </div>
   </DashboardLayout>
 
-  <!-- EVENT DETAIL MODAL -->
-  <Teleport to="body">
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-end justify-center">
-      <div class="absolute inset-0 bg-black/50" @click="showModal = false"></div>
-      <div v-if="activeEvent" class="relative w-full max-w-107.5 overflow-hidden rounded-t-3xl bg-white pb-8">
-        <!-- Image -->
-        <div class="relative h-45 w-full overflow-hidden">
-          <img :src="activeEvent.image" :alt="activeEvent.title" class="h-full w-full object-cover" />
-          <div class="absolute inset-0 bg-linear-to-t from-black/60 to-transparent"></div>
-          <button
-            @click="showModal = false"
-            class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white"
-          >
-            <Icon icon="mdi:close" class="text-lg" />
-          </button>
-          <span
-            v-if="activeEvent.badge"
-            class="absolute left-3 top-3 rounded bg-[#0ba99d] px-2 py-0.5 text-[7px] font-semibold text-white"
-          >
-            {{ activeEvent.badge }}
-          </span>
-        </div>
-
-        <!-- Content -->
-        <div class="px-5 pt-4">
-          <div class="flex items-center gap-1 text-[9px] font-bold text-gray-400">
-            <Icon icon="mdi:calendar-blank-outline" class="text-[11px]" />
-            {{ activeEvent.date }}
-          </div>
-          <h2 class="mt-2 text-lg font-semibold text-[#17212f]">{{ activeEvent.title }}</h2>
-          <p class="mt-3 text-xs leading-relaxed text-gray-500">{{ activeEvent.detail }}</p>
-
-          <!-- Reward -->
-          <div class="mt-4 flex items-center justify-between rounded-xl bg-[#e9fffc] px-4 py-3">
-            <div>
-              <p class="text-[9px] font-bold text-gray-400">Total Reward Pool</p>
-              <p class="mt-0.5 text-lg font-semibold text-[#0ba99d]">{{ activeEvent.reward }} USDT</p>
-            </div>
-            <Icon icon="mdi:trophy-outline" class="text-4xl text-[#0ba99d]/40" />
-          </div>
-
-          <!-- CTA -->
-          <button
-            class="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-semibold active:scale-95"
-            :class="activeEvent.primary ? 'bg-[#08a99f] text-white' : 'border border-[#0ba99d] bg-white text-[#0ba99d]'"
-          >
-            {{ activeEvent.button }}
-            <Icon icon="mdi:arrow-right" class="text-base" />
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
-</template>
+  </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
@@ -240,13 +187,13 @@ interface MenuItem {
 }
 
 interface Event {
+  id: number
   badge: string | null
   image: string
   date: string
   title: string
   reward: string
   desc: string
-  detail: string
   button: string
   primary: boolean
 }
@@ -269,35 +216,35 @@ const menuItems: MenuItem[] = [
 // ── Defaults ──────────────────────────────────────────────────────────────────
 const defaultEvents: Event[] = [
   {
+    id: 0,
     badge: 'HOT',
     image: '/images/event-banner.webp',
     date: 'May 20 - Jun 03, 2025',
     title: 'Futures Trading Competition',
     reward: '50,000',
     desc: 'Compete in futures trading and climb the leaderboard!',
-    detail: 'Trade futures, climb the leaderboard, and compete for a share of the prize pool. Show your trading skill and win big rewards.',
     button: 'Join Now',
     primary: true,
   },
   {
+    id: 0,
     badge: null,
     image: '/images/event-2.webp',
     date: 'May 15 - May 29, 2025',
     title: 'Deposit & Trade Challenge',
     reward: '20,000',
     desc: 'Deposit, trade, and win a share of the prize pool.',
-    detail: 'Deposit funds, complete trading missions, and earn rewards based on your activity. The more you participate, the bigger your chance to win.',
     button: 'View Details',
     primary: false,
   },
   {
+    id: 0,
     badge: null,
     image: '/images/learn-banner.webp',
     date: 'May 10 - May 14, 2025',
     title: 'Learn & Earn Quiz',
     reward: '5,000',
     desc: 'Learn about crypto and earn rewards effortlessly.',
-    detail: 'Learn basic crypto and trading knowledge, answer simple quizzes, and earn rewards.',
     button: 'Join Now',
     primary: true,
   },
@@ -335,13 +282,13 @@ onMounted(async () => {
     const data = await api.getEvents()
     if (data.events.length > 0) {
       events.value = data.events.map((e, i) => ({
+        id:      e.id,
         badge:   e.status === 'ongoing' ? 'HOT' : null,
         image:   e.banner_url ?? '/images/event-banner.webp',
         date:    formatDateRange(e.start_date, e.end_date),
         title:   e.title,
         reward:  e.prize_pool ? Number(e.prize_pool).toLocaleString() : '0',
         desc:    e.description ?? '',
-        detail:  e.description ?? '',
         button:  e.status === 'ongoing' ? 'Join Now' : 'View Details',
         primary: i === 0 || e.status === 'ongoing',
       }))
@@ -359,12 +306,4 @@ onMounted(async () => {
     }
   } catch { /* silently use defaults */ }
 })
-
-const showModal = ref(false)
-const activeEvent = ref<Event | null>(null)
-
-function openModal(event: Event) {
-  activeEvent.value = event
-  showModal.value = true
-}
 </script>

@@ -73,7 +73,6 @@
               </div>
             </div>
 
-            <Icon icon="mdi:chevron-right" class="text-[30px] text-[#6b82c4]" />
           </button>
         </section>
 
