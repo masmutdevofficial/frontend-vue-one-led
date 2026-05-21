@@ -1478,10 +1478,18 @@ function getSpotValue(holding: { coin: string; amount: number }): string {
   return price > 0 ? formatPrice(price * holding.amount) : '0.00'
 }
 
-/** Get spot price for a holding (same as AssetsScreen) */
+/** Get spot price for a holding — uses per-coin price, NOT the current trading pair */
 function getSpotPrice(holding: { coin: string; amount: number }): number {
   const ticker = tickerMap.value.get(holding.coin + 'USDT')
-  return ticker?.price ?? livePrice.value ?? baseCoin.value.price ?? 0
+  if (ticker?.price && ticker.price > 0) return ticker.price
+  // Fallback: use market store coin price
+  const meta = marketStore.coinMap.get(holding.coin)
+  const pair = meta?.binancePair ?? (holding.coin + 'USDT')
+  const tickerFromMap = tickerMap.value.get(pair)
+  if (tickerFromMap?.price && tickerFromMap.price > 0) return tickerFromMap.price
+  // Last resort: only use livePrice if this coin matches current trading pair
+  if (holding.coin === baseCoin.value.symbol) return livePrice.value || 0
+  return 0
 }
 
 /** Get 24h change for a spot holding (from tickerMap or fallback) */
