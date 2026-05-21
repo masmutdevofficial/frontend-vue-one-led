@@ -327,7 +327,7 @@
                       {{ merchant.price }}
                     </span>
 
-                    <span class="pb-0.5 text-[10px] font-semibold text-gray-500 sm:text-[12px]">
+                    <span class="text-[10px] font-semibold text-gray-500 sm:text-[12px]">
                       {{ merchant.currency }}
                     </span>
                   </div>
