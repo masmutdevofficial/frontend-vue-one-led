@@ -96,13 +96,6 @@
             </div>
           </div>
 
-          <!-- CTA -->
-          <button
-            class="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#08a99f] text-sm font-semibold text-white shadow-sm active:scale-95"
-          >
-            {{ event.status === 'ongoing' ? 'Join Now' : 'Register Interest' }}
-            <Icon icon="mdi:arrow-right" class="text-base" />
-          </button>
         </section>
       </template>
     </div>
