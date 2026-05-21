@@ -536,11 +536,7 @@
                   </div>
                   <div class="text-right">
                     <p class="text-[13px] font-semibold text-[#17212f]">
-                      {{ (() => {
-                        const ticker = tickerMap.get(h.coin + 'USDT')
-                        const price = ticker?.price ?? baseCoin.value.price
-                        return price ? formatPrice(price * h.amount) + ' USDT' : '—'
-                      })() }}
+                      {{ getSpotHoldingValue(h) }}
                     </p>
                   </div>
                 </div>
@@ -1447,6 +1443,13 @@ const spotHoldings = computed(() =>
     .filter(([coin, amount]) => coin !== 'USDT' && amount > 0)
     .map(([coin, amount]) => ({ coin, amount }))
 )
+
+/** Calculate spot holding value using live ticker price or fallback to catalog price */
+function getSpotHoldingValue(holding: { coin: string; amount: number }): string {
+  const ticker = tickerMap.value.get(holding.coin + 'USDT')
+  const price = ticker?.price ?? baseCoin.value.price
+  return price ? formatPrice(price * holding.amount) + ' USDT' : '—'
+}
 
 async function fetchCoinBalances() {
   if (!tradeApi.value) return
