@@ -518,26 +518,39 @@
           <!-- ── POSITIONS TAB ── -->
           <template v-else-if="activeBottomTab === 'positions'">
 
-            <!-- Spot Holdings (from filled buy orders) -->
+            <!-- Spot Holdings — like AssetsScreen holdings (without sparkline) -->
             <div v-if="spotHoldings.length > 0" class="border-b border-gray-100">
               <div class="px-4 py-2">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Spot Holdings</p>
               </div>
               <div class="divide-y divide-gray-100">
                 <div v-for="h in spotHoldings" :key="h.coin" class="flex items-center justify-between px-4 py-3">
-                  <div class="flex items-center gap-2.5">
-                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                  <!-- Asset -->
+                  <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" :class="coinIconClass(h.coin)">
                       <CoinIcon :icon="marketStore.coinMap.get(h.coin)?.icon ?? 'mdi:currency-usd'" :symbol="h.coin" icon-class="text-[18px]" img-class="h-6 w-6 rounded-full" />
                     </div>
-                    <div>
-                      <p class="text-[13px] font-semibold text-[#17212f]">{{ h.coin }}/USDT</p>
-                      <p class="mt-0.5 text-[10px] font-semibold text-gray-400">{{ h.amount.toFixed(6) }} {{ h.coin }}</p>
+                    <div class="min-w-0">
+                      <p class="text-[13px] font-semibold text-[#17212f] leading-none">{{ h.coin }}</p>
+                      <p class="mt-1 text-[9px] font-semibold text-gray-400 truncate">{{ marketStore.coinMap.get(h.coin)?.name ?? h.coin }}</p>
                     </div>
                   </div>
-                  <div class="text-right">
-                    <p class="text-[13px] font-semibold text-[#17212f]">
-                      {{ getSpotHoldingValue(h) }}
-                    </p>
+                  <!-- Amount -->
+                  <div class="w-20 text-right shrink-0">
+                    <p class="text-[11px] font-semibold text-[#17212f] leading-none tabular-nums">{{ h.amount.toFixed(h.coin === 'USDT' ? 2 : 5) }}</p>
+                    <p class="mt-1 text-[9px] font-semibold text-gray-400">{{ h.coin }}</p>
+                  </div>
+                  <!-- Value (USDT) -->
+                  <div class="w-22 text-right shrink-0">
+                    <p class="text-[11px] font-semibold text-[#17212f] leading-none tabular-nums">{{ getSpotValue(h) }}</p>
+                    <p class="mt-1 text-[9px] font-semibold text-gray-400">≈ ${{ getSpotValue(h) }}</p>
+                  </div>
+                  <!-- 24h Change -->
+                  <div class="w-16 text-right shrink-0">
+                    <span
+                      class="inline-block rounded-lg px-2 py-1 text-[10px] font-bold"
+                      :class="getSpotChange(h) >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-400'"
+                    >{{ (getSpotChange(h) >= 0 ? '+' : '') + getSpotChange(h).toFixed(2) }}%</span>
                   </div>
                 </div>
               </div>
@@ -692,7 +705,7 @@ import { Icon } from '@iconify/vue'
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import CoinIcon from '@/components/CoinIcon.vue'
 import { useMarketWs } from '@/services/marketWs'
-import { useMarketStore } from '@/stores/market'
+import { useMarketStore, coinIconClass } from '@/stores/market'
 import { useAuthStore } from '@/stores/auth'
 import { makeTradeApi, type SpotOrder, type FuturesPosition } from '@/services/api'
 import {
@@ -1456,6 +1469,19 @@ function getSpotHoldingValue(holding: { coin: string; amount: number }): string 
   const ticker = tickerMap.value.get(holding.coin + 'USDT')
   const price = ticker?.price ?? baseCoin.value.price
   return price ? formatPrice(price * holding.amount) + ' USDT' : '—'
+}
+
+/** Get spot holding value as formatted number string (like AssetsScreen) */
+function getSpotValue(holding: { coin: string; amount: number }): string {
+  const ticker = tickerMap.value.get(holding.coin + 'USDT')
+  const price = ticker?.price ?? livePrice.value ?? baseCoin.value.price
+  return price > 0 ? formatPrice(price * holding.amount) : '0.00'
+}
+
+/** Get 24h change for a spot holding (from tickerMap or fallback) */
+function getSpotChange(holding: { coin: string; amount: number }): number {
+  const ticker = tickerMap.value.get(holding.coin + 'USDT')
+  return ticker ? Math.round(ticker.change * 100) / 100 : liveChange.value
 }
 
 async function fetchCoinBalances() {
