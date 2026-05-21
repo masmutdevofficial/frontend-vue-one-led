@@ -138,8 +138,9 @@ export interface UserProfile {
 }
 
 export interface UserBalance {
-  total:    string
-  balances: { coin: string; amount: string }[]
+  total:      string
+  balances:   { coin: string; amount: string }[]
+  cost_basis?: Record<string, string>  // coin → VWAP avg buy price
 }
 
 /** Authenticated user profile + balance API */

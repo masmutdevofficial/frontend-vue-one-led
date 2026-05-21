@@ -337,7 +337,7 @@ import { Autoplay, Pagination } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/pagination'
 import { useAuthStore } from '@/stores/auth'
-import { makeUserApi, makeTradeApi } from '@/services/api'
+import { makeUserApi } from '@/services/api'
 import { useMarketStore } from '@/stores/market'
 import { useMarketWs } from '@/services/marketWs'
 
@@ -446,29 +446,6 @@ function tickChart() {
   chartPoints.value = [...chartPoints.value.slice(1), next]
 }
 
-/** Compute VWAP (weighted average buy price) per coin from filled spot orders */
-async function fetchCostBasis() {
-  if (!auth.accessToken) return
-  try {
-    const { orders } = await makeTradeApi(auth.accessToken).getOrders('history')
-    const totalSpent:  Record<string, number> = {}
-    const totalFilled: Record<string, number> = {}
-    for (const o of orders) {
-      if (o.side !== 'Buy' || o.status !== 'filled') continue
-      const coin   = o.symbol.replace('USDT', '')
-      const price  = Number(o.price)
-      const amount = Number(o.filled || o.amount)
-      if (price <= 0 || amount <= 0) continue
-      totalSpent[coin]  = (totalSpent[coin]  ?? 0) + price * amount
-      totalFilled[coin] = (totalFilled[coin] ?? 0) + amount
-    }
-    const map: Record<string, number> = {}
-    for (const coin of Object.keys(totalSpent)) {
-      if (totalFilled[coin] > 0) map[coin] = totalSpent[coin] / totalFilled[coin]
-    }
-    costBasisMap.value = map
-  } catch { /* ignore */ }
-}
 // ──────────────────────────────────────────────────────────────
 
 let priceRefreshTimer: ReturnType<typeof setInterval>
@@ -484,7 +461,7 @@ onMounted(() => {
   fetchKlinesPrices()
   // Refresh every 30 s so prices stay live even if WS server has stale data
   priceRefreshTimer = setInterval(fetchKlinesPrices, 30_000)
-  // Fetch real balance + cost basis for PnL
+  // Fetch real balance + cost basis for PnL (cost_basis from server-side VWAP calculation)
   if (auth.accessToken) {
     makeUserApi(auth.accessToken).getBalance()
       .then(d => {
@@ -492,9 +469,16 @@ onMounted(() => {
         const map: Record<string, number> = {}
         for (const b of (d.balances ?? [])) map[(b.coin as string).toUpperCase()] = Number(b.amount)
         coinBalanceMap.value = map
+        // Apply server-side cost basis (VWAP from all filled buy orders)
+        if (d.cost_basis) {
+          const cb: Record<string, number> = {}
+          for (const [coin, price] of Object.entries(d.cost_basis)) {
+            cb[coin] = parseFloat(price as string)
+          }
+          costBasisMap.value = cb
+        }
       })
       .catch(() => {})
-    fetchCostBasis()
   }
 })
 
